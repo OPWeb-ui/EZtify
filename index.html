@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EZtify — Turn Images to PDF (Premium & Private)</title>
+    <meta name="description" content="Convert JPG, PNG, and WebP images into a single PDF instantly. No upload, 100% private, free, fast, and secure." />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              pastel: {
+                bg: '#FAF9F6', // Premium Off-White / Newspaper White
+                card: 'rgba(255, 255, 255, 0.8)',
+                border: '#E2E8F0',
+              },
+              charcoal: {
+                950: '#0F0E12', // Deep Gemini-like Dark Bg
+                900: '#1F1E24', // Deep Purple-Black
+                800: '#2D2B36', // Primary Text
+                600: '#52505E', // Secondary Text
+                500: '#716F82', // Muted
+                400: '#9CA3AF',
+              },
+              brand: {
+                purple: '#8B5CF6', // Creative Purple (Primary)
+                purpleDark: '#7C3AED', // Hover state
+                purpleLight: '#DDD6FE', // Light tint
+                blue: '#60A5FA', // Soft Sky (Secondary) - Img to PDF
+                mint: '#34D399', // Mint (Accent) - PDF to Img
+                violet: '#C084FC', // Soft Violet - Compress
+                orange: '#FBA758', // Soft Orange - Merge
+              }
+            },
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              heading: ['Poppins', 'sans-serif'],
+            },
+            animation: {
+              'blob': 'blob 10s infinite',
+              'float': 'float 6s ease-in-out infinite',
+              'gradient-xy': 'gradient-xy 6s ease infinite',
+              'shimmer': 'shimmer 4s infinite',
+            },
+            keyframes: {
+              blob: {
+                '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                '100%': { transform: 'translate(0px, 0px) scale(1)' },
+              },
+              float: {
+                '0%, 100%': { transform: 'translateY(0)' },
+                '50%': { transform: 'translateY(-10px)' },
+              },
+              'gradient-xy': {
+                '0%, 100%': {
+                  'background-size': '200% 200%',
+                  'background-position': 'left center'
+                },
+                '50%': {
+                  'background-size': '200% 200%',
+                  'background-position': 'right center'
+                }
+              },
+              shimmer: {
+                '0%': { transform: 'translateX(-100%)' },
+                '40%': { transform: 'translateX(100%)' },
+                '60%': { transform: 'translateX(100%)' },
+                '100%': { transform: 'translateX(100%)' }
+              }
+            }
+          },
+        },
+      }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+      body {
+        background-color: #FAF9F6;
+        transition: background-color 0.3s ease, color 0.3s ease;
+        /* Very subtle paper noise */
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
+        color: #2D2B36;
+        font-family: 'Inter', sans-serif;
+        overflow-x: hidden;
+      }
+      .dark body {
+        background-color: #0F0E12;
+        color: #E2E8F0;
+        background-image: none; /* Cleaner look in dark mode */
+      }
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border: 1px solid rgba(139, 92, 246, 0.1); /* Subtle purple tint on border */
+        box-shadow: 0 8px 32px rgba(139, 92, 246, 0.05);
+      }
+      .dark .glass-panel {
+        background: rgba(31, 30, 36, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.02);
+      }
+      .dark .custom-scrollbar::-webkit-scrollbar-track {
+        background: rgba(255,255,255,0.02);
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(139, 92, 246, 0.2); /* Brand Purple thumb */
+        border-radius: 10px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(139, 92, 246, 0.4);
+      }
+      ::selection {
+        background-color: rgba(139, 92, 246, 0.2);
+        color: #5B21B6;
+      }
+      .dark ::selection {
+        background-color: rgba(139, 92, 246, 0.4);
+        color: #FFFFFF;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "framer-motion": "https://aistudiocdn.com/framer-motion@^12.23.25",
+    "react/": "https://aistudiocdn.com/react@^19.2.1/",
+    "react": "https://aistudiocdn.com/react@^19.2.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
+    "react-dom": "https://aistudiocdn.com/react-dom@^19.2.1",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0",
+    "@dnd-kit/sortable": "https://aistudiocdn.com/@dnd-kit/sortable@^10.0.0",
+    "@dnd-kit/core": "https://aistudiocdn.com/@dnd-kit/core@^6.3.1",
+    "@dnd-kit/utilities": "https://aistudiocdn.com/@dnd-kit/utilities@^3.2.2",
+    "jspdf": "https://aistudiocdn.com/jspdf@^3.0.4",
+    "nanoid": "https://aistudiocdn.com/nanoid@^5.1.6",
+    "react-dropzone": "https://aistudiocdn.com/react-dropzone@^14.3.8",
+    "pdfjs-dist": "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/+esm",
+    "jszip": "https://aistudiocdn.com/jszip@^3.10.1",
+    "pdf-lib": "https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/+esm",
+    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^6.22.3",
+    "@remix-run/router": "https://aistudiocdn.com/@remix-run/router@^1.15.3"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
