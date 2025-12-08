@@ -6,7 +6,9 @@ export const loadPdfJs = async () => {
   try {
     // Dynamic import to prevent initial load crash
     // We rely on the import map in index.html to resolve 'pdfjs-dist'
-    const pdfjsModule = await import('pdfjs-dist');
+    // We use a variable and @vite-ignore to prevent Vite from bundling it (which fails due to Top-Level Await target issues)
+    const libName = 'pdfjs-dist';
+    const pdfjsModule = await import(/* @vite-ignore */ libName);
     
     // Handle potential default export mismatch (common with CDN/ESM)
     const pdfjsLib = (pdfjsModule as any).default || pdfjsModule;
