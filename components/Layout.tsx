@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Outlet, useLocation, useOutletContext } from 'react-router-dom';
 import { Header } from './Header';
 import { ToastContainer } from './Toast';
@@ -6,17 +6,31 @@ import { ToastMessage, AppMode } from '../types';
 import { nanoid } from 'nanoid';
 import { AnimatePresence, motion } from 'framer-motion';
 import { pageVariants } from '../utils/animations';
+import { PageLoader } from './PageLoader';
 
 export const Layout: React.FC = () => {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const location = useLocation();
 
-  // Determine current mode from URL
-  let currentMode: AppMode = 'image-to-pdf';
-  if (location.pathname.includes('pdf-to-image')) currentMode = 'pdf-to-image';
-  else if (location.pathname.includes('compress-pdf')) currentMode = 'compress-pdf';
-  else if (location.pathname.includes('merge-pdf')) currentMode = 'merge-pdf';
-  else if (location.pathname.includes('split-pdf')) currentMode = 'split-pdf';
+  // Determine current mode from URL with strict checking
+  let currentMode: AppMode = 'home';
+  const path = location.pathname;
+
+  if (path === '/' || path === '') {
+    currentMode = 'home';
+  } else if (path.includes('images-to-pdf')) {
+    currentMode = 'image-to-pdf';
+  } else if (path.includes('pdf-to-images')) {
+    currentMode = 'pdf-to-image';
+  } else if (path.includes('compress-pdf')) {
+    currentMode = 'compress-pdf';
+  } else if (path.includes('merge-pdf')) {
+    currentMode = 'merge-pdf';
+  } else if (path.includes('split-pdf')) {
+    currentMode = 'split-pdf';
+  } else if (path.includes('zip-it')) {
+    currentMode = 'zip-files';
+  }
 
   // Clear toasts when switching pages
   useEffect(() => {
@@ -56,7 +70,10 @@ export const Layout: React.FC = () => {
             exit="exit"
             className="flex-1 flex flex-col"
           >
-            <Outlet context={{ addToast }} />
+            {/* Suspense acts here to show loader only in content area, not unmounting header */}
+            <Suspense fallback={<PageLoader />}>
+              <Outlet context={{ addToast }} />
+            </Suspense>
           </motion.div>
         </AnimatePresence>
       </main>

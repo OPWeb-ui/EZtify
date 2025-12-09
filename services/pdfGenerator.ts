@@ -183,5 +183,5 @@ export const generatePDF = async (
 
   // Generate filename with timestamp
   const date = new Date().toISOString().slice(0, 10);
-  doc.save(`EZtify-${date}.pdf`);
+  doc.save(`EZtify-${date}-EZtify.pdf`);
 };

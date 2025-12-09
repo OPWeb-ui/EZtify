@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useToast } from '../components/Layout';
 import { UploadArea } from '../components/UploadArea';
 import { HowItWorks } from '../components/HowItWorks';
@@ -9,11 +9,11 @@ import { Filmstrip } from '../components/Filmstrip';
 import { Preview } from '../components/Preview';
 import { AdSlot } from '../components/AdSlot';
 import { RotatingText } from '../components/RotatingText';
+import { HeroPill } from '../components/HeroPill';
 import { UploadedImage, PdfConfig, ExportConfig } from '../types';
 import { extractImagesFromPdf } from '../services/pdfExtractor';
-import { generateZip } from '../services/zipGenerator';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, FolderInput, Download, Check } from 'lucide-react';
+import { X, Plus, FolderInput } from 'lucide-react';
 import { useDropzone, FileRejection } from 'react-dropzone';
 import { buttonTap } from '../utils/animations';
 
@@ -25,7 +25,7 @@ export const PdfToImagePage: React.FC = () => {
   const [progress, setProgress] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [showConfirm, setShowConfirm] = useState(false);
+  const [scale, setScale] = useState(1);
 
   // Config State
   const [config, setConfig] = useState<PdfConfig>({
@@ -48,6 +48,15 @@ export const PdfToImagePage: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Reset scale when active image changes
+  useEffect(() => {
+    setScale(1);
+  }, [activeImageId]);
+
+  const handleZoomIn = () => setScale(prev => Math.min(prev + 0.25, 4));
+  const handleZoomOut = () => setScale(prev => Math.max(prev - 0.25, 0.5));
+  const handleResetZoom = () => setScale(1);
+
   const processPdf = async (file: File) => {
     setIsGenerating(true);
     setProgress(0);
@@ -57,8 +66,16 @@ export const PdfToImagePage: React.FC = () => {
       if (extracted.length === 0) {
         addToast("Error", "No images found or PDF is empty.", "error");
       } else {
-        setImages(extracted);
-        setActiveImageId(extracted[0].id);
+        // Append new images instead of replacing
+        setImages(prev => {
+           const updated = [...prev, ...extracted];
+           // Switch active view to the first page of the new batch
+           if (extracted.length > 0) {
+              setActiveImageId(extracted[0].id);
+           }
+           return updated;
+        });
+        addToast("Success", `Added ${extracted.length} pages.`, "warning");
       }
     } catch (e) {
       console.error(e);
@@ -70,33 +87,34 @@ export const PdfToImagePage: React.FC = () => {
   };
 
   const onDrop = useCallback(async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
-    // 1. Handle explicit rejections from dropzone
+    // 1. Handle explicit rejections
     if (fileRejections.length > 0) {
-      addToast("Invalid File", "Please upload a PDF file.", "error");
+      const isImage = fileRejections.some(r => r.file.type.startsWith('image/'));
+      if (isImage) {
+         addToast("Incorrect File Type", "Image detected. Please upload a PDF file.", "error");
+      } else {
+         addToast("Invalid File", "Please upload a PDF file.", "error");
+      }
       return;
     }
 
     if (acceptedFiles.length === 0) return;
-    const file = acceptedFiles[0];
     
-    // 2. Extra check for file type
-    if (file.type !== 'application/pdf') {
-      addToast("Invalid File", "Please upload a PDF file.", "error");
-      return;
+    // Process all accepted PDFs (append them one by one)
+    for (const file of acceptedFiles) {
+        if (file.type !== 'application/pdf') {
+            addToast("Invalid File", `Skipped ${file.name}. Please upload PDF files.`, "error");
+            continue;
+        }
+        await processPdf(file);
     }
-
-    if (acceptedFiles.length > 1) {
-       addToast("Single File", "Please upload one PDF at a time.", "warning");
-    }
-
-    processPdf(file);
   }, [addToast]);
 
-  // Dropzone for replacing the PDF (New Batch)
-  const { getRootProps: getReplaceRoot, getInputProps: getReplaceInput, open: openReplace } = useDropzone({
+  // Dropzone for Adding more PDFs (Append)
+  const { getRootProps: getAddRoot, getInputProps: getAddInput, open: openAdd } = useDropzone({
     onDrop,
     accept: { 'application/pdf': ['.pdf'] },
-    multiple: false,
+    multiple: true, // Allow adding multiple PDFs at once
     noClick: true,
     noKeyboard: true
   });
@@ -121,11 +139,60 @@ export const PdfToImagePage: React.FC = () => {
     if (images.length === 0) return;
     setIsGenerating(true);
     setProgress(0);
+
     try {
       requestAnimationFrame(async () => {
         try {
-          await generateZip(images, exportConfig, setProgress);
+          for (let i = 0; i < images.length; i++) {
+            // Update progress occasionally
+            setProgress(Math.round(((i + 1) / images.length) * 100));
+            
+            const imgData = images[i];
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            if (ctx) {
+                const img = new Image();
+                img.src = imgData.previewUrl;
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                });
+
+                const isRotatedSideways = imgData.rotation === 90 || imgData.rotation === 270;
+                canvas.width = isRotatedSideways ? img.height : img.width;
+                canvas.height = isRotatedSideways ? img.width : img.height;
+
+                if (exportConfig.format === 'jpeg') {
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                ctx.rotate((imgData.rotation * Math.PI) / 180);
+                ctx.drawImage(img, -img.width / 2, -img.height / 2);
+
+                const mimeType = exportConfig.format === 'png' ? 'image/png' : 'image/jpeg';
+                const extension = exportConfig.format === 'png' ? 'png' : 'jpg';
+
+                const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, mimeType, exportConfig.quality));
+                
+                if (blob) {
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `Page-${i + 1}-EZtify.${extension}`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                }
+            }
+            // Brief delay to help browser handle multiple downloads
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
         } catch (e) {
+          console.error(e);
           addToast("Error", "Export failed.", "error");
         } finally {
           setIsGenerating(false);
@@ -134,74 +201,18 @@ export const PdfToImagePage: React.FC = () => {
       });
     } catch (e) {
       setIsGenerating(false);
+      setProgress(0);
     }
   };
 
-  const handleDownloadCurrent = async () => {
-    const activeImage = images.find(img => img.id === activeImageId);
-    if (!activeImage) return;
-
-    try {
-      // Create canvas to process image (rotation + format)
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      const img = new Image();
-      img.src = activeImage.previewUrl;
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-      });
-
-      // Handle Rotation logic
-      const isRotatedSideways = activeImage.rotation === 90 || activeImage.rotation === 270;
-      canvas.width = isRotatedSideways ? img.height : img.width;
-      canvas.height = isRotatedSideways ? img.width : img.height;
-
-      // Fill background for JPEGs
-      if (exportConfig.format === 'jpeg') {
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
-
-      // Apply transformations
-      ctx.translate(canvas.width / 2, canvas.height / 2);
-      ctx.rotate((activeImage.rotation * Math.PI) / 180);
-      ctx.drawImage(img, -img.width / 2, -img.height / 2);
-
-      // Export
-      const mimeType = exportConfig.format === 'png' ? 'image/png' : 'image/jpeg';
-      const extension = exportConfig.format === 'png' ? 'png' : 'jpg';
-      
-      const dataUrl = canvas.toDataURL(mimeType, exportConfig.quality);
-      
-      const link = document.createElement('a');
-      link.href = dataUrl;
-      const pageIndex = images.indexOf(activeImage) + 1;
-      link.download = `Page-${pageIndex}.${extension}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      addToast("Saved", `Page ${pageIndex} downloaded as ${extension.toUpperCase()}`, "warning"); 
-    } catch (e) {
-      console.error(e);
-      addToast("Error", "Failed to download image", "error");
-    }
-  };
-
-  const handleNewBatch = () => {
-    if (images.length > 0) {
-      setShowConfirm(true);
-    } else {
-      openReplace();
-    }
+  const handleAddPdf = () => {
+      openAdd();
   };
 
   const handleReset = () => {
     setImages([]);
     setActiveImageId(null);
+    setScale(1);
   };
 
   const activeImage = images.find(img => img.id === activeImageId) || null;
@@ -223,7 +234,13 @@ export const PdfToImagePage: React.FC = () => {
                <h2 className="text-3xl md:text-6xl font-heading font-bold text-charcoal-900 dark:text-white mb-4 leading-tight tracking-tight">
                  Turn Your PDF Pages <br/> Into Images in Seconds
                </h2>
-               <div className="w-full max-w-xl my-6 md:my-8 relative z-20">
+               
+               <HeroPill>
+                  <span className="font-bold text-brand-mint">PDF to Image</span> extracts pages from your document and saves them as high-resolution JPG or PNG files. 
+                  Secure, local extraction with no server uploads.
+               </HeroPill>
+
+               <div className="w-full max-w-xl mb-8 relative z-20">
                  <UploadArea onDrop={onDrop} mode="pdf-to-image" disabled={isGenerating} />
                </div>
                <RotatingText />
@@ -251,9 +268,9 @@ export const PdfToImagePage: React.FC = () => {
           }}
           className="flex-1 flex flex-col md:flex-row relative h-[100dvh] overflow-hidden"
         >
-          {/* Hidden Replace Input */}
-          <div {...getReplaceRoot({ className: 'hidden' })}>
-            <input {...getReplaceInput()} />
+          {/* Hidden Add Input */}
+          <div {...getAddRoot({ className: 'hidden' })}>
+            <input {...getAddInput()} />
           </div>
 
           <Sidebar 
@@ -272,23 +289,12 @@ export const PdfToImagePage: React.FC = () => {
                <Preview 
                  image={activeImage} 
                  config={config} 
-                 onReplace={() => {}} // Disabled for PDF pages
+                 onReplace={() => {}} // Replace is disabled for extracted pages
+                 onAddFiles={onDrop} // Dropping file here Appends
                  onDropRejected={() => {}}
                  onClose={handleReset}
+                 scale={scale}
                />
-               
-               {/* Floating Download Button (Correctly aligned with Close button) */}
-               <div className="absolute top-4 right-16 md:top-8 md:right-20 z-20">
-                  <motion.button 
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={buttonTap}
-                    onClick={handleDownloadCurrent}
-                    className="h-10 px-4 flex items-center gap-2 rounded-xl bg-white/90 dark:bg-charcoal-800/90 backdrop-blur border border-slate-200 dark:border-charcoal-600 shadow-sm text-charcoal-700 dark:text-slate-200 hover:bg-white dark:hover:bg-charcoal-700 hover:border-brand-mint/30 transition-colors group"
-                  >
-                      <Download className="w-4 h-4 group-hover:translate-y-0.5 transition-transform text-brand-mint" />
-                      <span className="text-sm font-bold text-brand-mint">Save Page</span>
-                  </motion.button>
-               </div>
             </div>
             
             {/* 2. FILMSTRIP (Fixed height wrapper) */}
@@ -313,56 +319,15 @@ export const PdfToImagePage: React.FC = () => {
               isGenerating={isGenerating} 
               progress={progress}
               mode="pdf-to-image"
-              onSecondaryAction={handleNewBatch}
-              secondaryLabel="New PDF"
-              secondaryIcon={<FolderInput className="w-4 h-4" />}
+              onSecondaryAction={handleAddPdf}
+              secondaryLabel="Add PDF"
+              secondaryIcon={<Plus className="w-4 h-4" />}
+              zoomLevel={scale}
+              onZoomIn={handleZoomIn}
+              onZoomOut={handleZoomOut}
+              onResetZoom={handleResetZoom}
             />
           </div>
-
-          {/* Confirmation Modal */}
-          <AnimatePresence>
-            {showConfirm && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ pointerEvents: 'auto' }}>
-                 {/* Backdrop */}
-                 <motion.div 
-                    initial={{ opacity: 0 }} 
-                    animate={{ opacity: 1 }} 
-                    exit={{ opacity: 0 }}
-                    onClick={() => setShowConfirm(false)}
-                    className="absolute inset-0 bg-charcoal-900/40 backdrop-blur-sm"
-                 />
-                 {/* Modal */}
-                 <motion.div 
-                   initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                   exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                   className="relative bg-white dark:bg-charcoal-900 rounded-2xl p-6 shadow-2xl max-w-sm w-full border border-slate-100 dark:border-charcoal-700 overflow-hidden"
-                 >
-                   <h3 className="text-lg font-heading font-bold text-charcoal-800 dark:text-white mb-2">Open New PDF?</h3>
-                   <p className="text-sm text-charcoal-500 dark:text-slate-400 mb-6 leading-relaxed">
-                     This will remove the current pages and start fresh. Any unsaved exports will be lost.
-                   </p>
-                   <div className="flex justify-end gap-3">
-                     <button 
-                       onClick={() => setShowConfirm(false)}
-                       className="px-4 py-2 text-sm font-medium text-charcoal-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-charcoal-800 rounded-lg transition-colors"
-                     >
-                       Cancel
-                     </button>
-                     <button 
-                       onClick={() => {
-                         setShowConfirm(false);
-                         openReplace();
-                       }}
-                       className="px-4 py-2 text-sm font-bold text-white bg-brand-purple hover:bg-brand-purpleDark rounded-lg shadow-lg shadow-brand-purple/20 transition-colors"
-                     >
-                       Yes, Open New
-                     </button>
-                   </div>
-                 </motion.div>
-              </div>
-            )}
-          </AnimatePresence>
         </motion.div>
       )}
     </AnimatePresence>

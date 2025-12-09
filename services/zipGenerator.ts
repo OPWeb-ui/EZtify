@@ -55,7 +55,7 @@ export const generateZip = async (
     );
 
     if (blob && folder) {
-      folder.file(`page-${i + 1}.${extension}`, blob);
+      folder.file(`page-${i + 1}-EZtify.${extension}`, blob);
     }
   }
 
@@ -74,7 +74,7 @@ export const generateZip = async (
   const link = document.createElement('a');
   link.href = url;
   const date = new Date().toISOString().slice(0, 10);
-  link.download = `EZtify-Images-${date}.zip`;
+  link.download = `EZtify-Images-${date}-EZtify.zip`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

@@ -14,25 +14,36 @@
             colors: {
               pastel: {
                 bg: '#FAF9F6', // Premium Off-White / Newspaper White
-                card: 'rgba(255, 255, 255, 0.8)',
+                card: 'rgba(255, 255, 255, 0.9)',
                 border: '#E2E8F0',
               },
+              // Neutral UI Scale (Dark Mode)
               charcoal: {
-                950: '#0F0E12', // Deep Gemini-like Dark Bg
-                900: '#1F1E24', // Deep Purple-Black
-                800: '#2D2B36', // Primary Text
-                600: '#52505E', // Secondary Text
-                500: '#716F82', // Muted
-                400: '#9CA3AF',
+                950: '#020617', // Main App Background
+                900: '#0F172A', // Card Background
+                800: '#1E293B', // Secondary BG / Soft Border / Secondary Button
+                700: '#334155', // Strong Border / Secondary Hover
+                600: '#475569', // Disabled Text
+                500: '#94A3B8', // Muted Text
+                400: '#CBD5E1', // Secondary Text
+                300: '#F8FAFC', // Primary Text (Mapped to 300 for ease)
+                200: '#F1F5F9',
+                100: '#F8FAFC',
               },
               brand: {
-                purple: '#8B5CF6', // Creative Purple (Primary)
-                purpleDark: '#7C3AED', // Hover state
-                purpleLight: '#DDD6FE', // Light tint
-                blue: '#60A5FA', // Soft Sky (Secondary) - Img to PDF
-                mint: '#34D399', // Mint (Accent) - PDF to Img
-                violet: '#C084FC', // Soft Violet - Compress
-                orange: '#FBA758', // Soft Orange - Merge
+                // Identity
+                purple: '#6D28D9', // Primary 500
+                purpleDark: '#5B21B6', // Primary 600
+                purpleLight: '#DDD6FE', // Primary 100
+                // Action (Money Button)
+                green: '#22C55E', // Primary Action
+                greenHover: '#16A34A', // Hover
+                greenDark: '#052E1A', // Success BG
+                // Tool Specific (Accents)
+                blue: '#60A5FA', 
+                mint: '#22C55E', // Mapped to green for consistency
+                violet: '#8B5CF6',
+                orange: '#F59E0B',
               }
             },
             fontFamily: {
@@ -84,26 +95,26 @@
         transition: background-color 0.3s ease, color 0.3s ease;
         /* Very subtle paper noise */
         background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
-        color: #2D2B36;
+        color: #1E293B;
         font-family: 'Inter', sans-serif;
         overflow-x: hidden;
       }
       .dark body {
-        background-color: #0F0E12;
-        color: #E2E8F0;
-        background-image: none; /* Cleaner look in dark mode */
+        background-color: #020617; /* Background 900 */
+        color: #F8FAFC; /* Text Primary */
+        background-image: none;
       }
       .glass-panel {
         background: rgba(255, 255, 255, 0.92);
         backdrop-filter: blur(24px);
         -webkit-backdrop-filter: blur(24px);
-        border: 1px solid rgba(139, 92, 246, 0.1); /* Subtle purple tint on border */
-        box-shadow: 0 8px 32px rgba(139, 92, 246, 0.05);
+        border: 1px solid rgba(109, 40, 217, 0.1);
+        box-shadow: 0 8px 32px rgba(109, 40, 217, 0.05);
       }
       .dark .glass-panel {
-        background: rgba(31, 30, 36, 0.9);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        background: rgba(15, 23, 42, 0.9); /* Card BG 900 */
+        border: 1px solid #1E293B; /* Border Soft 800 */
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
       }
       .custom-scrollbar::-webkit-scrollbar {
         width: 6px;
@@ -116,18 +127,18 @@
         background: rgba(255,255,255,0.02);
       }
       .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: rgba(139, 92, 246, 0.2); /* Brand Purple thumb */
+        background: rgba(109, 40, 217, 0.2); /* Brand Purple */
         border-radius: 10px;
       }
       .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: rgba(139, 92, 246, 0.4);
+        background: rgba(109, 40, 217, 0.4);
       }
       ::selection {
-        background-color: rgba(139, 92, 246, 0.2);
+        background-color: rgba(109, 40, 217, 0.2);
         color: #5B21B6;
       }
       .dark ::selection {
-        background-color: rgba(139, 92, 246, 0.4);
+        background-color: rgba(109, 40, 217, 0.4);
         color: #FFFFFF;
       }
     </style>

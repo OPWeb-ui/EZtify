@@ -24,7 +24,9 @@ const ToastItem: React.FC<ToastProps> = ({ toast, onDismiss }) => {
       animate={{ 
         opacity: 1, 
         y: 0, 
-        scale: 1 
+        scale: 1,
+        // Strong shake animation for errors
+        x: toast.type === 'error' ? [0, -10, 10, -10, 10, 0] : 0
       }}
       exit={{ 
         opacity: 0, 
@@ -32,7 +34,12 @@ const ToastItem: React.FC<ToastProps> = ({ toast, onDismiss }) => {
         transition: { duration: 0.2 } 
       }}
       whileHover={{ scale: 1.02 }}
-      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+      transition={{ 
+        type: "spring", 
+        stiffness: 400, 
+        damping: 25,
+        x: { duration: 0.4, ease: "easeInOut" } // Specific timing for shake
+      }}
       className="pointer-events-auto w-full max-w-md mx-auto mb-3 px-4 md:px-0"
     >
       <div className="relative overflow-hidden rounded-2xl bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-xl border border-slate-200 dark:border-charcoal-700 shadow-2xl shadow-brand-purple/10 p-4 flex items-start gap-4 group">

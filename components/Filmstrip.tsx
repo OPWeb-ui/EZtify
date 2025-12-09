@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -17,7 +17,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { UploadedImage } from '../types';
-import { X, RotateCw, GripHorizontal, Check } from 'lucide-react';
+import { X, RotateCw, GripHorizontal, Check, Plus, Minus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { buttonTap } from '../utils/animations';
 
@@ -33,6 +33,14 @@ interface FilmstripProps {
   className?: string;
 }
 
+type ThumbnailSize = 'sm' | 'md' | 'lg';
+
+const SIZES: Record<ThumbnailSize, { width: string; height: string }> = {
+  sm: { width: 'w-16', height: 'h-20' },
+  md: { width: 'w-24', height: 'h-32' },
+  lg: { width: 'w-32', height: 'h-44' },
+};
+
 interface SortableItemProps {
   image: UploadedImage;
   isActive: boolean;
@@ -41,6 +49,7 @@ interface SortableItemProps {
   onRemove: (e: React.MouseEvent) => void;
   onRotate: (e: React.MouseEvent) => void;
   isMobile: boolean;
+  sizeClasses: { width: string; height: string };
 }
 
 const SortableItem: React.FC<SortableItemProps> = ({ 
@@ -50,7 +59,8 @@ const SortableItem: React.FC<SortableItemProps> = ({
   onSelect, 
   onRemove, 
   onRotate, 
-  isMobile 
+  isMobile,
+  sizeClasses
 }) => {
   const {
     attributes,
@@ -66,9 +76,6 @@ const SortableItem: React.FC<SortableItemProps> = ({
     transition,
     zIndex: isDragging ? 50 : 'auto',
   };
-
-  const width = isMobile ? 'w-16' : 'w-20';
-  const height = isMobile ? 'h-20' : 'h-28';
 
   // Standard Action Button Class for Thumbnails
   const actionBtnClass = `
@@ -89,7 +96,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
       onClick={onSelect}
       className={`
         relative group flex-shrink-0 cursor-pointer select-none
-        ${width} ${height} rounded-xl overflow-hidden border-2 transition-all duration-200
+        ${sizeClasses.width} ${sizeClasses.height} rounded-xl overflow-hidden border-2 transition-all duration-200
         ${isActive 
           ? 'border-brand-purple ring-4 ring-brand-purple/10 scale-105 shadow-xl shadow-brand-purple/10 z-10' 
           : isSelected
@@ -168,6 +175,22 @@ export const Filmstrip: React.FC<FilmstripProps> = ({
   isMobile,
   className = ''
 }) => {
+  const [size, setSize] = useState<ThumbnailSize>(isMobile ? 'sm' : 'md');
+
+  useEffect(() => {
+    setSize(isMobile ? 'sm' : 'md');
+  }, [isMobile]);
+
+  const handleZoomIn = () => {
+    if (size === 'sm') setSize('md');
+    else if (size === 'md') setSize('lg');
+  };
+
+  const handleZoomOut = () => {
+    if (size === 'lg') setSize('md');
+    else if (size === 'md') setSize('sm');
+  };
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -189,8 +212,38 @@ export const Filmstrip: React.FC<FilmstripProps> = ({
     }
   };
 
+  const currentSizeClasses = SIZES[size];
+
   return (
-    <div className={`w-full flex items-center justify-center ${className}`}>
+    <div className={`w-full relative group/filmstrip flex items-center justify-center ${className}`}>
+      
+      {/* Size Controls - Floating Top Right */}
+      <div className="absolute top-1 right-6 z-40 flex items-center gap-1 bg-white/80 dark:bg-charcoal-800/80 backdrop-blur-md rounded-lg border border-slate-200 dark:border-charcoal-600 p-1 shadow-sm opacity-0 group-hover/filmstrip:opacity-100 transition-opacity duration-200">
+         <motion.button 
+            whileTap={{ scale: 0.9 }}
+            onClick={handleZoomOut} 
+            disabled={size === 'sm'} 
+            className="p-1 hover:bg-slate-100 dark:hover:bg-charcoal-700 text-charcoal-600 dark:text-slate-300 rounded disabled:opacity-30 disabled:hover:bg-transparent"
+            title="Smaller Thumbnails"
+          >
+           <Minus size={14}/>
+         </motion.button>
+         
+         <span className="text-[10px] font-bold text-charcoal-500 dark:text-slate-400 w-4 text-center select-none">
+            {size === 'sm' ? 'S' : size === 'md' ? 'M' : 'L'}
+         </span>
+         
+         <motion.button 
+            whileTap={{ scale: 0.9 }}
+            onClick={handleZoomIn} 
+            disabled={size === 'lg'} 
+            className="p-1 hover:bg-slate-100 dark:hover:bg-charcoal-700 text-charcoal-600 dark:text-slate-300 rounded disabled:opacity-30 disabled:hover:bg-transparent"
+            title="Larger Thumbnails"
+          >
+           <Plus size={14}/>
+         </motion.button>
+      </div>
+
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -212,6 +265,7 @@ export const Filmstrip: React.FC<FilmstripProps> = ({
                   onRemove={(e) => { e.stopPropagation(); onRemove(img.id); }}
                   onRotate={(e) => { e.stopPropagation(); onRotate(img.id); }}
                   isMobile={isMobile}
+                  sizeClasses={currentSizeClasses}
                 />
               ))}
             </AnimatePresence>

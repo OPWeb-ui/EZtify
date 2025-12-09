@@ -6,11 +6,12 @@ import { FAQ } from '../components/FAQ';
 import { AdSlot } from '../components/AdSlot';
 import { RotatingText } from '../components/RotatingText';
 import { MergeFileList } from '../components/MergeFileList';
+import { HeroPill } from '../components/HeroPill';
 import { PdfFile } from '../types';
 import { mergePdfs } from '../services/pdfMerger';
 import { nanoid } from 'nanoid';
 import { Plus, CheckCircle, Download, RefreshCcw, X } from 'lucide-react';
-import { useDropzone } from 'react-dropzone';
+import { useDropzone, FileRejection } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import { buttonTap } from '../utils/animations';
 
@@ -22,8 +23,19 @@ export const MergePdfPage: React.FC = () => {
   const [progress, setProgress] = useState(0);
   const [shouldShake, setShouldShake] = useState(false);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const onDrop = useCallback((acceptedFiles: File[], fileRejections: FileRejection[]) => {
+    if (fileRejections.length > 0) {
+      const isImage = fileRejections.some(r => r.file.type.startsWith('image/'));
+      if (isImage) {
+         addToast("Incorrect File Type", "Image detected. Please upload PDF files.", "error");
+      } else {
+         addToast("Invalid File", "Please upload only PDF files.", "error");
+      }
+      return;
+    }
+
     if (acceptedFiles.length === 0) return;
+    
     const newFiles = acceptedFiles
       .filter(f => f.type === 'application/pdf')
       .map(file => ({ id: nanoid(), file }));
@@ -73,7 +85,7 @@ export const MergePdfPage: React.FC = () => {
     const url = URL.createObjectURL(result.blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `EZtify-Merged.pdf`;
+    link.download = `EZtify-Merged-EZtify.pdf`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -96,7 +108,13 @@ export const MergePdfPage: React.FC = () => {
                <h2 className="text-3xl md:text-6xl font-heading font-bold text-charcoal-900 dark:text-white mb-4 leading-tight tracking-tight">
                  Merge Multiple PDFs <br/> Into One File in One Click
                </h2>
-               <div className="w-full max-w-xl my-6 md:my-8 relative z-20">
+               
+               <HeroPill>
+                  <span className="font-bold text-brand-orange">Merge PDF</span> combines multiple documents into one organized file. 
+                  Rearrange pages easily and merge instantly without sending files to the cloud.
+               </HeroPill>
+
+               <div className="w-full max-w-xl mb-8 relative z-20">
                  <UploadArea onDrop={onDrop} mode="merge-pdf" disabled={isGenerating} />
                </div>
                <RotatingText />
@@ -139,79 +157,93 @@ export const MergePdfPage: React.FC = () => {
           </motion.button>
 
           <div className="w-full max-w-lg mb-20 mt-8">
-            {!result ? (
-              <>
-                 <MergeFileList 
-                   files={files} 
-                   onReorder={setFiles} 
-                   onRemove={(id) => setFiles(p => p.filter(x => x.id !== id))} 
-                 />
-                 
-                 <div className="mb-8">
-                    <motion.div 
-                      {...getRootProps()} 
-                      whileHover={{ scale: 1.02, borderColor: '#8B5CF6' }}
-                      whileTap={buttonTap}
-                      className="border-2 border-dashed border-slate-200 dark:border-charcoal-700 rounded-xl p-4 text-center hover:bg-white dark:hover:bg-charcoal-800 cursor-pointer transition-colors"
-                    >
-                       <input {...getInputProps()} />
-                       <span className="text-sm font-bold text-brand-purple flex items-center justify-center gap-2">
-                          <Plus size={16} /> Add more PDFs
-                       </span>
-                    </motion.div>
-                 </div>
-                 
-                 <AdSlot zone="sidebar" className="!my-4 !min-h-[100px]" />
-
-                 <div className="sticky bottom-4 z-30">
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.96 }}
-                      animate={shouldShake ? { x: [0, -10, 10, -10, 10, 0], backgroundColor: "#F43F5E" } : { x: 0, backgroundColor: "#8B5CF6" }}
-                      transition={{ duration: 0.4 }}
-                      onClick={handleMerge}
-                      disabled={isGenerating}
-                      className="w-full py-4 rounded-xl text-white font-bold text-lg shadow-lg shadow-brand-purple/30 hover:shadow-brand-purple/50 transition-all disabled:opacity-50 disabled:cursor-wait relative overflow-hidden"
-                    >
-                       {isGenerating ? (
-                          <div className="flex items-center justify-center gap-2">
-                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            <span>Merging {progress > 0 && `${Math.round(progress)}%`}...</span>
-                          </div>
-                       ) : "Merge PDFs Now"}
-                    </motion.button>
-                 </div>
-              </>
-            ) : (
-              <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500 mt-12">
-                   <div className="bg-brand-mint/10 border border-brand-mint/20 rounded-2xl p-6 text-center">
-                      <div className="text-brand-mint mb-2 flex justify-center"><CheckCircle size={48} /></div>
-                      <h3 className="text-xl font-bold text-charcoal-800 dark:text-white">Merge Complete!</h3>
-                      <p className="text-charcoal-500 dark:text-slate-400 mt-2 text-sm">Successfully merged {result.count} files.</p>
-                      <div className="text-brand-purple font-bold text-lg mt-1">{(result.size / (1024 * 1024)).toFixed(2)} MB</div>
-                   </div>
-
-                   <motion.button
-                     whileHover={{ scale: 1.02 }}
-                     whileTap={{ scale: 0.96 }}
-                     onClick={downloadResult}
-                     className="w-full py-4 rounded-xl bg-brand-purple text-white font-bold text-lg shadow-lg shadow-brand-purple/30 hover:shadow-brand-purple/50 transition-all flex items-center justify-center gap-2"
-                   >
-                      <Download size={20} /> Download Merged PDF
-                   </motion.button>
-
-                   <motion.button
-                     whileHover={{ scale: 1.02 }}
-                     whileTap={{ scale: 0.98 }}
-                     onClick={() => { setFiles([]); setResult(null); }}
-                     className="w-full py-3 text-charcoal-500 dark:text-slate-400 hover:text-brand-purple font-medium text-sm flex items-center justify-center gap-2"
-                   >
-                      <RefreshCcw size={14} /> Merge more files
-                   </motion.button>
+            <AnimatePresence mode="wait">
+              {!result ? (
+                <motion.div
+                  key="input"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                  transition={{ duration: 0.3 }}
+                >
+                   <MergeFileList 
+                     files={files} 
+                     onReorder={setFiles} 
+                     onRemove={(id) => setFiles(p => p.filter(x => x.id !== id))} 
+                   />
                    
-                   <AdSlot zone="sidebar" />
-              </div>
-            )}
+                   <div className="mb-8">
+                      <motion.div 
+                        {...getRootProps()} 
+                        whileHover={{ scale: 1.02, borderColor: '#8B5CF6' }}
+                        whileTap={buttonTap}
+                        className="border-2 border-dashed border-slate-200 dark:border-charcoal-700 rounded-xl p-4 text-center hover:bg-white dark:hover:bg-charcoal-800 cursor-pointer transition-colors"
+                      >
+                         <input {...getInputProps()} />
+                         <span className="text-sm font-bold text-brand-purple flex items-center justify-center gap-2">
+                            <Plus size={16} /> Add more PDFs
+                         </span>
+                      </motion.div>
+                   </div>
+                   
+                   <AdSlot zone="sidebar" className="!my-4 !min-h-[100px]" />
+
+                   <div className="sticky bottom-4 z-30">
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.96 }}
+                        animate={shouldShake ? { x: [0, -10, 10, -10, 10, 0], backgroundColor: "#F43F5E" } : { x: 0, backgroundColor: "#8B5CF6" }}
+                        transition={{ duration: 0.4 }}
+                        onClick={handleMerge}
+                        disabled={isGenerating}
+                        className="w-full py-4 rounded-xl text-white font-bold text-lg shadow-lg shadow-brand-purple/30 hover:shadow-brand-purple/50 transition-all disabled:opacity-50 disabled:cursor-wait relative overflow-hidden"
+                      >
+                         {isGenerating ? (
+                            <div className="flex items-center justify-center gap-2">
+                              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                              <span>Merging {progress > 0 && `${Math.round(progress)}%`}...</span>
+                            </div>
+                         ) : "Merge PDFs Now"}
+                      </motion.button>
+                   </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="result"
+                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                  className="space-y-6 mt-12"
+                >
+                     <div className="bg-brand-mint/10 border border-brand-mint/20 rounded-2xl p-6 text-center">
+                        <div className="text-brand-mint mb-2 flex justify-center"><CheckCircle size={48} /></div>
+                        <h3 className="text-xl font-bold text-charcoal-800 dark:text-white">Merge Complete!</h3>
+                        <p className="text-charcoal-500 dark:text-slate-400 mt-2 text-sm">Successfully merged {result.count} files.</p>
+                        <div className="text-brand-purple font-bold text-lg mt-1">{(result.size / (1024 * 1024)).toFixed(2)} MB</div>
+                     </div>
+
+                     <motion.button
+                       whileHover={{ scale: 1.02 }}
+                       whileTap={{ scale: 0.96 }}
+                       onClick={downloadResult}
+                       className="w-full py-4 rounded-xl bg-brand-purple text-white font-bold text-lg shadow-lg shadow-brand-purple/30 hover:shadow-brand-purple/50 transition-all flex items-center justify-center gap-2"
+                     >
+                        <Download size={20} /> Download Merged PDF
+                     </motion.button>
+
+                     <motion.button
+                       whileHover={{ scale: 1.02 }}
+                       whileTap={{ scale: 0.98 }}
+                       onClick={() => { setFiles([]); setResult(null); }}
+                       className="w-full py-3 text-charcoal-500 dark:text-slate-400 hover:text-brand-purple font-medium text-sm flex items-center justify-center gap-2"
+                     >
+                        <RefreshCcw size={14} /> Merge more files
+                     </motion.button>
+                     
+                     <AdSlot zone="sidebar" />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </motion.div>
       )}

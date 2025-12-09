@@ -1,4 +1,4 @@
-export type AppMode = 'image-to-pdf' | 'pdf-to-image' | 'compress-pdf' | 'merge-pdf' | 'split-pdf';
+export type AppMode = 'home' | 'image-to-pdf' | 'pdf-to-image' | 'compress-pdf' | 'merge-pdf' | 'split-pdf' | 'zip-files';
 
 export interface UploadedImage {
   id: string;
@@ -68,3 +68,10 @@ export interface PdfPage {
   previewUrl: string;
   selected: boolean;
 }
+
+export interface ZipFile {
+  id: string;
+  file: File;
+}
+
+export type ZipCompressionLevel = 'STORE' | 'DEFLATE';

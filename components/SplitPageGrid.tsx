@@ -18,7 +18,8 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { motion } from 'framer-motion';
 import { PdfPage } from '../types';
-import { Check, Trash2, ArrowLeftRight, CheckSquare, XSquare } from 'lucide-react';
+import { Check, Trash2, ArrowLeftRight, SquareCheck, SquareX } from 'lucide-react';
+import { buttonTap } from '../utils/animations';
 
 interface SplitPageGridProps {
   pages: PdfPage[];
@@ -185,17 +186,19 @@ export const SplitPageGrid: React.FC<SplitPageGridProps> = ({
         </div>
         
         <div className="flex flex-wrap gap-2 text-xs md:text-sm font-medium">
-          <button 
+          <motion.button 
             onClick={onSelectAll}
+            whileTap={buttonTap}
             className="flex items-center gap-1.5 text-brand-purple hover:text-brand-purpleDark hover:bg-brand-purple/5 px-3 py-1.5 rounded-lg transition-colors"
             title="Select All"
           >
-            <CheckSquare size={14} /> All
-          </button>
+            <SquareCheck size={14} /> All
+          </motion.button>
           
-          <button 
+          <motion.button 
             onClick={onDeselectAll}
             disabled={selectedCount === 0}
+            whileTap={buttonTap}
             className={`
               flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors
               ${selectedCount > 0 
@@ -204,25 +207,27 @@ export const SplitPageGrid: React.FC<SplitPageGridProps> = ({
             `}
             title="Deselect All"
           >
-            <XSquare size={14} /> None
-          </button>
+            <SquareX size={14} /> None
+          </motion.button>
 
-          <button 
+          <motion.button 
             onClick={onInvertSelection}
+            whileTap={buttonTap}
             className="flex items-center gap-1.5 text-charcoal-500 hover:text-charcoal-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-charcoal-800 px-3 py-1.5 rounded-lg transition-colors"
             title="Invert Selection"
           >
             <ArrowLeftRight size={14} /> Invert
-          </button>
+          </motion.button>
 
           {selectedCount > 0 && (
-             <button 
+             <motion.button 
                onClick={onRemoveSelected}
+               whileTap={buttonTap}
                className="flex items-center gap-1.5 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 px-3 py-1.5 rounded-lg transition-colors ml-2 border border-rose-100 dark:border-rose-900/30"
                title="Remove Selected Pages"
              >
                <Trash2 size={14} /> Remove Selected
-             </button>
+             </motion.button>
           )}
         </div>
       </div>

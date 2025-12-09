@@ -20,6 +20,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { PdfFile } from '../types';
 import { FileText, GripVertical, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { buttonTap } from '../utils/animations';
 
 interface MergeFileListProps {
   files: PdfFile[];
@@ -87,16 +88,17 @@ const SortableItem: React.FC<{ file: PdfFile; onRemove: () => void }> = ({ file,
         <p className="text-xs text-charcoal-500 dark:text-slate-500 font-mono">{(file.file.size / (1024 * 1024)).toFixed(2)} MB</p>
       </div>
 
-      <button
+      <motion.button
         onClick={(e) => {
           e.stopPropagation();
           onRemove();
         }}
+        whileTap={buttonTap}
         onPointerDown={(e) => e.stopPropagation()}
         className="p-2 text-charcoal-400 dark:text-slate-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-full transition-colors cursor-pointer"
       >
         <X size={18} />
-      </button>
+      </motion.button>
     </motion.div>
   );
 };

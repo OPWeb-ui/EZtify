@@ -15,12 +15,16 @@ export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled }
     onDrop,
     accept: mode === 'image-to-pdf' 
       ? { 'image/*': ['.jpeg', '.jpg', '.png', '.webp', '.gif', '.bmp'] }
-      : { 'application/pdf': ['.pdf'] },
+      : mode === 'zip-files'
+        ? undefined // Accept all files
+        : { 'application/pdf': ['.pdf'] },
     disabled,
-    multiple: mode === 'image-to-pdf' || mode === 'merge-pdf',
+    multiple: mode === 'image-to-pdf' || mode === 'merge-pdf' || mode === 'zip-files',
     maxSize: mode === 'image-to-pdf' ? 25 * 1024 * 1024 : undefined // 25MB limit for images
   });
 
+  // Theme colors for icons are kept for visual differentiation, 
+  // but borders and active states will use Brand Purple for consistency.
   const getThemeColor = () => {
     switch(mode) {
       case 'image-to-pdf': return 'text-brand-blue';
@@ -28,6 +32,7 @@ export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled }
       case 'compress-pdf': return 'text-brand-violet';
       case 'merge-pdf': return 'text-brand-orange';
       case 'split-pdf': return 'text-brand-mint';
+      case 'zip-files': return 'text-amber-500';
       default: return 'text-brand-purple';
     }
   };
@@ -39,6 +44,7 @@ export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled }
       case 'compress-pdf': return 'from-brand-purple via-brand-violet to-brand-violet';
       case 'merge-pdf': return 'from-brand-purple via-brand-orange to-brand-orange';
       case 'split-pdf': return 'from-brand-purple via-brand-mint to-brand-blue';
+      case 'zip-files': return 'from-amber-500 via-orange-500 to-amber-500';
       default: return 'from-brand-purple via-brand-blue to-brand-mint';
     }
   };
@@ -100,7 +106,7 @@ export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled }
       return (
         <motion.svg {...svgProps}>
           {/* Main Doc (Center) */}
-          <rect x="8" y="3" width="8" height="18" rx="1" className="text-charcoal-400 dark:text-slate-500" strokeWidth="2" />
+          <rect x="8" y="3" width="8" height="18" rx="1" className="text-charcoal-400 dark:text-charcoal-500" strokeWidth="2" />
           
           {/* Left Page Slide & Rotate */}
           <motion.rect 
@@ -271,6 +277,64 @@ export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled }
        );
     }
 
+    if (mode === 'zip-files') {
+      // ZIP FOLDER ANIMATION
+      return (
+        <motion.svg {...svgProps}>
+           <defs>
+             <clipPath id="folderClip">
+               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+             </clipPath>
+           </defs>
+           
+           {/* Back Folder */}
+           <motion.path
+             d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+             className="text-amber-500 opacity-30"
+             fill="currentColor"
+           />
+
+           {/* Files dropping in */}
+           <motion.rect
+              x="8" y="-10" width="8" height="10" rx="1"
+              className="text-white fill-current opacity-80"
+              initial={{ y: -10, opacity: 0 }}
+              animate={{ y: 8, opacity: 1 }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeIn" }}
+              clipPath="url(#folderClip)"
+           />
+           <motion.rect
+              x="10" y="-15" width="8" height="10" rx="1"
+              className="text-white fill-current opacity-60"
+              initial={{ y: -15, opacity: 0 }}
+              animate={{ y: 8, opacity: 1 }}
+              transition={{ duration: 2, repeat: Infinity, delay: 0.5, ease: "easeIn" }}
+              clipPath="url(#folderClip)"
+           />
+
+           {/* Front Folder Flap (Zipper) */}
+           <motion.path
+             d="M2 19V9h20v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z"
+             className="text-amber-500"
+             fill="currentColor"
+             fillOpacity="0.2"
+             strokeWidth="2"
+           />
+           
+           {/* Zipper Teeth Animation */}
+           <motion.path
+              d="M12 9v12"
+              stroke="white"
+              strokeWidth="2"
+              strokeDasharray="2 2"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+           />
+        </motion.svg>
+      );
+    }
+
     // Default Fallback
     return <Plus className="w-16 h-16 text-brand-purple" />;
   };
@@ -281,6 +345,7 @@ export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled }
     if (mode === 'compress-pdf') return "Drop PDF here";
     if (mode === 'merge-pdf') return "Drop your PDFs here";
     if (mode === 'split-pdf') return "Drop PDF here";
+    if (mode === 'zip-files') return "Drop files here";
     return "Drop PDF here";
   };
 
@@ -289,6 +354,7 @@ export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled }
     if (mode === 'compress-pdf') return "Reduce file size instantly";
     if (mode === 'merge-pdf') return "Combine multiple files into one";
     if (mode === 'split-pdf') return "Extract pages or split into files";
+    if (mode === 'zip-files') return "Create a ZIP archive instantly";
     return "Convert any PDF into high-quality images";
   };
 
@@ -317,9 +383,9 @@ export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled }
          <div className={`absolute inset-0 bg-gradient-to-r ${getGradientClass()} opacity-20 blur-md`} />
       </div>
       
-      {/* Animated Dashed Border (SVG) */}
+      {/* Animated Dashed Border (SVG) - Color follows Brand Purple when active/hover */}
       <motion.svg 
-        className={`absolute inset-0 w-full h-full pointer-events-none transition-colors duration-300 ${isDragActive ? getThemeColor() : 'text-charcoal-400/20 dark:text-slate-600/30 group-hover:text-charcoal-400/40'}`}
+        className={`absolute inset-0 w-full h-full pointer-events-none transition-colors duration-300 ${isDragActive ? 'text-brand-purple' : 'text-charcoal-500/20 dark:text-charcoal-600/30 group-hover:text-brand-purple/40'}`}
       >
         <motion.rect
           width="100%"
@@ -375,15 +441,15 @@ export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled }
         </motion.div>
         
         <div>
-          <span className="block font-heading font-bold text-charcoal-800 dark:text-slate-200 text-xl md:text-3xl mb-2 md:mb-3 tracking-tight">
+          <span className="block font-heading font-bold text-charcoal-800 dark:text-white text-xl md:text-3xl mb-2 md:mb-3 tracking-tight">
             {getHeadline()}
           </span>
-          <p className="text-charcoal-500 dark:text-slate-400 text-xs md:text-base font-medium max-w-[260px] mx-auto leading-relaxed">
+          <p className="text-charcoal-500 dark:text-charcoal-400 text-xs md:text-base font-medium max-w-[260px] mx-auto leading-relaxed">
              {getSubtext()}
           </p>
         </div>
 
-        {/* Action Button */}
+        {/* Action Button - Brand Purple */}
         <motion.div 
           className="relative overflow-hidden mt-1 px-6 py-2.5 md:px-8 md:py-3 bg-brand-purple text-white rounded-full font-bold shadow-lg shadow-brand-purple/30 group-hover:shadow-brand-purple/50 flex items-center gap-2"
           whileHover={{ scale: 1.05 }}

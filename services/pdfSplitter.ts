@@ -134,7 +134,7 @@ export const splitPagesToZip = async (
     const blob = new Blob([pdfBytes], { type: 'application/pdf' });
     
     if (folder) {
-      folder.file(`Page-${pageIndex + 1}.pdf`, blob);
+      folder.file(`Page-${pageIndex + 1}-EZtify.pdf`, blob);
     }
 
     if (onProgress) {

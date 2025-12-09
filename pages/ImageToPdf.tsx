@@ -9,10 +9,11 @@ import { Preview } from '../components/Preview';
 import { StickyBar } from '../components/StickyBar';
 import { AdSlot } from '../components/AdSlot';
 import { RotatingText } from '../components/RotatingText';
+import { HeroPill } from '../components/HeroPill';
 import { UploadedImage, PdfConfig, ExportConfig } from '../types';
 import { generatePDF } from '../services/pdfGenerator';
 import { nanoid } from 'nanoid';
-import { Plus, X, FolderInput } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useDropzone, FileRejection } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -25,7 +26,7 @@ export const ImageToPdfPage: React.FC = () => {
   const [progress, setProgress] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [showConfirm, setShowConfirm] = useState(false);
+  const [scale, setScale] = useState(1);
 
   // Config State
   const [config, setConfig] = useState<PdfConfig>({
@@ -53,6 +54,15 @@ export const ImageToPdfPage: React.FC = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Reset scale when active image changes
+  useEffect(() => {
+    setScale(1);
+  }, [activeImageId]);
+
+  const handleZoomIn = () => setScale(prev => Math.min(prev + 0.25, 4));
+  const handleZoomOut = () => setScale(prev => Math.max(prev - 0.25, 0.5));
+  const handleResetZoom = () => setScale(1);
 
   // Shared file processing logic
   const processFiles = useCallback(async (files: File[], maxSlots: number) => {
@@ -109,7 +119,13 @@ export const ImageToPdfPage: React.FC = () => {
   // Handler for Appending Images (Standard Drop)
   const onDrop = useCallback(async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
     if (fileRejections.length > 0) {
-      addToast("Invalid File", "Please upload supported image formats only.", "error");
+      const isPdf = fileRejections.some(r => r.file.type === 'application/pdf');
+      if (isPdf) {
+         addToast("Incorrect File Type", "PDF detected. Please upload Images (JPG, PNG).", "error");
+      } else {
+         addToast("Invalid File", "Please upload supported image formats only.", "error");
+      }
+      return; // Block processing if rejection
     }
     
     // STRICT LIMIT CHECK
@@ -124,51 +140,29 @@ export const ImageToPdfPage: React.FC = () => {
     if (validImages.length > 0) {
       setImages(prev => {
         const updated = [...prev, ...validImages];
+        // Select the first new image
         const newId = validImages[0].id;
-        if (!activeImageId && updated.length > 0) {
-          setActiveImageId(newId);
-          setSelectedImageIds(new Set([newId]));
+        if (updated.length > 0) {
+           // If we just added our first images, or if user wants to see what they added, switch to it.
+           // Usually users want to see the new thing they added.
+           setActiveImageId(newId);
+           setSelectedImageIds(new Set([newId]));
         }
         return updated;
       });
+      // Optionally toast count
+      if (images.length > 0) {
+        addToast("Added", `${validImages.length} images added.`, "warning");
+      }
     }
-  }, [images.length, activeImageId, addToast, processFiles]);
+  }, [images.length, addToast, processFiles]);
 
-  // Handler for Replacing Images (New Batch)
-  const onDropReplace = useCallback(async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
-    if (fileRejections.length > 0) {
-      addToast("Invalid File", "Please upload supported image formats only.", "error");
-    }
-    
-    if (acceptedFiles.length === 0) return;
-
-    // Reset logic implies we can use full capacity
-    const validImages = await processFiles(acceptedFiles, MAX_IMAGE_COUNT);
-    
-    if (validImages.length > 0) {
-      setImages(validImages);
-      const newId = validImages[0].id;
-      setActiveImageId(newId);
-      setSelectedImageIds(new Set([newId]));
-      addToast("New Batch", "Images successfully replaced.", "warning");
-    }
-  }, [addToast, processFiles]);
-
-  // Main Dropzone (Append) - Programmatic usage for Add Page Button
-  const { open: openAddImage } = useDropzone({ 
+  // New Batch Dropzone (Append)
+  const { getRootProps: getAddRoot, getInputProps: getAddInput, open: openAdd } = useDropzone({
     onDrop,
-    accept: { 'image/*': ['.jpeg', '.jpg', '.png', '.webp'] },
+    accept: { 'image/*': ['.jpeg', '.jpg', '.png', '.webp', '.gif', '.bmp'] },
     maxSize: MAX_FILE_SIZE_BYTES,
-    noClick: true,
-    noKeyboard: true,
-    multiple: true
-  });
-
-  // New Batch Dropzone (Replace) - Programmatically triggered
-  const { getRootProps: getReplaceRoot, getInputProps: getReplaceInput, open: openReplace } = useDropzone({
-    onDrop: onDropReplace,
-    accept: { 'image/*': ['.jpeg', '.jpg', '.png', '.webp'] },
-    maxSize: MAX_FILE_SIZE_BYTES,
+    multiple: true,
     noClick: true,
     noKeyboard: true
   });
@@ -260,8 +254,13 @@ export const ImageToPdfPage: React.FC = () => {
     }
   };
   
+  // Handler for replacing a SPECIFIC image (passed to Preview for direct single replace)
   const handleReplace = (file: File) => {
     if (!activeImageId) return;
+    if (!file.type.startsWith('image/')) {
+       addToast("Invalid File", "Please upload an image file.", "error");
+       return;
+    }
     const objectUrl = URL.createObjectURL(file);
     const img = new Image();
     img.src = objectUrl;
@@ -276,18 +275,15 @@ export const ImageToPdfPage: React.FC = () => {
     };
   };
 
-  const handleNewBatch = () => {
-    if (images.length > 0) {
-      setShowConfirm(true);
-    } else {
-      openReplace();
-    }
+  const handleAddImages = () => {
+    openAdd();
   };
 
   const handleReset = () => {
     setImages([]);
     setActiveImageId(null);
     setSelectedImageIds(new Set());
+    setScale(1);
   };
 
   const activeImage = images.find(img => img.id === activeImageId) || null;
@@ -311,7 +307,12 @@ export const ImageToPdfPage: React.FC = () => {
                  Turn Your Images Into <br/> a PDF in One Click
                </h2>
                
-               <div className="w-full max-w-xl my-6 md:my-8 relative z-20">
+               <HeroPill>
+                  <span className="font-bold text-brand-purple">Image to PDF</span> converts your photos into a single, high-quality document instantly. 
+                  100% private processing in your browser—no uploads, no waiting.
+               </HeroPill>
+
+               <div className="w-full max-w-xl mb-8 relative z-20">
                  <UploadArea onDrop={onDrop} mode="image-to-pdf" disabled={isGenerating} />
                </div>
 
@@ -340,9 +341,9 @@ export const ImageToPdfPage: React.FC = () => {
           }}
           className="flex-1 flex flex-col md:flex-row relative h-[100dvh] overflow-hidden"
         >
-          {/* Hidden Replace Input */}
-          <div {...getReplaceRoot({ className: 'hidden' })}>
-            <input {...getReplaceInput()} />
+          {/* Hidden Add Input */}
+          <div {...getAddRoot({ className: 'hidden' })}>
+            <input {...getAddInput()} />
           </div>
 
           {/* Sidebar */}
@@ -355,7 +356,7 @@ export const ImageToPdfPage: React.FC = () => {
             isOpen={isSidebarOpen} 
           />
 
-          {/* Main Area: Flex Column instead of overlapping absolutes to prevent clipping */}
+          {/* Main Area */}
           <div className="flex-1 flex flex-col relative h-full bg-slate-50/30 dark:bg-charcoal-900/30 overflow-hidden">
             
             {/* 1. PREVIEW AREA (Grow to fill available space) */}
@@ -363,11 +364,13 @@ export const ImageToPdfPage: React.FC = () => {
               <Preview 
                 image={activeImage} 
                 config={config} 
-                onReplace={handleReplace}
+                onReplace={handleReplace} // Keep this for single replace if needed
+                onAddFiles={onDrop} // Dropping files here Appends
                 onDropRejected={(msg) => addToast("Error", msg, "error")}
                 onClose={handleReset}
-                onAddImage={openAddImage}
+                scale={scale}
               />
+              {/* REMOVED DUPLICATE TOP-RIGHT ADD BUTTON */}
             </div>
 
             {/* 2. FILMSTRIP (Fixed height) */}
@@ -393,56 +396,17 @@ export const ImageToPdfPage: React.FC = () => {
               isGenerating={isGenerating} 
               progress={progress}
               mode="image-to-pdf"
-              onSecondaryAction={handleNewBatch}
-              secondaryLabel="New Batch"
-              secondaryIcon={<FolderInput className="w-4 h-4" />}
+              onSecondaryAction={handleAddImages}
+              secondaryLabel="Add Images"
+              secondaryIcon={<Plus className="w-4 h-4" />}
+              zoomLevel={scale}
+              onZoomIn={handleZoomIn}
+              onZoomOut={handleZoomOut}
+              onResetZoom={handleResetZoom}
             />
           </div>
         </motion.div>
       )}
-
-      {/* Confirmation Modal */}
-      <AnimatePresence>
-        {showConfirm && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ pointerEvents: 'auto' }}>
-             <motion.div 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
-                exit={{ opacity: 0 }}
-                onClick={() => setShowConfirm(false)}
-                className="absolute inset-0 bg-charcoal-900/40 backdrop-blur-sm"
-             />
-             <motion.div 
-               initial={{ opacity: 0, scale: 0.95, y: 10 }}
-               animate={{ opacity: 1, scale: 1, y: 0 }}
-               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-               className="relative bg-white dark:bg-charcoal-900 rounded-2xl p-6 shadow-2xl max-w-sm w-full border border-slate-100 dark:border-charcoal-700 overflow-hidden"
-             >
-               <h3 className="text-lg font-heading font-bold text-charcoal-800 dark:text-white mb-2">Start New Batch?</h3>
-               <p className="text-sm text-charcoal-500 dark:text-slate-400 mb-6 leading-relaxed">
-                 This will remove all current images and start fresh. Any unsaved PDFs will be lost.
-               </p>
-               <div className="flex justify-end gap-3">
-                 <button 
-                   onClick={() => setShowConfirm(false)}
-                   className="px-4 py-2 text-sm font-medium text-charcoal-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-charcoal-800 rounded-lg transition-colors"
-                 >
-                   Cancel
-                 </button>
-                 <button 
-                   onClick={() => {
-                     setShowConfirm(false);
-                     openReplace();
-                   }}
-                   className="px-4 py-2 text-sm font-bold text-white bg-brand-purple hover:bg-brand-purpleDark rounded-lg shadow-lg shadow-brand-purple/20 transition-colors"
-                 >
-                   Yes, Start New
-                 </button>
-               </div>
-             </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </AnimatePresence>
   );
 };

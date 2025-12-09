@@ -114,7 +114,7 @@ export const compressPDF = async (
       originalSize,
       newSize,
       blob: pdfBlob,
-      fileName: file.name.replace('.pdf', '') + '_compressed.pdf'
+      fileName: file.name.replace('.pdf', '') + '_compressed-EZtify.pdf'
     };
 
   } catch (error) {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Upload, Layers, Download, Settings, FileImage, MousePointerClick, Zap, Sliders, CheckCircle, GripVertical, Scissors, FileOutput } from 'lucide-react';
+import { Upload, Layers, Download, Settings, FileImage, MousePointerClick, Zap, Sliders, CheckCircle, GripVertical, Scissors, FileOutput, Archive, FilePlus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AppMode } from '../types';
 import { staggerContainer, fadeInUp, cardHover } from '../utils/animations';
@@ -17,6 +17,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ mode }) => {
       case 'compress-pdf': return 'text-brand-violet'; // Squeeze & Reduce Theme
       case 'merge-pdf': return 'text-brand-orange';    // Stack & Combine Theme
       case 'split-pdf': return 'text-brand-mint';      // Unfold & Separate Theme
+      case 'zip-files': return 'text-amber-500';       // Archive & Package Theme
       default: return 'text-brand-purple';
     }
   };
@@ -97,6 +98,25 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ mode }) => {
           icon: <FileOutput className={`w-6 h-6 ${activeColor}`} />,
           title: "3. Split",
           desc: "Download selected pages."
+        }
+      ];
+    }
+    if (mode === 'zip-files') {
+      return [
+        {
+          icon: <FilePlus className={`w-6 h-6 ${activeColor}`} />,
+          title: "1. Select",
+          desc: "Add files to archive."
+        },
+        {
+          icon: <Settings className={`w-6 h-6 ${activeColor}`} />,
+          title: "2. Configure",
+          desc: "Choose compression level."
+        },
+        {
+          icon: <Archive className={`w-6 h-6 ${activeColor}`} />,
+          title: "3. Zip It",
+          desc: "Download your ZIP archive."
         }
       ];
     }

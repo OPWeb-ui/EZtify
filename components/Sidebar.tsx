@@ -3,6 +3,7 @@ import { PdfConfig, AppMode, ExportConfig, ImageFormat } from '../types';
 import { Settings, FileText, Maximize, Scissors, Layout, Image as ImageIcon, ChevronDown, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { buttonTap } from '../utils/animations';
+import { Tooltip } from './Tooltip';
 
 interface SidebarProps {
   mode: AppMode;
@@ -51,7 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     flex items-center justify-center
     ${isActive 
       ? 'bg-brand-purple text-white border-brand-purple shadow-brand-purple/20' 
-      : 'bg-white dark:bg-charcoal-800 border-slate-200 dark:border-charcoal-700 text-charcoal-600 dark:text-slate-300 hover:border-brand-purple/30 hover:bg-slate-50 dark:hover:bg-charcoal-700'}
+      : 'bg-white dark:bg-charcoal-800 border-slate-200 dark:border-charcoal-700 text-charcoal-600 dark:text-charcoal-400 hover:border-brand-purple/30 hover:bg-slate-50 dark:hover:bg-charcoal-700'}
   `;
 
   const fitOptions = [
@@ -86,9 +87,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="space-y-7 md:space-y-8">
             {/* Page Size */}
             <div className="space-y-3 group">
-              <label className="flex items-center gap-2 text-xs md:text-sm font-bold text-charcoal-400 dark:text-slate-500 uppercase tracking-wide group-hover:text-brand-purple transition-colors">
-                <FileText className="w-4 h-4" /> Page Size
-              </label>
+              <Tooltip content="Choose standard paper sizes or auto-match image." side="top">
+                <label className="flex items-center gap-2 text-xs md:text-sm font-bold text-charcoal-500 dark:text-charcoal-500 uppercase tracking-wide group-hover:text-brand-purple transition-colors cursor-help w-fit">
+                  <FileText className="w-4 h-4" /> Page Size
+                </label>
+              </Tooltip>
               <div className="grid grid-cols-3 gap-2">
                 {['auto', 'a4', 'letter'].map((size) => (
                   <motion.button
@@ -106,7 +109,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             {/* Orientation */}
             <div className="space-y-3 group">
-              <label className="flex items-center gap-2 text-xs md:text-sm font-bold text-charcoal-400 dark:text-slate-500 uppercase tracking-wide group-hover:text-brand-purple transition-colors">
+              <label className="flex items-center gap-2 text-xs md:text-sm font-bold text-charcoal-500 dark:text-charcoal-500 uppercase tracking-wide group-hover:text-brand-purple transition-colors">
                 <Layout className="w-4 h-4" /> Orientation
               </label>
               <div className="flex gap-2">
@@ -131,16 +134,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             {/* Fit Mode (Custom Dropdown) */}
             <div className="space-y-3 group" ref={fitDropdownRef}>
-              <label className="flex items-center gap-2 text-xs md:text-sm font-bold text-charcoal-400 dark:text-slate-500 uppercase tracking-wide group-hover:text-brand-purple transition-colors">
-                <Maximize className="w-4 h-4" /> Fit Mode
-              </label>
+              <Tooltip content="Control how images fit on the page." side="top">
+                 <label className="flex items-center gap-2 text-xs md:text-sm font-bold text-charcoal-500 dark:text-charcoal-500 uppercase tracking-wide group-hover:text-brand-purple transition-colors cursor-help w-fit">
+                   <Maximize className="w-4 h-4" /> Fit Mode
+                 </label>
+              </Tooltip>
               <div className="relative">
                 <motion.button
                   onClick={() => setIsFitDropdownOpen(!isFitDropdownOpen)}
                   whileTap={{ scale: 0.98 }}
+                  whileHover={{ scale: 1.01 }}
                   className={`
                     w-full flex items-center justify-between
-                    bg-white dark:bg-charcoal-800 text-sm font-bold text-charcoal-700 dark:text-slate-200 
+                    bg-white dark:bg-charcoal-800 text-sm font-bold text-charcoal-700 dark:text-charcoal-300 
                     rounded-xl px-4 py-3 border border-slate-200 dark:border-charcoal-700 
                     focus:border-brand-purple focus:ring-4 focus:ring-brand-purple/10 outline-none 
                     transition-all shadow-sm hover:bg-slate-50 dark:hover:bg-charcoal-700
@@ -152,7 +158,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     animate={{ rotate: isFitDropdownOpen ? 180 : 0 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <ChevronDown className="w-4 h-4 text-charcoal-400 dark:text-slate-500" />
+                    <ChevronDown className="w-4 h-4 text-charcoal-500 dark:text-charcoal-500" />
                   </motion.div>
                 </motion.button>
 
@@ -176,7 +182,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors mb-0.5 last:mb-0
                             ${config.fitMode === option.value
                               ? 'bg-brand-purple/10 text-brand-purple'
-                              : 'text-charcoal-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-charcoal-700'}
+                              : 'text-charcoal-600 dark:text-charcoal-300 hover:bg-slate-50 dark:hover:bg-charcoal-700'}
                           `}
                         >
                           {option.label}
@@ -194,10 +200,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {/* Margin */}
             <div className="space-y-4 group">
               <div className="flex justify-between items-center">
-                <label className="flex items-center gap-2 text-xs md:text-sm font-bold text-charcoal-400 dark:text-slate-500 uppercase tracking-wide group-hover:text-brand-purple transition-colors">
-                  <Scissors className="w-4 h-4" /> Margin
-                </label>
-                <span className="text-xs bg-slate-100 dark:bg-charcoal-800 px-2.5 py-1 rounded-lg text-charcoal-600 dark:text-slate-400 font-mono font-bold border border-slate-200 dark:border-charcoal-700">{config.margin}mm</span>
+                <Tooltip content="Add white space around your images." side="top">
+                   <label className="flex items-center gap-2 text-xs md:text-sm font-bold text-charcoal-500 dark:text-charcoal-500 uppercase tracking-wide group-hover:text-brand-purple transition-colors cursor-help">
+                     <Scissors className="w-4 h-4" /> Margin
+                   </label>
+                </Tooltip>
+                <span className="text-xs bg-slate-100 dark:bg-charcoal-800 px-2.5 py-1 rounded-lg text-charcoal-600 dark:text-charcoal-400 font-mono font-bold border border-slate-200 dark:border-charcoal-700">{config.margin}mm</span>
               </div>
               <motion.input
                 type="range"
@@ -213,8 +221,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {/* Quality */}
             <div className="space-y-4 group">
               <div className="flex justify-between items-center">
-                <label className="text-xs md:text-sm font-bold text-charcoal-400 dark:text-slate-500 uppercase tracking-wide group-hover:text-brand-purple transition-colors">Quality</label>
-                <span className="text-xs bg-slate-100 dark:bg-charcoal-800 px-2.5 py-1 rounded-lg text-charcoal-600 dark:text-slate-400 font-mono font-bold border border-slate-200 dark:border-charcoal-700">{Math.round(config.quality * 100)}%</span>
+                <Tooltip content="Adjust compression to reduce file size." side="top">
+                  <label className="text-xs md:text-sm font-bold text-charcoal-500 dark:text-charcoal-500 uppercase tracking-wide group-hover:text-brand-purple transition-colors cursor-help">Quality</label>
+                </Tooltip>
+                <span className="text-xs bg-slate-100 dark:bg-charcoal-800 px-2.5 py-1 rounded-lg text-charcoal-600 dark:text-charcoal-400 font-mono font-bold border border-slate-200 dark:border-charcoal-700">{Math.round(config.quality * 100)}%</span>
               </div>
               <motion.input
                 type="range"
@@ -224,11 +234,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 whileHover={{ scale: 1.01 }}
                 value={config.quality}
                 onChange={(e) => handlePdfChange('quality', parseFloat(e.target.value))}
-                className="w-full h-2 bg-slate-200 dark:bg-charcoal-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-brand-blue [&::-webkit-slider-thumb]:shadow-lg hover:[&::-webkit-slider-thumb]:scale-110 transition-all outline-none focus:ring-2 focus:ring-brand-blue/30"
+                className="w-full h-2 bg-slate-200 dark:bg-charcoal-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-brand-purple [&::-webkit-slider-thumb]:shadow-lg hover:[&::-webkit-slider-thumb]:scale-110 transition-all outline-none focus:ring-2 focus:ring-brand-purple/30"
               />
             </div>
             
-            <div className="mt-8 p-4 bg-brand-purple/5 dark:bg-brand-purple/10 rounded-2xl border border-brand-purple/10 dark:border-brand-purple/20 text-xs text-charcoal-600 dark:text-slate-400 leading-relaxed shadow-sm">
+            <div className="mt-8 p-4 bg-brand-purple/5 dark:bg-brand-purple/10 rounded-2xl border border-brand-purple/10 dark:border-brand-purple/20 text-xs text-charcoal-600 dark:text-charcoal-400 leading-relaxed shadow-sm">
               <p className="font-bold text-brand-purple mb-1">Pro Tip:</p>
               Use "Auto" page size if you want the PDF pages to exactly match your original image dimensions.
             </div>
@@ -238,9 +248,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="space-y-7 md:space-y-8">
             {/* Output Format */}
             <div className="space-y-3 group">
-              <label className="flex items-center gap-2 text-xs md:text-sm font-bold text-charcoal-400 dark:text-slate-500 uppercase tracking-wide group-hover:text-brand-purple transition-colors">
-                <ImageIcon className="w-4 h-4" /> Output Format
-              </label>
+              <Tooltip content="Choose image file type." side="top">
+                <label className="flex items-center gap-2 text-xs md:text-sm font-bold text-charcoal-500 dark:text-charcoal-500 uppercase tracking-wide group-hover:text-brand-purple transition-colors cursor-help w-fit">
+                  <ImageIcon className="w-4 h-4" /> Output Format
+                </label>
+              </Tooltip>
               <div className="grid grid-cols-2 gap-3">
                 {(['png', 'jpeg'] as ImageFormat[]).map((fmt) => (
                   <motion.button
@@ -256,30 +268,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             </div>
 
-            {/* Quality (only for JPEG) */}
-            {exportConfig.format === 'jpeg' && (
-              <div className="space-y-4 group">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs md:text-sm font-bold text-charcoal-400 dark:text-slate-500 uppercase tracking-wide group-hover:text-brand-purple transition-colors">JPG Quality</label>
-                  <span className="text-xs bg-slate-100 dark:bg-charcoal-800 px-2.5 py-1 rounded-lg text-charcoal-600 dark:text-slate-400 font-mono font-bold border border-slate-200 dark:border-charcoal-700">{Math.round(exportConfig.quality * 100)}%</span>
-                </div>
-                <motion.input
-                  type="range"
-                  min="0.1"
-                  max="1.0"
-                  step="0.1"
-                  whileHover={{ scale: 1.01 }}
-                  value={exportConfig.quality}
-                  onChange={(e) => handleExportChange('quality', parseFloat(e.target.value))}
-                  className="w-full h-2 bg-slate-200 dark:bg-charcoal-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-brand-purple [&::-webkit-slider-thumb]:shadow-lg hover:[&::-webkit-slider-thumb]:scale-110 transition-all outline-none focus:ring-2 focus:ring-brand-purple/30"
-                />
-              </div>
-            )}
-            
-            <div className="mt-8 p-4 bg-brand-purple/5 dark:bg-brand-purple/10 rounded-2xl border border-brand-purple/10 dark:border-brand-purple/20 text-xs text-charcoal-600 dark:text-slate-400 leading-relaxed shadow-sm">
-              <p className="font-bold text-brand-purple mb-1">Note:</p>
-              PNG is lossless (better for text) but creates larger files. JPG is smaller but may have artifacts.
-            </div>
+            {/* Quality Controls - Animated Expansion for JPEG */}
+            <AnimatePresence initial={false}>
+              {exportConfig.format === 'jpeg' && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }} // Smooth Material easing
+                  className="overflow-hidden"
+                >
+                  <div className="pt-2 space-y-4 group">
+                    <div className="flex justify-between items-center">
+                      <Tooltip content="Lower quality for smaller file size." side="top">
+                        <label className="text-xs md:text-sm font-bold text-charcoal-500 dark:text-charcoal-500 uppercase tracking-wide group-hover:text-brand-purple transition-colors cursor-help">JPG Quality</label>
+                      </Tooltip>
+                      <span className="text-xs bg-slate-100 dark:bg-charcoal-800 px-2.5 py-1 rounded-lg text-charcoal-600 dark:text-charcoal-400 font-mono font-bold border border-slate-200 dark:border-charcoal-700">
+                        {Math.round(exportConfig.quality * 100)}%
+                      </span>
+                    </div>
+                    <motion.input
+                      type="range"
+                      min="0.1"
+                      max="1.0"
+                      step="0.1"
+                      whileHover={{ scale: 1.01 }}
+                      value={exportConfig.quality}
+                      onChange={(e) => handleExportChange('quality', parseFloat(e.target.value))}
+                      className="w-full h-2 bg-slate-200 dark:bg-charcoal-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-brand-purple [&::-webkit-slider-thumb]:shadow-lg hover:[&::-webkit-slider-thumb]:scale-110 transition-all outline-none focus:ring-2 focus:ring-brand-purple/30"
+                    />
+                  </div>
+                  
+                  {/* Note is now part of the collapsible section to prevent jarring layout shifts */}
+                  <div className="mt-8 p-4 bg-brand-purple/5 dark:bg-brand-purple/10 rounded-2xl border border-brand-purple/10 dark:border-brand-purple/20 text-xs text-charcoal-600 dark:text-charcoal-400 leading-relaxed shadow-sm">
+                    <p className="font-bold text-brand-purple mb-1">Note:</p>
+                    PNG is lossless (better for text) but creates larger files. JPG is smaller but may have artifacts.
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
       </div>

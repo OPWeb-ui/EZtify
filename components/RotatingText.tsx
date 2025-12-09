@@ -17,15 +17,15 @@ export const RotatingText: React.FC = () => {
   }, []);
 
   return (
-    <div className="h-6 w-full max-w-xl mx-auto relative flex items-center justify-center overflow-hidden">
+    <div className="w-full max-w-xl mx-auto relative flex items-center justify-center min-h-[3rem] px-4 py-1">
       <AnimatePresence mode="wait">
         <motion.p
           key={index}
-          initial={{ y: 10, opacity: 0 }}
+          initial={{ y: 5, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          exit={{ y: -10, opacity: 0 }}
+          exit={{ y: -5, opacity: 0 }}
           transition={{ duration: 0.5, ease: "easeInOut" }}
-          className="text-charcoal-500/80 dark:text-slate-400 text-sm font-medium tracking-wide absolute w-full text-center px-4"
+          className="text-charcoal-500/80 dark:text-slate-400 text-sm font-medium tracking-wide text-center leading-relaxed w-full"
         >
           {messages[index]}
         </motion.p>

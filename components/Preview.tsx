@@ -1,48 +1,50 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { UploadedImage, PdfConfig } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDropzone } from 'react-dropzone';
-import { ZoomIn, ZoomOut, Maximize, ImagePlus, X, RefreshCw } from 'lucide-react';
-import { buttonTap, buttonHover } from '../utils/animations';
+import { RefreshCw, X, Plus } from 'lucide-react';
+import { buttonTap } from '../utils/animations';
 
 interface PreviewProps {
   image: UploadedImage | null;
   config: PdfConfig;
   onReplace: (file: File) => void;
+  onAddFiles?: (files: File[]) => void;
   onDropRejected: (msg: string) => void;
   onClose?: () => void;
-  onAddImage?: () => void;
+  scale: number;
 }
 
 export const Preview: React.FC<PreviewProps> = ({ 
   image, 
   config, 
-  onReplace, 
+  onReplace,
+  onAddFiles,
   onDropRejected,
   onClose,
-  onAddImage
+  scale
 }) => {
-  const [scale, setScale] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  // Reset scale when image changes
-  useEffect(() => {
-    setScale(1);
-  }, [image?.id]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: (acceptedFiles) => {
       if (acceptedFiles.length > 0) {
-        onReplace(acceptedFiles[0]);
+        if (onAddFiles) {
+          // If we support adding, pass all files to the add handler (Append)
+          onAddFiles(acceptedFiles);
+        } else {
+          // Otherwise default to replacing the current image (Replace)
+          onReplace(acceptedFiles[0]);
+        }
       }
     },
     onDropRejected: () => {
       onDropRejected("Unsupported file type. Please upload JPG, PNG, or WebP.");
     },
     accept: { 'image/*': ['.jpeg', '.jpg', '.png', '.webp'] },
-    multiple: false,
+    multiple: !!onAddFiles, // Allow multiple if adding is supported
     noClick: true, // Disable click to open file dialog (keep existing UI for that)
-    disabled: !image
+    disabled: !image && !onAddFiles // Only disable if no image AND no add handler
   });
 
   const isRotated = image ? image.rotation % 180 !== 0 : false;
@@ -130,21 +132,6 @@ export const Preview: React.FC<PreviewProps> = ({
     </div>
   );
 
-  const handleZoomIn = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setScale(prev => Math.min(prev + 0.25, 4));
-  };
-
-  const handleZoomOut = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setScale(prev => Math.max(prev - 0.25, 0.5));
-  };
-
-  const handleResetZoom = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setScale(1);
-  };
-
   // Shared button class for top actions
   const topButtonClass = "h-10 px-3 flex items-center justify-center gap-2 rounded-xl bg-white/90 dark:bg-charcoal-800/90 backdrop-blur border border-slate-200 dark:border-charcoal-600 shadow-sm text-charcoal-700 dark:text-slate-200 hover:bg-white dark:hover:bg-charcoal-700 hover:border-brand-purple/30 transition-colors";
 
@@ -167,8 +154,14 @@ export const Preview: React.FC<PreviewProps> = ({
             exit={{ opacity: 0, scale: 0.95 }}
             className="absolute inset-4 z-50 rounded-3xl border-2 border-brand-purple border-dashed bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-md flex flex-col items-center justify-center text-brand-purple shadow-2xl pointer-events-none"
           >
-             <RefreshCw className="w-12 h-12 mb-4 animate-spin" />
-             <p className="text-xl font-heading font-bold">Drop to Replace</p>
+             {onAddFiles ? (
+               <Plus className="w-12 h-12 mb-4 animate-bounce" />
+             ) : (
+               <RefreshCw className="w-12 h-12 mb-4 animate-spin" />
+             )}
+             <p className="text-xl font-heading font-bold">
+               {onAddFiles ? "Drop to Add" : "Drop to Replace"}
+             </p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -183,25 +176,7 @@ export const Preview: React.FC<PreviewProps> = ({
       
       {/* Top Right Actions Container */}
       <div className="absolute top-4 right-4 md:top-8 md:right-8 z-30 flex flex-row flex-nowrap items-center gap-3">
-        
-        {/* 1. Add Image */}
-        {onAddImage && (
-          <motion.button 
-            onClick={(e) => {
-              e.stopPropagation();
-              onAddImage();
-            }}
-            whileHover={{ scale: 1.03 }}
-            whileTap={buttonTap}
-            className={`${topButtonClass} group`}
-            title="Add another image"
-          >
-            <ImagePlus className="w-5 h-5 text-brand-purple group-hover:scale-110 transition-transform" />
-            <span className="text-sm font-bold text-brand-purple hidden md:inline">Add Image</span>
-          </motion.button>
-        )}
-
-        {/* 2. Close Button */}
+        {/* Close Button */}
         {onClose && (
           <motion.button
             initial={{ opacity: 0, scale: 0.8 }}
@@ -277,60 +252,6 @@ export const Preview: React.FC<PreviewProps> = ({
             />
           </AnimatePresence>
         </div>
-      </motion.div>
-
-      {/* 3. Zoom Controls Toolbar (Floating Bottom Center) */}
-      <motion.div 
-        initial={{ y: 20, opacity: 0, x: "-50%" }}
-        animate={{ y: 0, opacity: 1, x: "-50%" }}
-        className="absolute bottom-6 left-1/2 z-20 flex items-center gap-1 p-1.5 bg-white/90 dark:bg-charcoal-800/90 backdrop-blur-xl rounded-full border border-slate-200 dark:border-charcoal-600 shadow-lg shadow-brand-purple/5"
-      >
-        <motion.button 
-          onClick={handleZoomOut}
-          disabled={scale <= 0.5}
-          whileTap={buttonTap}
-          whileHover={buttonHover}
-          className="p-2 rounded-full text-charcoal-500 hover:text-brand-purple hover:bg-brand-purple/5 transition-colors disabled:opacity-30"
-          title="Zoom Out"
-        >
-          <ZoomOut size={18} />
-        </motion.button>
-        
-        <div className="px-3 min-w-[3.5rem] text-center font-mono text-xs font-bold text-charcoal-600 dark:text-slate-300">
-          {Math.round(scale * 100)}%
-        </div>
-        
-        <motion.button 
-          onClick={handleZoomIn}
-          disabled={scale >= 4}
-          whileTap={buttonTap}
-          whileHover={buttonHover}
-          className="p-2 rounded-full text-charcoal-500 hover:text-brand-purple hover:bg-brand-purple/5 transition-colors disabled:opacity-30"
-          title="Zoom In"
-        >
-          <ZoomIn size={18} />
-        </motion.button>
-
-        <AnimatePresence>
-          {scale !== 1 && (
-            <motion.div
-              initial={{ width: 0, opacity: 0, scale: 0.8 }}
-              animate={{ width: 'auto', opacity: 1, scale: 1 }}
-              exit={{ width: 0, opacity: 0, scale: 0.8 }}
-              className="flex items-center overflow-hidden border-l border-slate-200 dark:border-charcoal-600 ml-1 pl-1"
-            >
-               <motion.button 
-                onClick={handleResetZoom}
-                whileTap={buttonTap}
-                whileHover={buttonHover}
-                className="p-2 rounded-full text-charcoal-500 hover:text-brand-purple hover:bg-brand-purple/5 transition-colors"
-                title="Reset to 100%"
-              >
-                <Maximize size={18} />
-              </motion.button>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </motion.div>
     </div>
   );

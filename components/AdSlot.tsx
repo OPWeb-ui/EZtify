@@ -14,15 +14,21 @@ export const AdSlot: React.FC<AdSlotProps> = ({ zone, className = '' }) => {
   return (
     <div className={`w-full flex items-center justify-center my-8 ${className}`}>
       <div className={`
-        w-full max-w-4xl ${heightClass} bg-slate-100 rounded-lg border border-slate-200 border-dashed 
-        flex items-center justify-center relative overflow-hidden group
+        w-full max-w-4xl ${heightClass} 
+        bg-slate-50/50 dark:bg-charcoal-900/40 backdrop-blur-sm
+        rounded-2xl border border-slate-200 dark:border-charcoal-700 border-dashed 
+        flex items-center justify-center relative overflow-hidden group transition-colors duration-300
+        hover:bg-slate-100/50 dark:hover:bg-charcoal-800/40
       `}>
-        <div className="text-slate-400 text-xs font-mono uppercase tracking-widest font-bold z-10">
+        <div className="text-charcoal-400 dark:text-charcoal-600 text-[10px] font-mono uppercase tracking-[0.2em] font-bold z-10 select-none">
           Advertisement
         </div>
         
-        {/* Subtle background pattern to indicate this is a reserved slot */}
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:16px_16px]" />
+        {/* Subtle background pattern */}
+        <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] bg-[radial-gradient(#64748b_1px,transparent_1px)] [background-size:16px_16px]" />
+        
+        {/* Subtle Glow on Hover */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none" />
       </div>
     </div>
   );

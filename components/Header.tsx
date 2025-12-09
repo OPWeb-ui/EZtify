@@ -19,11 +19,13 @@ export const Header: React.FC<HeaderProps> = ({ currentMode }) => {
   const { theme, toggleTheme } = useTheme();
 
   const tools = [
-    { id: 'image-to-pdf', label: 'Images → PDF', path: '/image-to-pdf' },
-    { id: 'pdf-to-image', label: 'PDF → Images', path: '/pdf-to-image' },
+    { id: 'home', label: 'Home', path: '/' },
+    { id: 'image-to-pdf', label: 'Images → PDF', path: '/images-to-pdf' },
+    { id: 'pdf-to-image', label: 'PDF → Images', path: '/pdf-to-images' },
     { id: 'compress-pdf', label: 'Compress PDF', path: '/compress-pdf' },
     { id: 'merge-pdf', label: 'Merge PDF', path: '/merge-pdf' },
-    { id: 'split-pdf', label: 'Split PDF', path: '/split-pdf' }
+    { id: 'split-pdf', label: 'Split PDF', path: '/split-pdf' },
+    { id: 'zip-files', label: 'Zip It!', path: '/zip-it' }
   ] as const;
 
   const currentToolLabel = tools.find(t => t.id === currentMode)?.label || 'Tools';
@@ -48,19 +50,25 @@ export const Header: React.FC<HeaderProps> = ({ currentMode }) => {
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="h-16 flex items-center justify-between px-4 md:px-8 bg-white/60 dark:bg-charcoal-950/80 backdrop-blur-xl border-b border-white/20 dark:border-white/5 absolute top-0 left-0 right-0 z-50 transition-colors duration-300"
+      className="h-16 flex items-center justify-between px-4 md:px-8 bg-white/60 dark:bg-charcoal-950/80 backdrop-blur-xl border-b border-white/20 dark:border-charcoal-800 absolute top-0 left-0 right-0 z-50 transition-colors duration-300"
     >
-      {/* Left: Logo */}
+      {/* Left: Logo (Links to Home) */}
       <Link 
-        to="/image-to-pdf"
-        className="flex items-center gap-3 cursor-pointer relative z-10 group" 
+        to="/"
+        className="relative z-10 group" 
       >
-        <div className="transition-transform group-hover:scale-105">
-           <Logo size="sm" />
-        </div>
-        <h1 className="font-heading font-bold text-lg md:text-xl tracking-tight text-charcoal-900 dark:text-white transition-colors">
-          EZ<span className="text-brand-purple">tify</span>
-        </h1>
+        <motion.div 
+          className="flex items-center gap-2.5"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <div className="transition-transform group-hover:drop-shadow-sm">
+             <Logo size="sm" />
+          </div>
+          <h1 className="font-heading font-bold text-xl tracking-tight text-charcoal-900 dark:text-white transition-colors relative top-[1px]">
+            EZ<span className="text-brand-purple">tify</span>
+          </h1>
+        </motion.div>
       </Link>
 
       {/* Center: Tools Dropdown */}
@@ -78,10 +86,10 @@ export const Header: React.FC<HeaderProps> = ({ currentMode }) => {
             flex items-center gap-2 border shadow-sm
             ${isDropdownOpen 
               ? 'bg-brand-purple/5 border-brand-purple/20 text-brand-purple' 
-              : 'bg-white/60 dark:bg-charcoal-800/80 border-slate-200 dark:border-charcoal-700 text-charcoal-700 dark:text-slate-200 hover:border-brand-purple/30'}
+              : 'bg-white/60 dark:bg-charcoal-800/80 border-slate-200 dark:border-charcoal-700 text-charcoal-700 dark:text-charcoal-300 hover:border-brand-purple/30'}
           `}
         >
-          <span className="relative z-10">{currentToolLabel}</span>
+          <span className="relative z-10">{currentToolLabel === 'Tools' ? 'Select Tool' : currentToolLabel}</span>
           <motion.div
             animate={{ rotate: isDropdownOpen ? 180 : 0 }}
             transition={{ duration: 0.2 }}
@@ -101,19 +109,19 @@ export const Header: React.FC<HeaderProps> = ({ currentMode }) => {
               className="absolute top-full left-1/2 mt-3 w-56 bg-white dark:bg-charcoal-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-charcoal-800 overflow-hidden py-1.5 origin-top"
               style={{ x: "-50%" }}
             >
-              <div className="text-[10px] uppercase tracking-wider text-charcoal-400 dark:text-charcoal-500 font-bold px-4 py-2 border-b border-slate-50 dark:border-charcoal-800 mb-1">
+              <div className="text-[10px] uppercase tracking-wider text-charcoal-500 dark:text-charcoal-500 font-bold px-4 py-2 border-b border-slate-50 dark:border-charcoal-800 mb-1">
                 Select Tool
               </div>
               {tools.map((tool) => (
                 <motion.button
                   key={tool.id}
                   onClick={() => handleToolSelect(tool.path)}
-                  whileHover={{ backgroundColor: "rgba(139, 92, 246, 0.05)", x: 4 }}
+                  whileHover={{ backgroundColor: "rgba(109, 40, 217, 0.05)", x: 4 }}
                   className={`
                     w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium transition-colors
                     ${currentMode === tool.id 
                       ? 'bg-brand-purple/5 dark:bg-brand-purple/10 text-brand-purple' 
-                      : 'text-charcoal-600 dark:text-slate-300 dark:hover:text-white'}
+                      : 'text-charcoal-600 dark:text-charcoal-300 dark:hover:text-white'}
                   `}
                 >
                   {tool.label}
@@ -127,11 +135,23 @@ export const Header: React.FC<HeaderProps> = ({ currentMode }) => {
 
       {/* Right: Share & Theme */}
       <div className="flex items-center gap-2 md:gap-3 relative z-10">
+        <Link 
+          to="/about"
+          className="hidden md:block text-sm font-bold text-charcoal-600 dark:text-charcoal-300 transition-colors mr-2"
+        >
+          <motion.span
+             whileHover={{ color: "#6D28D9", scale: 1.05 }}
+             whileTap={{ scale: 0.95 }}
+             className="inline-block"
+          >
+            About
+          </motion.span>
+        </Link>
         <motion.button
           onClick={toggleTheme}
           whileTap={buttonTap}
           whileHover={{ rotate: 15, scale: 1.1 }}
-          className="w-9 h-9 flex items-center justify-center rounded-full bg-transparent hover:bg-slate-100 dark:hover:bg-charcoal-800 text-charcoal-500 dark:text-slate-400 border border-transparent hover:border-slate-200 dark:hover:border-charcoal-700 transition-all"
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-transparent hover:bg-slate-100 dark:hover:bg-charcoal-800 text-charcoal-500 dark:text-charcoal-400 border border-transparent hover:border-slate-200 dark:hover:border-charcoal-700 transition-all"
           aria-label="Toggle Dark Mode"
         >
           {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
