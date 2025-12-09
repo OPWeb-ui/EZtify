@@ -290,7 +290,7 @@ export const ImageToPdfPage: React.FC = () => {
   const totalSize = images.reduce((acc, img) => acc + img.file.size, 0);
 
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence mode="wait" initial={false}>
       {images.length === 0 ? (
         <motion.div 
           key="hero"
@@ -370,7 +370,6 @@ export const ImageToPdfPage: React.FC = () => {
                 onClose={handleReset}
                 scale={scale}
               />
-              {/* REMOVED DUPLICATE TOP-RIGHT ADD BUTTON */}
             </div>
 
             {/* 2. FILMSTRIP (Fixed height) */}

@@ -91,7 +91,7 @@ export const CompressPdfPage: React.FC = () => {
   };
 
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence mode="wait" initial={false}>
       {!file ? (
         <motion.div
           key="hero"

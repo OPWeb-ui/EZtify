@@ -93,7 +93,7 @@ export const MergePdfPage: React.FC = () => {
   };
 
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence mode="wait" initial={false}>
       {files.length === 0 ? (
         <motion.div
           key="hero"

@@ -219,7 +219,7 @@ export const PdfToImagePage: React.FC = () => {
   const totalSize = images.reduce((acc, img) => acc + img.file.size, 0); // Approx size
 
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence mode="wait" initial={false}>
       {images.length === 0 ? (
         <motion.div
           key="hero"
