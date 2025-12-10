@@ -30,7 +30,7 @@ const App: React.FC = () => {
                   <SEO 
                     title="EZtify — Free Online PDF Tools (Private & Secure)"
                     description="All-in-one PDF tools: Convert Images to PDF, PDF to Images, Compress, Merge, and Split PDFs. 100% free, private, and client-side."
-                    canonical="https://eztify.com/"
+                    canonical="https://eztify.pages.dev/"
                   />
                   <Home />
                 </>
@@ -74,7 +74,7 @@ const App: React.FC = () => {
                 <>
                     <SEO 
                     title="PDF to JPG/PNG Converter — Extract Images from PDF"
-                    description="Convert PDF pages to high-quality images (JPG or PNG) for free. Extract images from PDF securely offline."
+                    description="Convert PDF pages to high-quality images (JPG or PNG) for free. Extract images from PDF securely in your browser."
                     canonical="https://eztify.com/#/pdf-to-images"
                   />
                   <PdfToImagePage />

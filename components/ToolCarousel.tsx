@@ -73,13 +73,13 @@ export const ToolCarousel: React.FC<ToolCarouselProps> = ({ title, tools }) => {
   }, []);
 
   return (
-    <div className="w-full py-8 group/carousel">
+    <div className="w-full py-6 md:py-8 group/carousel">
       {/* Section Title */}
       <motion.h2 
         initial={{ opacity: 0, x: -20 }}
         whileInView={{ opacity: 1, x: 0 }}
         viewport={{ once: true }}
-        className="px-4 md:px-12 mb-6 text-xl md:text-2xl font-heading font-bold text-charcoal-800 dark:text-white flex items-center gap-3"
+        className="px-4 md:px-12 mb-4 md:mb-6 text-xl md:text-2xl font-heading font-bold text-charcoal-800 dark:text-white flex items-center gap-3"
       >
         {title}
         <div className="h-px flex-1 bg-slate-200 dark:bg-charcoal-800 ml-4" />
@@ -88,14 +88,14 @@ export const ToolCarousel: React.FC<ToolCarouselProps> = ({ title, tools }) => {
       <div className="relative">
         
         {/* Left Arrow */}
-        <div className={`absolute left-0 top-0 bottom-0 w-16 z-20 bg-gradient-to-r from-pastel-bg dark:from-charcoal-950 to-transparent flex items-center justify-start pl-2 transition-opacity duration-300 ${showLeftArrow ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        <div className={`absolute left-0 top-0 bottom-0 w-12 md:w-16 z-20 bg-gradient-to-r from-pastel-bg dark:from-charcoal-950 to-transparent flex items-center justify-start pl-2 transition-opacity duration-300 ${showLeftArrow ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => scroll('left')}
-            className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/80 dark:bg-charcoal-800/80 backdrop-blur-md shadow-lg border border-slate-200 dark:border-charcoal-700 flex items-center justify-center text-charcoal-700 dark:text-white hover:bg-brand-purple hover:text-white dark:hover:bg-brand-purple transition-colors"
+            className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/80 dark:bg-charcoal-800/80 backdrop-blur-md shadow-lg border border-slate-200 dark:border-charcoal-700 flex items-center justify-center text-charcoal-700 dark:text-white hover:bg-brand-purple hover:text-white dark:hover:bg-brand-purple transition-colors"
           >
-            <ChevronLeft size={24} />
+            <ChevronLeft size={20} />
           </motion.button>
         </div>
 
@@ -103,14 +103,14 @@ export const ToolCarousel: React.FC<ToolCarouselProps> = ({ title, tools }) => {
         <div
           ref={scrollRef}
           className="
-            flex gap-4 md:gap-6 overflow-x-auto snap-x snap-mandatory 
-            px-4 md:px-12 pb-12 pt-4
+            flex gap-4 md:gap-5 overflow-x-auto snap-x snap-mandatory 
+            px-4 md:px-12 pb-8 pt-2
             scrollbar-hide scroll-smooth
           "
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           <motion.div 
-            className="flex gap-4 md:gap-6"
+            className="flex gap-4 md:gap-5"
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "100px" }}
@@ -121,20 +121,20 @@ export const ToolCarousel: React.FC<ToolCarouselProps> = ({ title, tools }) => {
             }}
           >
             {tools.map((tool) => (
-              <ToolCard key={tool.id} tool={tool} />
+              <ToolCard key={tool.id} tool={tool} className="w-[280px] md:w-[260px] h-[320px] md:h-[230px]" />
             ))}
           </motion.div>
         </div>
 
         {/* Right Arrow */}
-        <div className={`absolute right-0 top-0 bottom-0 w-16 z-20 bg-gradient-to-l from-pastel-bg dark:from-charcoal-950 to-transparent flex items-center justify-end pr-2 transition-opacity duration-300 ${showRightArrow ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        <div className={`absolute right-0 top-0 bottom-0 w-12 md:w-16 z-20 bg-gradient-to-l from-pastel-bg dark:from-charcoal-950 to-transparent flex items-center justify-end pr-2 transition-opacity duration-300 ${showRightArrow ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
           <motion.button
              whileHover={{ scale: 1.1 }}
              whileTap={{ scale: 0.9 }}
              onClick={() => scroll('right')}
-             className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/80 dark:bg-charcoal-800/80 backdrop-blur-md shadow-lg border border-slate-200 dark:border-charcoal-700 flex items-center justify-center text-charcoal-700 dark:text-white hover:bg-brand-purple hover:text-white dark:hover:bg-brand-purple transition-colors"
+             className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/80 dark:bg-charcoal-800/80 backdrop-blur-md shadow-lg border border-slate-200 dark:border-charcoal-700 flex items-center justify-center text-charcoal-700 dark:text-white hover:bg-brand-purple hover:text-white dark:hover:bg-brand-purple transition-colors"
           >
-            <ChevronRight size={24} />
+            <ChevronRight size={20} />
           </motion.button>
         </div>
 

@@ -15,28 +15,13 @@ import { PageReadyTracker } from '../components/PageReadyTracker';
 import { UploadedImage, PdfConfig, ExportConfig } from '../types';
 import { extractImagesFromPdf } from '../services/pdfExtractor';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, Loader2 } from 'lucide-react';
 import { useDropzone, FileRejection } from 'react-dropzone';
 import { staggerContainer, fadeInUp } from '../utils/animations';
 
-const WorkspaceSkeleton: React.FC<{ isMobile: boolean }> = ({ isMobile }) => (
-  <div className="flex-1 flex flex-col md:flex-row relative h-full overflow-hidden">
-    <div className="flex-1 p-10 flex items-center justify-center">
-      <Skeleton className="w-full h-full max-w-lg aspect-auto" />
-    </div>
-    {!isMobile ? (
-      <div className="w-72 border-l border-pastel-border dark:border-charcoal-800 p-4">
-        <div className="flex flex-col gap-4">
-          {Array(4).fill(0).map((_, i) => <Skeleton key={i} className="w-full h-32 rounded-lg" />)}
-        </div>
-      </div>
-    ) : (
-      <div className="flex-none z-10 p-6 border-t border-pastel-border bg-white/80 dark:bg-charcoal-900/80 backdrop-blur">
-        <div className="flex gap-4 items-center">
-          {Array(3).fill(0).map((_, i) => <Skeleton key={i} className="w-20 h-24 rounded-xl" />)}
-        </div>
-      </div>
-    )}
+const WorkspaceSkeleton: React.FC = () => (
+  <div className="w-full h-full flex flex-col items-center justify-center p-8">
+    <div className="w-[300px] h-[400px] bg-white dark:bg-charcoal-800 rounded-lg animate-pulse shadow-xl" />
   </div>
 );
 
@@ -48,9 +33,14 @@ export const PdfToImagePage: React.FC = () => {
   const [hasStarted, setHasStarted] = useState(false);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [scale, setScale] = useState(1);
+  
+  // Responsive State
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  const isMobile = windowWidth < 768;
+  const showRightSidebar = windowWidth >= 1024; // Only show vertical filmstrip on large screens
+  const showBottomFilmstrip = !isMobile && !showRightSidebar; // Tablet mode: horizontal filmstrip
+
+  const [scale, setScale] = useState(0.85); 
   const [isFilmstripDrawerOpen, setIsFilmstripDrawerOpen] = useState(false);
 
   const [config, setConfig] = useState<PdfConfig>({
@@ -63,23 +53,23 @@ export const PdfToImagePage: React.FC = () => {
 
   const [exportConfig, setExportConfig] = useState<ExportConfig>({
     format: 'png',
-    quality: 0.9,
+    quality: 1.0,
     scale: 1
   });
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    const handleResize = () => setWindowWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
-    setScale(1);
+    setScale(0.85);
   }, [activeImageId]);
 
-  const handleZoomIn = () => setScale(prev => Math.min(prev + 0.25, 4));
-  const handleZoomOut = () => setScale(prev => Math.max(prev - 0.25, 0.5));
-  const handleResetZoom = () => setScale(1);
+  const handleZoomIn = () => setScale(prev => Math.min(prev + 0.1, 2.0));
+  const handleZoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.4));
+  const handleResetZoom = () => setScale(0.85);
 
   const processPdf = async (file: File) => {
     setIsGenerating(true);
@@ -95,7 +85,7 @@ export const PdfToImagePage: React.FC = () => {
            if (extracted.length > 0) setActiveImageId(extracted[0].id);
            return updated;
         });
-        addToast("Success", `Added ${extracted.length} pages.`, "warning");
+        addToast("Success", `Extracted ${extracted.length} pages.`, "success");
       }
     } catch (e) {
       console.error(e);
@@ -119,7 +109,7 @@ export const PdfToImagePage: React.FC = () => {
     }
   }, [addToast]);
 
-  const { getRootProps: getAddRoot, getInputProps: getAddInput, open: openAdd } = useDropzone({
+  const { getRootProps, getInputProps, open: openAdd, isDragActive } = useDropzone({
     onDrop,
     accept: { 'application/pdf': ['.pdf'] },
     multiple: true,
@@ -152,26 +142,34 @@ export const PdfToImagePage: React.FC = () => {
         for (let i = 0; i < images.length; i++) {
           setStatus(`Exporting page ${i + 1}/${images.length}...`);
           setProgress(Math.round(((i + 1) / images.length) * 100));
+          
           const imgData = images[i];
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
+          
           if (ctx) {
               const img = new Image();
               img.src = imgData.previewUrl;
               await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
+              
               const isRotatedSideways = imgData.rotation === 90 || imgData.rotation === 270;
               canvas.width = isRotatedSideways ? img.height : img.width;
               canvas.height = isRotatedSideways ? img.width : img.height;
+              
               if (exportConfig.format === 'jpeg') {
                   ctx.fillStyle = '#FFFFFF';
                   ctx.fillRect(0, 0, canvas.width, canvas.height);
               }
+              
               ctx.translate(canvas.width / 2, canvas.height / 2);
               ctx.rotate((imgData.rotation * Math.PI) / 180);
               ctx.drawImage(img, -img.width / 2, -img.height / 2);
+              
               const mimeType = exportConfig.format === 'png' ? 'image/png' : 'image/jpeg';
               const extension = exportConfig.format === 'png' ? 'png' : 'jpg';
+              
               const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, mimeType, exportConfig.quality));
+              
               if (blob) {
                   const url = URL.createObjectURL(blob);
                   const link = document.createElement('a');
@@ -212,90 +210,187 @@ export const PdfToImagePage: React.FC = () => {
       <AnimatePresence mode="wait">
         {!hasStarted ? (
           <motion.div key="hero" className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
-            <section className="flex-1 min-h-[calc(100vh-80px)] flex flex-col items-center justify-center p-6 pt-12 pb-12 relative">
+            <section className="flex-1 flex flex-col items-center justify-center p-4 pt-8 pb-10 relative">
                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] blur-[120px] rounded-full pointer-events-none bg-brand-mint/10" />
                <motion.div variants={staggerContainer} initial="hidden" animate="show" className="relative z-10 w-full max-w-2xl flex flex-col items-center text-center">
-                 <motion.h2 variants={fadeInUp} className="text-3xl md:text-6xl font-heading font-bold text-charcoal-900 dark:text-white mb-4 leading-tight tracking-tight">
-                   Turn Your PDF Pages <br/> Into Images in Seconds
-                 </motion.h2>
-                 <motion.div variants={fadeInUp}>
-                   <HeroPill>
-                      <span className="font-bold text-brand-mint">PDF to Image</span> extracts pages from your document and saves them as high-resolution JPG or PNG files. Secure, local extraction with no server uploads.
-                   </HeroPill>
-                 </motion.div>
-                 <motion.div variants={fadeInUp} className="w-full max-w-xl mb-8 relative z-20">
+                 <motion.div variants={fadeInUp} className="w-full max-w-xl my-4 relative z-20">
+                   <HeroPill>Extract pages from your PDF and save them as separate high-res images.</HeroPill>
                    <UploadArea onDrop={onDrop} mode="pdf-to-image" disabled={isGenerating} />
                  </motion.div>
                  <motion.div variants={fadeInUp}><RotatingText /></motion.div>
                </motion.div>
             </section>
             <AdSlot zone="hero" />
-            <div className="w-full bg-gradient-to-b from-transparent to-white/40 dark:to-charcoal-900/40 pb-20 pt-12 border-t border-brand-purple/5 dark:border-white/5">
+            <div className="w-full bg-gradient-to-b from-transparent to-white/40 dark:to-charcoal-900/40 pb-20 pt-10 border-t border-brand-purple/5 dark:border-white/5">
               <HowItWorks mode="pdf-to-image" />
               <AdSlot zone="footer" /><FAQ />
             </div>
           </motion.div>
         ) : (
-          <motion.div key="workspace" className="flex-1 flex flex-col md:flex-row relative h-full overflow-hidden">
-            <div {...getAddRoot({ className: 'hidden' })}><input {...getAddInput()} /></div>
-            <Sidebar 
-              mode="pdf-to-image" 
-              config={config} 
-              onConfigChange={setConfig} 
-              exportConfig={exportConfig} 
-              onExportConfigChange={setExportConfig} 
-              isOpen={isSidebarOpen} 
-              isMobile={isMobile}
-              imageCount={images.length}
-              totalSize={totalSize}
-              zoomLevel={scale}
-              onZoomIn={handleZoomIn}
-              onZoomOut={handleZoomOut}
-              onAddFiles={openAdd}
-              onGenerate={handleGenerate}
-              isGenerating={isGenerating}
-              progress={progress}
-              status={status}
-            />
+          <motion.div key="workspace" className="flex h-[calc(100vh-4rem)] w-full overflow-hidden bg-slate-100 dark:bg-black">
+            
+            {/* 1. LEFT SIDEBAR (Settings) */}
+            <div className="flex-none w-full md:w-80 bg-white dark:bg-charcoal-900 z-30 h-full flex flex-col shadow-xl md:shadow-none border-r border-slate-200 dark:border-charcoal-800">
+                <Sidebar 
+                  mode="pdf-to-image" 
+                  config={config} 
+                  onConfigChange={setConfig} 
+                  exportConfig={exportConfig} 
+                  onExportConfigChange={setExportConfig} 
+                  isOpen={true} 
+                  isMobile={isMobile}
+                  imageCount={images.length}
+                  zoomLevel={scale}
+                  onZoomIn={handleZoomIn}
+                  onZoomOut={handleZoomOut}
+                  onAddFiles={openAdd}
+                  onGenerate={handleGenerate}
+                  isGenerating={isGenerating}
+                  progress={progress}
+                  status={status}
+                />
+            </div>
 
-            <div className="flex-1 flex flex-col md:flex-row relative h-full bg-slate-50/30 dark:bg-charcoal-900/30 overflow-hidden">
-              <AnimatePresence mode="wait">
-                {isGenerating && images.length === 0 ? (
-                  <motion.div key="skeleton" className="flex-1 flex flex-col min-h-0">
-                    <WorkspaceSkeleton isMobile={isMobile} />
-                  </motion.div>
-                ) : (
-                  <motion.div key="content" className="flex-1 flex flex-col md:flex-row min-h-0">
-                    <div className={`flex-1 relative min-h-0 w-full flex flex-col ${isMobile ? 'pb-24' : ''}`}>
-                       <Preview image={activeImage} config={config} onReplace={() => {}} onAddFiles={onDrop} onDropRejected={() => {}} onClose={handleReset} scale={scale} />
-                    </div>
-                    {!isMobile ? (
-                      <div className="flex-none z-10 border-l border-pastel-border dark:border-charcoal-800 bg-white/60 dark:bg-charcoal-900/60 backdrop-blur w-36">
-                        <Filmstrip direction="vertical" images={images} activeImageId={activeImageId} onReorder={setImages} onSelect={setActiveImageId} onRemove={handleRemove} onRotate={handleRotate} isMobile={isMobile} />
+            {/* 2. CENTER CANVAS (The Desk) */}
+            <div 
+              className="flex-1 relative h-full bg-slate-200/50 dark:bg-[#0c0c0c] overflow-hidden flex flex-col"
+              {...getRootProps()}
+            >
+              <input {...getInputProps()} />
+              
+              {/* Dot Grid Pattern */}
+              <div 
+                className="absolute inset-0 pointer-events-none opacity-[0.4] dark:opacity-[0.1]" 
+                style={{
+                  backgroundImage: 'radial-gradient(circle, #64748b 1px, transparent 1px)',
+                  backgroundSize: '24px 24px'
+                }} 
+              />
+
+              {/* Drag Overlay */}
+              <AnimatePresence>
+                {isDragActive && (
+                  <motion.div 
+                      initial={{ opacity: 0 }} 
+                      animate={{ opacity: 1 }} 
+                      exit={{ opacity: 0 }}
+                      className="absolute inset-0 z-50 bg-brand-mint/10 backdrop-blur-sm flex items-center justify-center border-4 border-dashed border-brand-mint rounded-3xl pointer-events-none m-8"
+                  >
+                      <div className="text-center text-brand-mint">
+                          <Plus size={64} className="mx-auto mb-4 animate-pulse" />
+                          <p className="text-2xl font-bold">Drop more PDFs to add</p>
                       </div>
-                    ) : (
-                      <AnimatePresence>
-                        {isFilmstripDrawerOpen && (
-                          <motion.div
-                            initial={{ y: "100%" }}
-                            animate={{ y: 0 }}
-                            exit={{ y: "100%" }}
-                            transition={{ type: "spring", stiffness: 400, damping: 35 }}
-                            className="fixed bottom-0 left-0 right-0 z-50 h-48 bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-xl border-t border-slate-200 dark:border-charcoal-700 shadow-2xl"
-                          >
-                            <button onClick={() => setIsFilmstripDrawerOpen(false)} className="absolute top-2 right-2 z-50 p-2 text-charcoal-500 rounded-full hover:bg-slate-100 dark:hover:bg-charcoal-800" aria-label="Close filmstrip">
-                              <X size={18} />
-                            </button>
-                            <Filmstrip direction="horizontal" images={images} activeImageId={activeImageId} onReorder={setImages} onSelect={setActiveImageId} onRemove={handleRemove} onRotate={handleRotate} isMobile={isMobile} />
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              {/* Loading State */}
+              {isGenerating && images.length === 0 && (
+                 <div className="absolute inset-0 z-40 bg-white/50 dark:bg-charcoal-900/50 backdrop-blur-sm flex items-center justify-center">
+                    <WorkspaceSkeleton />
+                 </div>
+              )}
+
+              {/* Main Preview Container - Centered */}
+              <div className="flex-1 w-full h-full flex items-center justify-center p-4 md:p-10 relative z-10 overflow-auto">
+                 <motion.div 
+                    animate={{ scale }}
+                    transition={{ type: "spring", stiffness: 200, damping: 25 }}
+                    className="relative origin-center"
+                 >
+                    <Preview 
+                        image={activeImage} 
+                        config={config} 
+                        onReplace={() => {}} 
+                        onAddFiles={onDrop} 
+                        onDropRejected={() => {}} 
+                        onClose={handleReset} 
+                        scale={1} // Internal scale handled by parent
+                    />
+                 </motion.div>
+              </div>
+
+              {/* Floating Action (Add PDF) - Desktop & Tablet Only */}
+              {!isMobile && (
+                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40">
+                  <motion.button 
+                    onClick={openAdd}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="flex items-center gap-2 bg-charcoal-800 text-white dark:bg-white dark:text-charcoal-900 px-5 py-3 rounded-full shadow-2xl hover:shadow-xl transition-all font-bold text-sm border border-white/10"
+                  >
+                      <Plus className="w-4 h-4" />
+                      <span>Add PDF</span>
+                  </motion.button>
+                </div>
+              )}
+
+              {/* Tablet Horizontal Filmstrip (Bottom) */}
+              {showBottomFilmstrip && (
+                <div className="flex-none h-40 bg-white/80 dark:bg-charcoal-900/80 backdrop-blur-md border-t border-slate-200 dark:border-charcoal-800 z-30">
+                    <Filmstrip 
+                      direction="horizontal"
+                      images={images}
+                      activeImageId={activeImageId}
+                      onReorder={setImages}
+                      onSelect={setActiveImageId}
+                      onRemove={handleRemove}
+                      onRotate={handleRotate}
+                      isMobile={false}
+                      className="h-full"
+                    />
+                </div>
+              )}
+
+              {/* Mobile Filmstrip Drawer */}
+              {isMobile && (
+                <AnimatePresence>
+                  {isFilmstripDrawerOpen && (
+                    <motion.div
+                      initial={{ y: "100%" }}
+                      animate={{ y: 0 }}
+                      exit={{ y: "100%" }}
+                      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                      className="absolute bottom-0 left-0 right-0 z-[60] h-64 bg-white dark:bg-charcoal-900 border-t border-slate-200 dark:border-charcoal-700 shadow-[0_-10px_40px_rgba(0,0,0,0.2)] flex flex-col"
+                    >
+                      <div className="flex items-center justify-between p-3 border-b border-slate-100 dark:border-charcoal-800">
+                        <span className="text-xs font-bold uppercase text-charcoal-500">Pages ({images.length})</span>
+                        <button onClick={() => setIsFilmstripDrawerOpen(false)} className="p-2 text-charcoal-500 hover:bg-slate-100 rounded-full">
+                          <X size={16} />
+                        </button>
+                      </div>
+                      <div className="flex-1 overflow-hidden p-2">
+                        <Filmstrip direction="vertical" images={images} activeImageId={activeImageId} onReorder={setImages} onSelect={setActiveImageId} onRemove={handleRemove} onRotate={handleRotate} isMobile={isMobile} className="h-full" />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              )}
             </div>
             
+            {/* 3. RIGHT SIDEBAR (Filmstrip - Large Desktop Only) */}
+            {showRightSidebar && (
+              <div className="flex-none w-72 h-full bg-white dark:bg-charcoal-900 border-l border-slate-200 dark:border-charcoal-800 z-20 flex flex-col">
+                <div className="h-14 flex items-center px-5 border-b border-slate-100 dark:border-charcoal-800 bg-white dark:bg-charcoal-900">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-charcoal-500 dark:text-slate-400">Pages ({images.length})</h3>
+                </div>
+                <div className="flex-1 overflow-hidden bg-slate-50/50 dark:bg-charcoal-900/50">
+                  <Filmstrip 
+                    direction="vertical" 
+                    images={images} 
+                    activeImageId={activeImageId} 
+                    onReorder={setImages} 
+                    onSelect={setActiveImageId} 
+                    onRemove={handleRemove} 
+                    onRotate={handleRotate} 
+                    isMobile={isMobile} 
+                    className="h-full"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Mobile Bottom Bar */}
             {isMobile && hasStarted && (
               <StickyBar 
                 imageCount={images.length} 
@@ -306,13 +401,13 @@ export const PdfToImagePage: React.FC = () => {
                 status={status}
                 mode="pdf-to-image"
                 onSecondaryAction={openAdd}
-                secondaryLabel="Add PDF"
+                secondaryLabel="Add"
                 secondaryIcon={<Plus className="w-4 h-4" />}
                 zoomLevel={scale}
                 onZoomIn={handleZoomIn}
                 onZoomOut={handleZoomOut}
                 onResetZoom={handleResetZoom}
-                showFilmstripToggle={isMobile && images.length > 0}
+                showFilmstripToggle={true}
                 onToggleFilmstrip={() => setIsFilmstripDrawerOpen(p => !p)}
                 isFilmstripVisible={isFilmstripDrawerOpen}
               />

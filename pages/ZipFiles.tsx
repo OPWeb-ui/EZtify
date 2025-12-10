@@ -50,10 +50,11 @@ export const ZipFilesPage: React.FC = () => {
 
     if (validNewFiles.length > 0) {
        setFiles(prev => [...prev, ...validNewFiles]);
+       addToast("Success", `Added ${validNewFiles.length} files to archive.`, "success");
     }
   }, [files, addToast]);
 
-  const { getRootProps, getInputProps, open } = useDropzone({
+  const { getRootProps, getInputProps, open, isDragActive } = useDropzone({
     onDrop,
     noClick: true,
     noKeyboard: true
@@ -123,7 +124,7 @@ export const ZipFilesPage: React.FC = () => {
             key="hero"
             className="flex-1 flex flex-col overflow-y-auto custom-scrollbar"
           >
-            <section className="flex-1 min-h-[calc(100vh-80px)] flex flex-col items-center justify-center p-6 pt-12 pb-12 relative">
+            <section className="flex-1 flex flex-col items-center justify-center p-4 pt-8 pb-10 relative">
                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] blur-[120px] rounded-full pointer-events-none bg-amber-500/10" />
                <motion.div 
                  variants={staggerContainer}
@@ -131,22 +132,8 @@ export const ZipFilesPage: React.FC = () => {
                  animate="show"
                  className="relative z-10 w-full max-w-2xl flex flex-col items-center text-center"
                >
-                 <motion.h2 
-                   variants={fadeInUp}
-                   className="text-3xl md:text-6xl font-heading font-bold text-charcoal-900 dark:text-white mb-4 leading-tight tracking-tight"
-                  >
-                   Zip It!
-                 </motion.h2>
-                 
-                 <motion.div variants={fadeInUp}>
-                   <HeroPill>
-                      <span className="font-bold text-amber-500">Zip It!</span> lets you combine multiple files into a single ZIP archive directly in your browser. 
-                      Your files are processed locally and never stored on our servers. 
-                      For the best experience, file size limits apply.
-                   </HeroPill>
-                 </motion.div>
-
-                 <motion.div variants={fadeInUp} className="w-full max-w-xl mb-8 relative z-20">
+                 <motion.div variants={fadeInUp} className="w-full max-w-xl my-4 relative z-20">
+                   <HeroPill>Create secure ZIP archives from your files locally in your browser.</HeroPill>
                    <UploadArea onDrop={onDrop} mode="zip-files" disabled={isGenerating} />
                    <div className="flex items-center justify-center mt-4">
                      <Tooltip content="For best performance: Max 100MB per file, 300MB total." side="bottom">
@@ -166,7 +153,7 @@ export const ZipFilesPage: React.FC = () => {
 
             <AdSlot zone="hero" />
 
-            <div className="w-full bg-gradient-to-b from-transparent to-white/40 dark:to-charcoal-900/40 pb-20 pt-12 border-t border-brand-purple/5 dark:border-white/5">
+            <div className="w-full bg-gradient-to-b from-transparent to-white/40 dark:to-charcoal-900/40 pb-20 pt-10 border-t border-brand-purple/5 dark:border-white/5">
               <HowItWorks mode="zip-files" />
               <AdSlot zone="footer" />
               <FAQ />
@@ -176,9 +163,24 @@ export const ZipFilesPage: React.FC = () => {
           <motion.div
             key="workspace"
             className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-y-auto custom-scrollbar"
-            {...getRootProps()}
+            {...getRootProps({ onClick: (e) => e.stopPropagation() })}
           >
             <input {...getInputProps()} />
+             <AnimatePresence>
+              {isDragActive && (
+                <motion.div 
+                    initial={{ opacity: 0 }} 
+                    animate={{ opacity: 1 }} 
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 z-[100] bg-amber-500/10 backdrop-blur-sm flex items-center justify-center border-4 border-dashed border-amber-500 rounded-3xl pointer-events-none"
+                >
+                    <div className="text-center text-amber-500">
+                        <Plus size={64} className="mx-auto mb-4 animate-pulse" />
+                        <p className="text-2xl font-bold">Drop more files to add</p>
+                    </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
             
             <motion.button
               initial={{ opacity: 0, scale: 0.8 }}
@@ -186,7 +188,7 @@ export const ZipFilesPage: React.FC = () => {
               exit={{ opacity: 0, scale: 0.8 }}
               whileHover={{ scale: 1.05, rotate: 90 }}
               whileTap={buttonTap}
-              onClick={handleReset}
+              onClick={(e) => { e.stopPropagation(); handleReset(); }}
               className="absolute top-8 right-4 z-50 w-10 h-10 flex items-center justify-center rounded-full bg-white/90 dark:bg-charcoal-800/90 text-charcoal-500 dark:text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:text-rose-500 shadow-md backdrop-blur-sm border border-slate-200 dark:border-charcoal-700 transition-colors"
               title="Close and Reset"
             >
@@ -218,7 +220,7 @@ export const ZipFilesPage: React.FC = () => {
                            <motion.button 
                               whileHover={{ scale: 1.05 }}
                               whileTap={buttonTap}
-                              onClick={handleClear}
+                              onClick={(e) => { e.stopPropagation(); handleClear(); }}
                               className="text-xs font-bold text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 px-3 py-1.5 rounded-lg transition-colors"
                            >
                               Clear All
@@ -248,7 +250,7 @@ export const ZipFilesPage: React.FC = () => {
                                     <motion.button
                                        whileHover={{ scale: 1.1, rotate: 90 }}
                                        whileTap={{ scale: 0.9 }}
-                                       onClick={() => handleRemove(f.id)}
+                                       onClick={(e) => { e.stopPropagation(); handleRemove(f.id); }}
                                        className="p-2 text-charcoal-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-full transition-colors"
                                        title="Remove File"
                                     >
@@ -264,7 +266,7 @@ export const ZipFilesPage: React.FC = () => {
                               <motion.button
                                  whileTap={buttonTap}
                                  whileHover={{ scale: 1.02 }}
-                                 onClick={() => setCompressionLevel('STORE')}
+                                 onClick={(e) => { e.stopPropagation(); setCompressionLevel('STORE'); }}
                                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors ${compressionLevel === 'STORE' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-500' : 'text-charcoal-500 hover:bg-slate-50 dark:hover:bg-charcoal-800'}`}
                               >
                                  Fast (Store)
@@ -272,7 +274,7 @@ export const ZipFilesPage: React.FC = () => {
                               <motion.button
                                  whileTap={buttonTap}
                                  whileHover={{ scale: 1.02 }}
-                                 onClick={() => setCompressionLevel('DEFLATE')}
+                                 onClick={(e) => { e.stopPropagation(); setCompressionLevel('DEFLATE'); }}
                                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors ${compressionLevel === 'DEFLATE' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-500' : 'text-charcoal-500 hover:bg-slate-50 dark:hover:bg-charcoal-800'}`}
                               >
                                  Compact (Deflate)
@@ -283,7 +285,7 @@ export const ZipFilesPage: React.FC = () => {
                              <motion.button
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
-                                onClick={open}
+                                onClick={(e) => { e.stopPropagation(); open(); }}
                                 disabled={isGenerating}
                                 className="md:flex-1 w-full py-3.5 rounded-xl border-2 border-slate-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-charcoal-600 dark:text-slate-300 font-bold hover:border-amber-400 hover:text-amber-600 dark:hover:border-amber-500/50 dark:hover:text-amber-400 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                              >
@@ -294,7 +296,7 @@ export const ZipFilesPage: React.FC = () => {
                              <motion.button
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
-                                onClick={handleZip}
+                                onClick={(e) => { e.stopPropagation(); handleZip(); }}
                                 disabled={isGenerating || files.length === 0}
                                 className="md:flex-[1.5] w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold shadow-lg shadow-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 relative overflow-hidden"
                              >
@@ -333,7 +335,7 @@ export const ZipFilesPage: React.FC = () => {
                         <motion.button
                            whileHover={{ scale: 1.02 }}
                            whileTap={{ scale: 0.98 }}
-                           onClick={downloadResult}
+                           onClick={(e) => { e.stopPropagation(); downloadResult(); }}
                            className="w-full py-4 rounded-xl bg-brand-purple text-white font-bold text-lg shadow-lg shadow-brand-purple/30 hover:shadow-brand-purple/50 transition-all flex items-center justify-center gap-2 mb-4"
                          >
                             <Download size={20} /> Download ZIP
@@ -342,7 +344,7 @@ export const ZipFilesPage: React.FC = () => {
                          <motion.button
                            whileHover={{ scale: 1.02 }}
                            whileTap={{ scale: 0.98 }}
-                           onClick={handleReset}
+                           onClick={(e) => { e.stopPropagation(); handleReset(); }}
                            className="w-full py-3 text-charcoal-500 dark:text-slate-400 hover:text-brand-purple font-medium text-sm flex items-center justify-center gap-2"
                          >
                             <RefreshCcw size={14} /> Create another ZIP

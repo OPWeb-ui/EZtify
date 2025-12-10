@@ -47,7 +47,7 @@ export interface ToastMessage {
   id: string;
   title: string;
   message: string;
-  type: 'warning' | 'error' | 'undo';
+  type: 'warning' | 'error' | 'undo' | 'success';
   duration?: number;
   action?: ToastAction;
 }
@@ -55,11 +55,13 @@ export interface ToastMessage {
 export type CompressionLevel = 'normal' | 'strong';
 
 export interface CompressionResult {
+  id: string; // For mapping back to the source PdfFile
+  originalFileName: string;
   originalSize: number;
   newSize: number;
   blob: Blob;
-  fileName: string;
-  status?: string;
+  fileName: string; // New filename
+  status?: 'Success' | 'Failed';
 }
 
 export interface PdfFile {

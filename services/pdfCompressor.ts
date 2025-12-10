@@ -1,13 +1,14 @@
 import { jsPDF } from 'jspdf';
 import { extractImagesFromPdf } from './pdfExtractor';
-import { CompressionLevel, CompressionResult } from '../types';
+import { CompressionLevel, CompressionResult, PdfFile } from '../types';
 
 export const compressPDF = async (
-  file: File,
+  pdfFile: PdfFile,
   level: CompressionLevel,
   onProgress?: (percent: number) => void,
   onStatusUpdate?: (status: string) => void
 ): Promise<CompressionResult> => {
+  const file = pdfFile.file;
   const originalSize = file.size;
   
   // 1. Extract images from PDF
@@ -114,7 +115,10 @@ export const compressPDF = async (
 
     if (onProgress) onProgress(100);
 
+    // FIX: Return a complete CompressionResult object as per the function's type signature.
     return {
+      id: pdfFile.id,
+      originalFileName: file.name,
       originalSize,
       newSize,
       blob: pdfBlob,

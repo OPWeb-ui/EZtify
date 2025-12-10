@@ -178,7 +178,7 @@ export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled }
         ? undefined 
         : { 'application/pdf': ['.pdf'] },
     disabled,
-    multiple: mode === 'image-to-pdf' || mode === 'merge-pdf' || mode === 'zip-files',
+    multiple: mode === 'image-to-pdf' || mode === 'merge-pdf' || mode === 'zip-files' || mode === 'compress-pdf',
     maxSize: mode === 'image-to-pdf' ? 25 * 1024 * 1024 : undefined
   });
 
@@ -204,7 +204,7 @@ export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled }
   const getHeadline = () => {
     if (dropState === 'dragActive') return "Release to add files";
     if (mode === 'image-to-pdf') return "Drop images here";
-    if (mode === 'compress-pdf') return "Drop PDF here";
+    if (mode === 'compress-pdf') return "Drop PDFs here";
     if (mode === 'merge-pdf') return "Drop your PDFs here";
     if (mode === 'split-pdf') return "Drop PDF here";
     if (mode === 'zip-files') return "Drop files here";
@@ -213,7 +213,7 @@ export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled }
 
   const getSubtext = () => {
     if (mode === 'image-to-pdf') return "Supports JPG, PNG, WebP, GIF, BMP";
-    if (mode === 'compress-pdf') return "Reduce file size instantly";
+    if (mode === 'compress-pdf') return "Reduce file sizes instantly (up to 10 PDFs)";
     if (mode === 'merge-pdf') return "Combine multiple files into one";
     if (mode === 'split-pdf') return "Extract pages or split into files";
     if (mode === 'zip-files') return "Create a ZIP archive instantly";

@@ -13,7 +13,7 @@ interface LayoutContextType {
   addToast: (
     title: string,
     message: string,
-    type?: 'warning' | 'error' | 'undo',
+    type?: 'warning' | 'error' | 'undo' | 'success',
     durationOrAction?: number | ToastAction
   ) => string;
   removeToast: (id: string) => void;
@@ -96,7 +96,7 @@ export const Layout: React.FC = () => {
   const addToast = (
     title: string,
     message: string,
-    type: 'warning' | 'error' | 'undo' = 'warning',
+    type: 'warning' | 'error' | 'undo' | 'success' = 'warning',
     durationOrAction?: number | ToastAction
   ) => {
     const id = nanoid();
@@ -106,6 +106,9 @@ export const Layout: React.FC = () => {
     else if (typeof durationOrAction === 'object') {
       toast.action = durationOrAction;
       toast.duration = 6000;
+    } else {
+      // Default duration set to 2 seconds as requested
+      toast.duration = 2000;
     }
 
     setToasts(prev => [...prev, toast].slice(-5));

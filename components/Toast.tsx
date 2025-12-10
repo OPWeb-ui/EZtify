@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, X, AlertCircle } from 'lucide-react';
+import { AlertTriangle, X, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { ToastMessage } from '../types';
 
 interface ToastProps {
@@ -10,12 +10,33 @@ interface ToastProps {
 
 const ToastItem: React.FC<ToastProps> = ({ toast, onDismiss }) => {
   useEffect(() => {
-    const duration = toast.duration ?? 6000;
+    const duration = toast.duration ?? 2000; // Default 2 seconds
     const timer = setTimeout(() => {
       onDismiss(toast.id);
     }, duration);
     return () => clearTimeout(timer);
   }, [toast.id, onDismiss, toast.duration]);
+
+  const isError = toast.type === 'error';
+  const isSuccess = toast.type === 'success';
+  const isWarning = toast.type === 'warning';
+
+  let accentColor = 'bg-brand-orange';
+  let iconColor = 'text-brand-orange';
+  let glowColor = 'bg-brand-orange/30';
+  let icon = <AlertTriangle className={`relative w-4 h-4 ${iconColor}`} />;
+
+  if (isError) {
+    accentColor = 'bg-rose-500';
+    iconColor = 'text-rose-500';
+    glowColor = 'bg-rose-500/30';
+    icon = <AlertCircle className={`relative w-4 h-4 ${iconColor}`} />;
+  } else if (isSuccess) {
+    accentColor = 'bg-brand-green';
+    iconColor = 'text-brand-green';
+    glowColor = 'bg-brand-green/30';
+    icon = <CheckCircle2 className={`relative w-4 h-4 ${iconColor}`} />;
+  }
 
   return (
     <motion.div
@@ -25,8 +46,7 @@ const ToastItem: React.FC<ToastProps> = ({ toast, onDismiss }) => {
         opacity: 1, 
         y: 0, 
         scale: 1,
-        // Strong shake animation for errors
-        x: toast.type === 'error' ? [0, -10, 10, -10, 10, 0] : 0
+        x: isError ? [0, -10, 10, -10, 10, 0] : 0
       }}
       exit={{ 
         opacity: 0, 
@@ -38,34 +58,30 @@ const ToastItem: React.FC<ToastProps> = ({ toast, onDismiss }) => {
         type: "spring", 
         stiffness: 400, 
         damping: 25,
-        x: { duration: 0.4, ease: "easeInOut" } // Specific timing for shake
+        x: { duration: 0.4, ease: "easeInOut" }
       }}
-      className="pointer-events-auto w-full max-w-md mx-auto mb-3 px-4 md:px-0"
+      className="pointer-events-auto w-full max-w-md ml-auto px-4 md:px-0"
     >
-      <div className="relative overflow-hidden rounded-2xl bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-xl border border-slate-200 dark:border-charcoal-700 shadow-2xl shadow-brand-purple/10 p-4 flex items-start gap-4 group">
+      <div className="relative overflow-hidden rounded-xl bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-xl border border-slate-200 dark:border-charcoal-700 shadow-xl shadow-brand-purple/10 p-3 flex items-start gap-3 group">
         
         {/* Animated Gradient Glow Line */}
-        <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${toast.type === 'error' ? 'bg-rose-500' : 'bg-brand-orange'}`} />
+        <div className={`absolute left-0 top-0 bottom-0 w-1 ${accentColor}`} />
         
         {/* Subtle Background Tint */}
-        <div className={`absolute inset-0 opacity-[0.03] ${toast.type === 'error' ? 'bg-rose-500' : 'bg-brand-orange'} pointer-events-none`} />
+        <div className={`absolute inset-0 opacity-[0.03] ${accentColor} pointer-events-none`} />
 
         {/* Icon */}
         <div className="relative flex-shrink-0 mt-0.5">
-          <div className={`absolute inset-0 rounded-full blur-md animate-pulse ${toast.type === 'error' ? 'bg-rose-500/30' : 'bg-brand-orange/30'}`} />
-          {toast.type === 'error' ? (
-             <AlertCircle className="relative w-6 h-6 text-rose-500" />
-          ) : (
-             <AlertTriangle className="relative w-6 h-6 text-brand-orange" />
-          )}
+          <div className={`absolute inset-0 rounded-full blur-md animate-pulse ${glowColor}`} />
+          {icon}
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-w-0 pt-0.5">
-          <h3 className="text-sm font-bold tracking-wide mb-1 text-charcoal-800 dark:text-slate-100">
+        <div className="flex-1 min-w-0">
+          <h3 className="text-xs font-bold tracking-wide text-charcoal-800 dark:text-slate-100 leading-tight">
             {toast.title}
           </h3>
-          <p className="text-xs md:text-sm text-charcoal-500 dark:text-slate-400 leading-relaxed font-medium">
+          <p className="text-[11px] text-charcoal-500 dark:text-slate-400 leading-tight mt-0.5 font-medium">
             {toast.message}
           </p>
         </div>
@@ -79,9 +95,9 @@ const ToastItem: React.FC<ToastProps> = ({ toast, onDismiss }) => {
           }}
           whileHover={{ scale: 1.2, rotate: 90 }}
           whileTap={{ scale: 0.9 }}
-          className="relative z-10 -mr-1 -mt-1 p-2 rounded-full text-charcoal-400 hover:text-charcoal-700 dark:text-slate-500 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-charcoal-800 transition-colors cursor-pointer outline-none focus:ring-2 focus:ring-brand-purple/20"
+          className="relative z-10 -mr-1 -mt-1 p-1 rounded-full text-charcoal-400 hover:text-charcoal-700 dark:text-slate-500 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-charcoal-800 transition-colors cursor-pointer outline-none focus:ring-2 focus:ring-brand-purple/20"
         >
-          <X className="w-4 h-4" strokeWidth={2.5} />
+          <X className="w-3.5 h-3.5" strokeWidth={2.5} />
         </motion.button>
       </div>
     </motion.div>
@@ -101,8 +117,8 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onDismis
   return (
     <div 
       className={`
-        fixed z-[100] pointer-events-none flex flex-col justify-end
-        ${isMobile ? 'inset-x-0 bottom-20 px-2' : 'bottom-24 right-8 w-[400px]'}
+        fixed z-[100] pointer-events-none flex flex-col justify-end gap-2
+        ${isMobile ? 'inset-x-0 bottom-6 px-4' : 'bottom-6 right-6 w-[300px]'}
       `}
     >
       <AnimatePresence mode="popLayout">

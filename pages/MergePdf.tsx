@@ -5,8 +5,8 @@ import { HowItWorks } from '../components/HowItWorks';
 import { FAQ } from '../components/FAQ';
 import { AdSlot } from '../components/AdSlot';
 import { RotatingText } from '../components/RotatingText';
-import { MergeFileList } from '../components/MergeFileList';
 import { HeroPill } from '../components/HeroPill';
+import { MergeFileList } from '../components/MergeFileList';
 import { PageReadyTracker } from '../components/PageReadyTracker';
 import { PdfFile } from '../types';
 import { mergePdfs } from '../services/pdfMerger';
@@ -46,12 +46,18 @@ export const MergePdfPage: React.FC = () => {
       addToast("Ignored Files", "Only PDF files are supported.", "warning");
     }
     
-    setFiles(prev => [...prev, ...newFiles]);
+    if (newFiles.length > 0) {
+        setFiles(prev => [...prev, ...newFiles]);
+        addToast("Success", `Added ${newFiles.length} files to merge.`, "success");
+    }
   }, [addToast]);
 
-  const { getRootProps, getInputProps } = useDropzone({
+  const { getRootProps, getInputProps, open, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'application/pdf': ['.pdf'] }
+    accept: { 'application/pdf': ['.pdf'] },
+    noClick: true,
+    noKeyboard: true,
+    multiple: true
   });
 
   const handleMerge = async () => {
@@ -114,7 +120,7 @@ export const MergePdfPage: React.FC = () => {
             key="hero"
             className="flex-1 flex flex-col overflow-y-auto custom-scrollbar"
           >
-            <section className="flex-1 min-h-[calc(100vh-80px)] flex flex-col items-center justify-center p-6 pt-12 pb-12 relative">
+            <section className="flex-1 flex flex-col items-center justify-center p-4 pt-8 pb-10 relative">
                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] blur-[120px] rounded-full pointer-events-none bg-brand-orange/10" />
                <motion.div 
                  variants={staggerContainer}
@@ -122,21 +128,8 @@ export const MergePdfPage: React.FC = () => {
                  animate="show"
                  className="relative z-10 w-full max-w-2xl flex flex-col items-center text-center"
                >
-                 <motion.h2 
-                   variants={fadeInUp}
-                   className="text-3xl md:text-6xl font-heading font-bold text-charcoal-900 dark:text-white mb-4 leading-tight tracking-tight"
-                  >
-                   Merge Multiple PDFs <br/> Into One File in One Click
-                 </motion.h2>
-                 
-                 <motion.div variants={fadeInUp}>
-                   <HeroPill>
-                      <span className="font-bold text-brand-orange">Merge PDF</span> combines multiple documents into one organized file. 
-                      Rearrange pages easily and merge instantly without sending files to the cloud.
-                   </HeroPill>
-                 </motion.div>
-
-                 <motion.div variants={fadeInUp} className="w-full max-w-xl mb-8 relative z-20">
+                 <motion.div variants={fadeInUp} className="w-full max-w-xl my-4 relative z-20">
+                   <HeroPill>Combine multiple PDF files into one organized document in seconds.</HeroPill>
                    <UploadArea onDrop={onDrop} mode="merge-pdf" disabled={isGenerating} />
                  </motion.div>
                  <motion.div variants={fadeInUp}>
@@ -147,7 +140,7 @@ export const MergePdfPage: React.FC = () => {
 
             <AdSlot zone="hero" />
 
-            <div className="w-full bg-gradient-to-b from-transparent to-white/40 dark:to-charcoal-900/40 pb-20 pt-12 border-t border-brand-purple/5 dark:border-white/5">
+            <div className="w-full bg-gradient-to-b from-transparent to-white/40 dark:to-charcoal-900/40 pb-20 pt-10 border-t border-brand-purple/5 dark:border-white/5">
               <HowItWorks mode="merge-pdf" />
               <AdSlot zone="footer" />
               <FAQ />
@@ -157,14 +150,32 @@ export const MergePdfPage: React.FC = () => {
           <motion.div
             key="workspace"
             className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-y-auto custom-scrollbar"
+            {...getRootProps({ onClick: (e) => e.stopPropagation() })}
           >
+            <input {...getInputProps()} />
+            <AnimatePresence>
+              {isDragActive && (
+                <motion.div 
+                    initial={{ opacity: 0 }} 
+                    animate={{ opacity: 1 }} 
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 z-[100] bg-brand-orange/10 backdrop-blur-sm flex items-center justify-center border-4 border-dashed border-brand-orange rounded-3xl pointer-events-none"
+                >
+                    <div className="text-center text-brand-orange">
+                        <Plus size={64} className="mx-auto mb-4 animate-pulse" />
+                        <p className="text-2xl font-bold">Drop more PDFs to add</p>
+                    </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <motion.button
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
               whileHover={{ scale: 1.05, rotate: 90 }}
               whileTap={buttonTap}
-              onClick={handleReset}
+              onClick={(e) => { e.stopPropagation(); handleReset(); }}
               className="absolute top-8 right-4 z-50 w-10 h-10 flex items-center justify-center rounded-full bg-white/90 dark:bg-charcoal-800/90 text-charcoal-500 dark:text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:text-rose-500 shadow-md backdrop-blur-sm border border-slate-200 dark:border-charcoal-700 transition-colors"
               title="Close and Reset"
             >
@@ -188,17 +199,16 @@ export const MergePdfPage: React.FC = () => {
                      />
                      
                      <div className="mb-8">
-                        <motion.div 
-                          {...getRootProps()} 
+                        <motion.button 
+                          onClick={(e) => { e.stopPropagation(); open(); }}
                           whileHover={{ scale: 1.02, borderColor: '#8B5CF6' }}
                           whileTap={buttonTap}
-                          className="border-2 border-dashed border-slate-200 dark:border-charcoal-700 rounded-xl p-4 text-center hover:bg-white dark:hover:bg-charcoal-800 cursor-pointer transition-colors"
+                          className="w-full border-2 border-dashed border-slate-200 dark:border-charcoal-700 rounded-xl p-4 text-center hover:bg-white dark:hover:bg-charcoal-800 cursor-pointer transition-colors"
                         >
-                           <input {...getInputProps()} />
                            <span className="text-sm font-bold text-brand-purple flex items-center justify-center gap-2">
                               <Plus size={16} /> Add more PDFs
                            </span>
-                        </motion.div>
+                        </motion.button>
                      </div>
                      
                      <AdSlot zone="sidebar" className="!my-4 !min-h-[100px]" />
@@ -209,7 +219,7 @@ export const MergePdfPage: React.FC = () => {
                           whileTap={{ scale: 0.96 }}
                           animate={shouldShake ? { x: [0, -10, 10, -10, 10, 0], backgroundColor: "#F43F5E" } : { x: 0, backgroundColor: "#8B5CF6" }}
                           transition={{ duration: 0.4 }}
-                          onClick={handleMerge}
+                          onClick={(e) => { e.stopPropagation(); handleMerge(); }}
                           disabled={isGenerating}
                           className="w-full py-4 rounded-xl text-white font-bold text-lg shadow-lg shadow-brand-purple/30 hover:shadow-brand-purple/50 transition-all disabled:opacity-50 disabled:cursor-wait relative overflow-hidden"
                         >
@@ -243,7 +253,7 @@ export const MergePdfPage: React.FC = () => {
                        <motion.button
                          whileHover={{ scale: 1.02 }}
                          whileTap={{ scale: 0.96 }}
-                         onClick={downloadResult}
+                         onClick={(e) => { e.stopPropagation(); downloadResult(); }}
                          className="w-full py-4 rounded-xl bg-brand-purple text-white font-bold text-lg shadow-lg shadow-brand-purple/30 hover:shadow-brand-purple/50 transition-all flex items-center justify-center gap-2"
                          >
                           <Download size={20} /> Download Merged PDF
@@ -252,9 +262,9 @@ export const MergePdfPage: React.FC = () => {
                        <motion.button
                          whileHover={{ scale: 1.02 }}
                          whileTap={{ scale: 0.98 }}
-                         onClick={() => { setFiles([]); setResult(null); }}
+                         onClick={(e) => { e.stopPropagation(); setFiles([]); setResult(null); }}
                          className="w-full py-3 text-charcoal-500 dark:text-slate-400 hover:text-brand-purple font-medium text-sm flex items-center justify-center gap-2"
-                       >
+                         >
                           <RefreshCcw size={14} /> Merge more files
                        </motion.button>
                        

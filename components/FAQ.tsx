@@ -10,8 +10,8 @@ export const FAQ = () => {
     },
     {
       icon: <Zap className="w-4 h-4 text-brand-blue" />,
-      q: "Does it work offline?",
-      a: "Yes. Once loaded, no internet needed."
+      q: "Do I need to install anything?",
+      a: "No. EZtify runs in your browser. Add it to your home screen for quick access."
     },
     {
       icon: <HardDrive className="w-4 h-4 text-brand-mint" />,

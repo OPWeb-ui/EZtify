@@ -5,13 +5,13 @@ import { HowItWorks } from '../components/HowItWorks';
 import { FAQ } from '../components/FAQ';
 import { AdSlot } from '../components/AdSlot';
 import { RotatingText } from '../components/RotatingText';
-import { SplitPageGrid } from '../components/SplitPageGrid';
 import { HeroPill } from '../components/HeroPill';
+import { SplitPageGrid } from '../components/SplitPageGrid';
 import { Skeleton } from '../components/Skeleton';
 import { PageReadyTracker } from '../components/PageReadyTracker';
 import { PdfPage, SplitMode } from '../types';
 import { loadPdfPages, extractPagesToPdf, splitPagesToZip } from '../services/pdfSplitter';
-import { Download, RefreshCcw, CheckCircle, Scissors, X, Loader2, ListFilter } from 'lucide-react';
+import { Download, RefreshCcw, CheckCircle, Scissors, X, Loader2, ListFilter, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { buttonTap, staggerContainer, fadeInUp } from '../utils/animations';
 import { useDropzone, FileRejection } from 'react-dropzone';
@@ -65,6 +65,7 @@ export const SplitPdfPage: React.FC = () => {
            addToast("Single Page PDF", "This document only has one page. Nothing to split.", "warning", 5000);
         }
         setPages(loadedPages);
+        addToast("Success", `Successfully loaded ${loadedPages.length} pages.`, "success");
       }
     } catch (e) {
       console.error(e);
@@ -77,9 +78,12 @@ export const SplitPdfPage: React.FC = () => {
     }
   }, [addToast]);
 
-  const { getRootProps, getInputProps } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'application/pdf': ['.pdf'] }
+    accept: { 'application/pdf': ['.pdf'] },
+    noClick: true,
+    noKeyboard: true,
+    multiple: false,
   });
 
   const togglePageSelection = (id: string) => {
@@ -219,7 +223,7 @@ export const SplitPdfPage: React.FC = () => {
             key="hero"
             className="flex-1 flex flex-col overflow-y-auto custom-scrollbar"
           >
-            <section className="flex-1 min-h-[calc(100vh-80px)] flex flex-col items-center justify-center p-6 pt-12 pb-12 relative">
+            <section className="flex-1 flex flex-col items-center justify-center p-4 pt-8 pb-10 relative">
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] blur-[120px] rounded-full pointer-events-none bg-brand-mint/10" />
                 <motion.div 
                   variants={staggerContainer}
@@ -227,21 +231,8 @@ export const SplitPdfPage: React.FC = () => {
                   animate="show"
                   className="relative z-10 w-full max-w-2xl flex flex-col items-center text-center"
                 >
-                  <motion.h2 
-                    variants={fadeInUp}
-                    className="text-3xl md:text-6xl font-heading font-bold text-charcoal-900 dark:text-white mb-4 leading-tight tracking-tight"
-                  >
-                    Split & Extract PDF Pages <br/> in One Click
-                  </motion.h2>
-                  
-                  <motion.div variants={fadeInUp}>
-                    <HeroPill>
-                      <span className="font-bold text-brand-blue">Split PDF</span> lets you extract specific pages or separate documents into individual files. 
-                      Fast, precise, and completely secure processing.
-                    </HeroPill>
-                  </motion.div>
-
-                  <motion.div variants={fadeInUp} className="w-full max-w-xl my-6 md:my-8 relative z-20">
+                  <motion.div variants={fadeInUp} className="w-full max-w-xl my-4 relative z-20">
+                    <HeroPill>Extract specific pages or split a document into multiple separate files.</HeroPill>
                     <UploadArea onDrop={onDrop} mode="split-pdf" disabled={isGenerating} />
                   </motion.div>
                   <motion.div variants={fadeInUp}>
@@ -252,7 +243,7 @@ export const SplitPdfPage: React.FC = () => {
 
             <AdSlot zone="hero" />
 
-            <div className="w-full bg-gradient-to-b from-transparent to-white/40 dark:to-charcoal-900/40 pb-20 pt-12 border-t border-brand-purple/5 dark:border-white/5">
+            <div className="w-full bg-gradient-to-b from-transparent to-white/40 dark:to-charcoal-900/40 pb-20 pt-10 border-t border-brand-purple/5 dark:border-white/5">
               <HowItWorks mode="split-pdf" />
               <AdSlot zone="footer" />
               <FAQ />
@@ -261,8 +252,28 @@ export const SplitPdfPage: React.FC = () => {
         ) : (
           <motion.div
             key="workspace"
-            className="flex-1 flex flex-col items-center p-6 relative bg-white/50 dark:bg-charcoal-900/50 min-h-[calc(100vh-4rem)]"
+            className="flex-1 flex flex-col items-center p-6 relative bg-white/50 dark:bg-charcoal-900/50 min-h-[calc(100vh-4rem)] outline-none"
+            {...getRootProps({
+              onClick: (e: React.MouseEvent) => e.stopPropagation()
+            })}
           >
+            <input {...getInputProps()} />
+            <AnimatePresence>
+              {isDragActive && (
+                <motion.div 
+                  initial={{ opacity: 0 }} 
+                  animate={{ opacity: 1 }} 
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-[100] bg-brand-mint/10 backdrop-blur-sm flex items-center justify-center border-4 border-dashed border-brand-mint rounded-3xl pointer-events-none"
+                >
+                    <div className="text-center text-brand-mint">
+                        <Plus size={64} className="mx-auto mb-4 animate-pulse" />
+                        <p className="text-2xl font-bold">Drop new PDF to start over</p>
+                    </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <motion.button
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}

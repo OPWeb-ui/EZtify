@@ -44,14 +44,6 @@ export const StickyBar: React.FC<StickyBarProps> = ({
   onToggleFilmstrip,
   isFilmstripVisible
 }) => {
-  const formatSize = (bytes: number) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
   const getActionLabel = () => {
     if (isGenerating) {
       if (status) return `${status} ${progress > 0 && progress < 100 ? `(${progress}%)` : ''}`.trim();
@@ -91,18 +83,7 @@ export const StickyBar: React.FC<StickyBarProps> = ({
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       className="fixed bottom-0 left-0 right-0 z-[100] border-t border-slate-200/50 dark:border-charcoal-700/50 backdrop-blur-xl bg-white/90 dark:bg-charcoal-900/90 shadow-[0_-8px_30px_rgba(0,0,0,0.05)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.3)] p-4 md:px-8"
     >
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 md:gap-4">
-        
-        <div className="flex flex-col gap-0.5 min-w-[60px]">
-          <div className="text-sm font-bold text-charcoal-800 dark:text-charcoal-300 flex items-center gap-2">
-            <span className="bg-brand-purple/10 text-brand-purple px-2 py-0.5 rounded-md text-xs font-mono">{imageCount} files</span>
-            <span className="hidden md:inline text-charcoal-500 dark:text-charcoal-500 font-normal">selected</span>
-          </div>
-          <div className="text-[10px] text-charcoal-500 dark:text-charcoal-500 font-mono">
-            {formatSize(totalSize)}
-          </div>
-        </div>
-
+      <div className="max-w-7xl mx-auto flex items-center justify-end gap-3 md:gap-4">
         <div className="flex items-center gap-2 md:gap-3 flex-1 md:flex-none justify-end min-w-0">
           
           {showFilmstripToggle && onToggleFilmstrip && (
