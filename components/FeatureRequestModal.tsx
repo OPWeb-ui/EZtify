@@ -2,14 +2,15 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Mail, MessageSquare } from 'lucide-react';
 import { buttonTap, modalVariants } from '../utils/animations';
+import { useLayoutContext } from './Layout';
 
 interface FeatureRequestModalProps {
   isOpen: boolean;
   onClose: () => void;
-  addToast: (title: string, msg: string, type?: 'warning' | 'error') => void;
 }
 
-export const FeatureRequestModal: React.FC<FeatureRequestModalProps> = ({ isOpen, onClose, addToast }) => {
+export const FeatureRequestModal: React.FC<FeatureRequestModalProps> = ({ isOpen, onClose }) => {
+  const { addToast } = useLayoutContext();
   const [feature, setFeature] = useState('');
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);

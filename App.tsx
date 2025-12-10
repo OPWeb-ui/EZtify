@@ -3,6 +3,7 @@ import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Layout } from './components/Layout';
 import { GlobalErrorBoundary } from './components/GlobalErrorBoundary';
 import { SEO } from './components/SEO';
+import { ScrollToTop } from './components/ScrollToTop';
 
 // Lazy Load Pages (Code Splitting)
 const Home = React.lazy(() => import('./pages/Home').then(module => ({ default: module.Home })));
@@ -18,6 +19,7 @@ const App: React.FC = () => {
   return (
     <GlobalErrorBoundary>
       <Router>
+        <ScrollToTop />
         <Routes>
           <Route path="/" element={<Layout />}>
             {/* Landing Page (Main Entry Point) */}

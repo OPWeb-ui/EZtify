@@ -7,13 +7,14 @@ import { FAQ } from '../components/FAQ';
 import { ToolCarousel } from '../components/ToolCarousel';
 import { ToolData } from '../components/ToolCard';
 import { FeatureRequestModal } from '../components/FeatureRequestModal';
-import { useToast } from '../components/Layout';
+import { useLayoutContext } from '../components/Layout';
 import { Link } from 'react-router-dom';
-import { buttonTap } from '../utils/animations';
+import { buttonTap, staggerContainer, fadeInUp } from '../utils/animations';
+import { PageReadyTracker } from '../components/PageReadyTracker';
 
 export const Home: React.FC = () => {
   const shouldReduceMotion = useReducedMotion();
-  const { addToast } = useToast();
+  const { addToast } = useLayoutContext();
   const [isFeatureModalOpen, setIsFeatureModalOpen] = useState(false);
 
   const tools: ToolData[] = [
@@ -75,40 +76,48 @@ export const Home: React.FC = () => {
 
   return (
     <div className="flex-1 w-full overflow-y-auto custom-scrollbar bg-pastel-bg dark:bg-charcoal-950">
+      <PageReadyTracker />
       
       {/* 1. Hero Section */}
       <section className="relative px-6 pt-12 pb-20 md:pt-20 md:pb-32 overflow-hidden">
         
         {/* Animated Background Blobs */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-           <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-brand-purple/10 dark:bg-brand-purple/5 rounded-full blur-[100px] animate-blob" />
-           <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-brand-blue/10 dark:bg-brand-blue/5 rounded-full blur-[100px] animate-blob" style={{ animationDelay: '2s' }} />
+           <motion.div 
+              className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-brand-purple/10 dark:bg-brand-purple/5 rounded-full blur-[100px]"
+              animate={!shouldReduceMotion ? { scale: [1, 1.1, 1], x: [0, 20, 0], y: [0, -20, 0] } : {}}
+              transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+            />
+           <motion.div 
+             className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-brand-blue/10 dark:bg-brand-blue/5 rounded-full blur-[100px]"
+             animate={!shouldReduceMotion ? { scale: [1, 0.9, 1], x: [0, -20, 0], y: [0, 20, 0] } : {}}
+             transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+            />
         </div>
 
-        <div className="max-w-4xl mx-auto text-center relative z-10">
+        <motion.div 
+          variants={staggerContainer}
+          initial="hidden"
+          animate="show"
+          className="max-w-4xl mx-auto text-center relative z-10"
+        >
           
           <motion.div 
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
+            variants={fadeInUp}
             className="mb-8 inline-block"
           >
             <Logo size="lg" />
           </motion.div>
           
           <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
+            variants={fadeInUp}
             className="text-5xl md:text-7xl font-heading font-extrabold text-charcoal-900 dark:text-white mb-6 tracking-tight leading-[1.1]"
           >
             Your PDFs, <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-purple to-brand-blue">Simplified.</span>
           </motion.h1>
           
           <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.6 }}
+            variants={fadeInUp}
             className="text-lg md:text-xl text-charcoal-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed mb-10"
           >
             Fast, free, and private PDF tools that run entirely in your browser. 
@@ -116,9 +125,7 @@ export const Home: React.FC = () => {
           </motion.p>
           
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.6 }}
+            variants={fadeInUp}
             className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
             <Link to="/images-to-pdf">
@@ -142,7 +149,7 @@ export const Home: React.FC = () => {
             </motion.button>
           </motion.div>
 
-        </div>
+        </motion.div>
       </section>
 
       {/* 2. Tool Carousel */}
@@ -202,7 +209,6 @@ export const Home: React.FC = () => {
       <FeatureRequestModal 
         isOpen={isFeatureModalOpen} 
         onClose={() => setIsFeatureModalOpen(false)} 
-        addToast={addToast}
       />
     </div>
   );

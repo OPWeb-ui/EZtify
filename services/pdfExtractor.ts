@@ -1,12 +1,15 @@
 
+
 import { UploadedImage } from '../types';
 import { nanoid } from 'nanoid';
 import { loadPdfJs } from './pdfProvider';
 
 export const extractImagesFromPdf = async (
   file: File,
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number) => void,
+  onStatusUpdate?: (status: string) => void,
 ): Promise<UploadedImage[]> => {
+  onStatusUpdate?.('Preparing PDF...');
   const arrayBuffer = await file.arrayBuffer();
   
   // Load PDF Library dynamically
@@ -14,6 +17,7 @@ export const extractImagesFromPdf = async (
   
   let pdf;
   try {
+    onStatusUpdate?.('Parsing PDF document...');
     // Provide CMap parameters to ensure fonts load correctly
     const loadingTask = pdfjsLib.getDocument({ 
       data: arrayBuffer,
@@ -31,6 +35,7 @@ export const extractImagesFromPdf = async (
   const extractedImages: UploadedImage[] = [];
 
   for (let i = 1; i <= numPages; i++) {
+    onStatusUpdate?.(`Rendering page ${i} of ${numPages}...`);
     // Report progress
     if (onProgress) {
       onProgress(Math.round(((i - 1) / numPages) * 100));

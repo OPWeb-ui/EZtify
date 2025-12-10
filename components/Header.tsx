@@ -19,7 +19,6 @@ export const Header: React.FC<HeaderProps> = ({ currentMode }) => {
   const { theme, toggleTheme } = useTheme();
 
   const tools = [
-    { id: 'home', label: 'Home', path: '/' },
     { id: 'image-to-pdf', label: 'Images → PDF', path: '/images-to-pdf' },
     { id: 'pdf-to-image', label: 'PDF → Images', path: '/pdf-to-images' },
     { id: 'compress-pdf', label: 'Compress PDF', path: '/compress-pdf' },
@@ -27,8 +26,6 @@ export const Header: React.FC<HeaderProps> = ({ currentMode }) => {
     { id: 'split-pdf', label: 'Split PDF', path: '/split-pdf' },
     { id: 'zip-files', label: 'Zip It!', path: '/zip-it' }
   ] as const;
-
-  const currentToolLabel = tools.find(t => t.id === currentMode)?.label || 'Tools';
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -89,7 +86,7 @@ export const Header: React.FC<HeaderProps> = ({ currentMode }) => {
               : 'bg-white/60 dark:bg-charcoal-800/80 border-slate-200 dark:border-charcoal-700 text-charcoal-700 dark:text-charcoal-300 hover:border-brand-purple/30'}
           `}
         >
-          <span className="relative z-10">{currentToolLabel === 'Tools' ? 'Select Tool' : currentToolLabel}</span>
+          <span className="relative z-10">Select Tool</span>
           <motion.div
             animate={{ rotate: isDropdownOpen ? 180 : 0 }}
             transition={{ duration: 0.2 }}

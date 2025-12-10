@@ -3,13 +3,16 @@ import { PdfFile } from '../types';
 
 export const mergePdfs = async (
   files: PdfFile[],
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number) => void,
+  onStatusUpdate?: (status: string) => void,
 ): Promise<Blob> => {
   if (files.length === 0) throw new Error("No files to merge");
 
+  onStatusUpdate?.('Preparing to merge...');
   const mergedPdf = await PDFDocument.create();
 
   for (let i = 0; i < files.length; i++) {
+    onStatusUpdate?.(`Merging file ${i + 1} of ${files.length}...`);
     if (onProgress) {
       onProgress(Math.round((i / files.length) * 100));
     }
@@ -33,6 +36,7 @@ export const mergePdfs = async (
     }
   }
 
+  onStatusUpdate?.('Finalizing merged PDF...');
   if (onProgress) onProgress(95);
 
   const mergedPdfBytes = await mergedPdf.save();

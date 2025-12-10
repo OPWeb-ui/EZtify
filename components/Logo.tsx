@@ -1,13 +1,29 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 
 export const Logo: React.FC<{ size?: 'sm' | 'lg' | 'mono' }> = ({ size = 'lg' }) => {
   const isSmall = size === 'sm';
   const isMono = size === 'mono';
+  const shouldReduceMotion = useReducedMotion();
   
   // Increased base size for better readability of the detailed mark
   const width = isSmall ? 40 : 80;
   const height = isSmall ? 40 : 80;
+
+  const boltAnimation = { 
+     scale: [1, 1.1, 1],
+     filter: !isMono 
+       ? ["brightness(1)", "brightness(1.15) drop-shadow(0 0 8px rgba(250, 204, 21, 0.6))", "brightness(1)"] 
+       : undefined
+  };
+  const boltTransition = { 
+     duration: 2.5, 
+     repeat: Infinity, 
+     ease: "easeInOut" 
+  };
+  
+  const flashAnimation = { opacity: [0, 0.5, 0] };
+  const flashTransition = { duration: 2.5, repeat: Infinity, times: [0, 0.5, 1], ease: "easeInOut" };
 
   return (
     <div className="relative flex items-center justify-center">
@@ -45,66 +61,49 @@ export const Logo: React.FC<{ size?: 'sm' | 'lg' | 'mono' }> = ({ size = 'lg' })
           </filter>
         </defs>
 
-        {/* Document Outline - Uses Brand Gradient */}
-        <motion.path 
+        {/* Document Outline - Static First */}
+        <path 
           d="M26 14 H62 L82 34 V86 H26 V14 Z"
           stroke={isMono ? "currentColor" : "url(#ezDocGradient)"}
           strokeWidth={isSmall ? 6 : 5}
           strokeLinecap="round"
           strokeLinejoin="round"
           fill="none"
-          initial={{ pathLength: 0, opacity: 0 }}
-          animate={{ pathLength: 1, opacity: 1 }}
-          transition={{ duration: 1.2, ease: "easeOut" }}
           style={{ opacity: isMono ? 1 : 0.8 }}
         />
         
-        {/* Document Folded Corner */}
-        <motion.path 
+        {/* Document Folded Corner - Static First */}
+        <path 
           d="M62 14 V34 H82"
           stroke={isMono ? "currentColor" : "url(#ezDocGradient)"}
           strokeWidth={isSmall ? 6 : 5}
           strokeLinecap="round"
           strokeLinejoin="round"
           fill="none"
-          initial={{ pathLength: 0, opacity: 0 }}
-          animate={{ pathLength: 1, opacity: 1 }}
-          transition={{ duration: 1.2, ease: "easeOut", delay: 0.4 }}
           style={{ opacity: isMono ? 1 : 0.8 }}
         />
 
-        {/* Lightning Bolt (Central Power Element) - YELLOW */}
+        {/* Lightning Bolt (Central Power Element) - YELLOW - Gentle Pulse */}
         <motion.path
           d="M58 20 L34 54 H54 L44 90 L80 44 H58 L70 20 H58 Z"
           fill={isMono ? "currentColor" : "url(#ezBoltGradient)"}
           stroke={isMono ? "transparent" : "white"}
           strokeWidth={isMono ? 0 : 2}
           filter={!isMono ? "url(#ezYellowGlow)" : undefined}
-          initial={{ scale: 0.5, opacity: 0, y: 10 }}
-          animate={{ 
-             scale: 1, 
-             opacity: 1, 
-             y: 0,
-             filter: !isMono 
-               ? ["brightness(1)", "brightness(1.2) drop-shadow(0 0 5px rgba(250, 204, 21, 0.5))", "brightness(1)"] 
-               : undefined
-          }}
-          transition={{ 
-             scale: { type: "spring", stiffness: 400, damping: 18, delay: 0.2 },
-             filter: { duration: 2, repeat: Infinity, ease: "easeInOut" } // Smooth pulsing
-          }}
+          animate={shouldReduceMotion ? { scale: 1 } : boltAnimation}
+          transition={shouldReduceMotion ? { duration: 0 } : boltTransition}
+          style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
         />
         
-        {/* Inner energy flash animation */}
+        {/* Inner energy flash - Subtle */}
         {!isMono && (
            <motion.path
              d="M58 20 L34 54 H54 L44 90 L80 44 H58 L70 20 H58 Z"
              fill="white"
-             fillOpacity="0.5"
+             fillOpacity="0.3"
              stroke="none"
-             initial={{ opacity: 0 }}
-             animate={{ opacity: [0, 0.8, 0] }}
-             transition={{ duration: 3, repeat: Infinity, times: [0, 0.1, 1], ease: "easeOut" }}
+             animate={shouldReduceMotion ? { opacity: 0 } : flashAnimation}
+             transition={shouldReduceMotion ? { duration: 0 } : flashTransition}
              style={{ mixBlendMode: 'overlay' }}
            />
         )}

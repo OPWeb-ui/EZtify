@@ -38,12 +38,18 @@ export interface AppState {
   isGenerating: boolean;
 }
 
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 export interface ToastMessage {
   id: string;
   title: string;
   message: string;
-  type: 'warning' | 'error';
+  type: 'warning' | 'error' | 'undo';
   duration?: number;
+  action?: ToastAction;
 }
 
 export type CompressionLevel = 'normal' | 'strong';
@@ -53,6 +59,7 @@ export interface CompressionResult {
   newSize: number;
   blob: Blob;
   fileName: string;
+  status?: string;
 }
 
 export interface PdfFile {

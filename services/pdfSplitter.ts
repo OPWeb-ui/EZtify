@@ -10,8 +10,10 @@ import { loadPdfJs } from './pdfProvider';
  */
 export const loadPdfPages = async (
   file: File,
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number) => void,
+  onStatusUpdate?: (status: string) => void,
 ): Promise<PdfPage[]> => {
+  onStatusUpdate?.('Preparing PDF...');
   const arrayBuffer = await file.arrayBuffer();
   
   // Load PDF.js dynamically
@@ -19,6 +21,7 @@ export const loadPdfPages = async (
   
   let pdf;
   try {
+    onStatusUpdate?.('Parsing PDF document...');
     const loadingTask = pdfjsLib.getDocument({ 
       data: arrayBuffer,
       cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/cmaps/',
@@ -36,6 +39,7 @@ export const loadPdfPages = async (
   const pages: PdfPage[] = [];
 
   for (let i = 1; i <= numPages; i++) {
+    onStatusUpdate?.(`Loading preview for page ${i} of ${numPages}...`);
     if (onProgress) {
       onProgress(Math.round(((i - 1) / numPages) * 100));
     }
@@ -86,14 +90,17 @@ export const loadPdfPages = async (
 export const extractPagesToPdf = async (
   originalFile: File,
   pageIndices: number[],
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number) => void,
+  onStatusUpdate?: (status: string) => void,
 ): Promise<Blob> => {
+  onStatusUpdate?.('Reading original PDF...');
   const fileBytes = await originalFile.arrayBuffer();
   const srcPdf = await PDFDocument.load(fileBytes);
   const newPdf = await PDFDocument.create();
 
   if (onProgress) onProgress(30);
 
+  onStatusUpdate?.('Extracting selected pages...');
   const copiedPages = await newPdf.copyPages(srcPdf, pageIndices);
   
   for (let i = 0; i < copiedPages.length; i++) {
@@ -102,6 +109,7 @@ export const extractPagesToPdf = async (
 
   if (onProgress) onProgress(80);
 
+  onStatusUpdate?.('Finalizing new PDF...');
   const pdfBytes = await newPdf.save();
   
   if (onProgress) onProgress(100);
@@ -114,8 +122,10 @@ export const extractPagesToPdf = async (
 export const splitPagesToZip = async (
   originalFile: File,
   pageIndices: number[],
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number) => void,
+  onStatusUpdate?: (status: string) => void,
 ): Promise<Blob> => {
+  onStatusUpdate?.('Reading original PDF...');
   const fileBytes = await originalFile.arrayBuffer();
   const srcPdf = await PDFDocument.load(fileBytes);
   const zip = new JSZip();
@@ -125,6 +135,7 @@ export const splitPagesToZip = async (
 
   for (let i = 0; i < total; i++) {
     const pageIndex = pageIndices[i];
+    onStatusUpdate?.(`Creating PDF for page ${pageIndex + 1}...`);
     // Create new doc for just this page
     const singleDoc = await PDFDocument.create();
     const [copiedPage] = await singleDoc.copyPages(srcPdf, [pageIndex]);
@@ -146,6 +157,7 @@ export const splitPagesToZip = async (
     await new Promise(resolve => setTimeout(resolve, 0));
   }
 
+  onStatusUpdate?.('Creating ZIP archive...');
   // Generate Zip
   const zipContent = await zip.generateAsync({ type: "blob" });
   

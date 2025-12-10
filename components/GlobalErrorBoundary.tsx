@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCcw } from 'lucide-react';
 
 interface GlobalErrorBoundaryProps {
@@ -10,7 +10,7 @@ interface GlobalErrorBoundaryState {
   error: Error | null;
 }
 
-export class GlobalErrorBoundary extends Component<GlobalErrorBoundaryProps, GlobalErrorBoundaryState> {
+export class GlobalErrorBoundary extends React.Component<GlobalErrorBoundaryProps, GlobalErrorBoundaryState> {
   state: GlobalErrorBoundaryState = {
     hasError: false,
     error: null
@@ -47,6 +47,6 @@ export class GlobalErrorBoundary extends Component<GlobalErrorBoundaryProps, Glo
       );
     }
 
-    return this.props.children;
+    return (this as any).props.children;
   }
 }

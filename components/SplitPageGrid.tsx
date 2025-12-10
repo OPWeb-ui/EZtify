@@ -149,7 +149,8 @@ export const SplitPageGrid: React.FC<SplitPageGridProps> = ({
   onReorder
 }) => {
   
-  const selectedCount = pages.filter(p => p.selected).length;
+  const safePages = pages || [];
+  const selectedCount = safePages.filter(p => p.selected).length;
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -166,9 +167,11 @@ export const SplitPageGrid: React.FC<SplitPageGridProps> = ({
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      const oldIndex = pages.findIndex((p) => p.id === active.id);
-      const newIndex = pages.findIndex((p) => p.id === over.id);
-      onReorder(arrayMove(pages, oldIndex, newIndex));
+      const oldIndex = safePages.findIndex((p) => p.id === active.id);
+      const newIndex = safePages.findIndex((p) => p.id === over.id);
+      if (oldIndex > -1 && newIndex > -1) {
+        onReorder(arrayMove(safePages, oldIndex, newIndex));
+      }
     }
   };
 
@@ -178,7 +181,7 @@ export const SplitPageGrid: React.FC<SplitPageGridProps> = ({
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 px-2 gap-4">
         <div className="text-sm font-bold text-charcoal-600 dark:text-slate-300">
           <span className="bg-brand-mint/10 text-brand-mint px-2 py-1 rounded-md mr-2">
-            {pages.length} Pages
+            {safePages.length} Pages
           </span>
           <span className="text-charcoal-400 dark:text-slate-500 text-xs ml-2">
             ({selectedCount} selected)
@@ -239,11 +242,11 @@ export const SplitPageGrid: React.FC<SplitPageGridProps> = ({
         onDragEnd={handleDragEnd}
       >
         <SortableContext
-          items={pages.map(p => p.id)}
+          items={safePages.map(p => p.id)}
           strategy={rectSortingStrategy}
         >
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 pb-20">
-            {pages.map((page) => (
+            {safePages.map((page) => (
               <SortablePage
                 key={page.id}
                 page={page}

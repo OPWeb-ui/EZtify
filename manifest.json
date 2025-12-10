@@ -1,0 +1,21 @@
+{
+  "short_name": "EZtify",
+  "name": "EZtify: Private PDF & Image Tools",
+  "description": "Fast, free, and private PDF tools that run entirely in your browser. No server uploads, no file limits, no sign-up required.",
+  "icons": [
+    {
+      "src": "assets/icons/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "assets/icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#6D28D9",
+  "background_color": "#FAF9F6"
+}

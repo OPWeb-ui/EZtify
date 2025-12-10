@@ -138,7 +138,7 @@ export const Preview: React.FC<PreviewProps> = ({
   return (
     <div 
       {...getRootProps()}
-      className="w-full h-full relative flex items-center justify-center bg-transparent px-4 pt-16 pb-24 md:p-10 md:pb-28 outline-none overflow-hidden"
+      className="w-full h-full relative flex items-center justify-center bg-transparent px-4 pt-16 md:p-10 outline-none overflow-hidden"
     >
       <input {...getInputProps()} />
 
@@ -202,7 +202,7 @@ export const Preview: React.FC<PreviewProps> = ({
       <motion.div
         ref={containerRef}
         layout
-        className="relative bg-white shadow-2xl ring-1 ring-slate-900/5 dark:ring-white/10 z-10 transition-all duration-300 ease-out origin-center max-w-[90%] max-h-[85%] md:max-w-[40%] md:max-h-[40%]"
+        className="relative bg-white shadow-2xl ring-1 ring-slate-900/5 dark:ring-white/10 z-10 transition-all duration-300 ease-out origin-center max-w-[50%] max-h-[50%] md:max-w-[80%] md:max-h-[80%]"
         style={{
           aspectRatio: `${aspectRatio}`,
           width: aspectRatio >= 1 ? '100%' : 'auto',

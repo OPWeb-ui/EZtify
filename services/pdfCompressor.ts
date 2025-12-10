@@ -5,13 +5,15 @@ import { CompressionLevel, CompressionResult } from '../types';
 export const compressPDF = async (
   file: File,
   level: CompressionLevel,
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number) => void,
+  onStatusUpdate?: (status: string) => void
 ): Promise<CompressionResult> => {
   const originalSize = file.size;
   
   // 1. Extract images from PDF
   // We use the extractor service but we'll need to process these images
   if (onProgress) onProgress(10);
+  onStatusUpdate?.('Reading PDF...');
   
   // Settings based on compression level
   // Normal: Better quality, decent size reduction
@@ -35,7 +37,7 @@ export const compressPDF = async (
     const extractedImages = await extractImagesFromPdf(file, (p) => {
       // Map extraction progress (0-100) to overall progress (10-40)
       if (onProgress) onProgress(10 + (p * 0.3));
-    });
+    }, onStatusUpdate);
 
     if (extractedImages.length === 0) {
       throw new Error("No content found to compress");
@@ -53,6 +55,7 @@ export const compressPDF = async (
     for (let i = 0; i < extractedImages.length; i++) {
       const imgData = extractedImages[i];
       
+      onStatusUpdate?.(`Compressing page ${i + 1} of ${extractedImages.length}...`);
       // Update progress (40-90)
       if (onProgress) onProgress(40 + Math.round((i / extractedImages.length) * 50));
       
@@ -103,6 +106,7 @@ export const compressPDF = async (
       URL.revokeObjectURL(imgData.previewUrl);
     }
 
+    onStatusUpdate?.('Finalizing PDF...');
     if (onProgress) onProgress(95);
 
     const pdfBlob = doc.output('blob');

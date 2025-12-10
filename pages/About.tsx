@@ -3,30 +3,13 @@ import { motion } from 'framer-motion';
 import { Shield, Zap, Globe, Mail, ArrowRight, CheckCircle, Cpu, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AdSlot } from '../components/AdSlot';
+import { staggerContainer, fadeInUp } from '../utils/animations';
+import { PageReadyTracker } from '../components/PageReadyTracker';
 
 export const About: React.FC = () => {
-  const fadeIn = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: { duration: 0.5, ease: "easeOut" }
-    }
-  };
-
-  const stagger = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2
-      }
-    }
-  };
-
   return (
     <div className="flex-1 w-full overflow-y-auto custom-scrollbar bg-pastel-bg dark:bg-charcoal-950">
+      <PageReadyTracker />
       
       {/* Background Ambience */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
@@ -38,34 +21,40 @@ export const About: React.FC = () => {
         
         {/* 1. Hero */}
         <motion.section 
+          variants={staggerContainer}
           initial="hidden"
-          animate="visible"
-          variants={fadeIn}
+          animate="show"
           className="text-center mb-16 md:mb-24"
         >
-          <h1 className="text-4xl md:text-6xl font-heading font-extrabold text-charcoal-900 dark:text-white mb-6 tracking-tight">
+          <motion.h1 
+            variants={fadeInUp}
+            className="text-4xl md:text-6xl font-heading font-extrabold text-charcoal-900 dark:text-white mb-6 tracking-tight"
+          >
             About EZ<span className="text-brand-purple">tify</span>
-          </h1>
-          <p className="text-lg md:text-xl text-charcoal-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
+          </motion.h1>
+          <motion.p 
+            variants={fadeInUp}
+            className="text-lg md:text-xl text-charcoal-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed"
+          >
             Fast, privacy-first PDF tools that run right in your browser.
-          </p>
+          </motion.p>
         </motion.section>
 
         {/* 2. Our Mission */}
         <motion.section 
           initial="hidden"
-          whileInView="visible"
+          whileInView="show"
           viewport={{ once: true, margin: "-50px" }}
-          variants={fadeIn}
+          variants={staggerContainer}
           className="mb-20 bg-white/60 dark:bg-charcoal-900/60 backdrop-blur-xl p-8 md:p-12 rounded-3xl border border-slate-200 dark:border-charcoal-700 shadow-sm"
         >
-          <div className="flex items-center gap-4 mb-6">
+          <motion.div variants={fadeInUp} className="flex items-center gap-4 mb-6">
             <div className="w-12 h-12 rounded-2xl bg-brand-purple/10 flex items-center justify-center text-brand-purple">
                <Globe className="w-6 h-6" />
             </div>
             <h2 className="text-2xl md:text-3xl font-heading font-bold text-charcoal-900 dark:text-white">Our Mission</h2>
-          </div>
-          <div className="space-y-4 text-charcoal-600 dark:text-slate-300 leading-loose">
+          </motion.div>
+          <motion.div variants={fadeInUp} className="space-y-4 text-charcoal-600 dark:text-slate-300 leading-loose">
             <p>
               We built EZtify with a single goal: to make everyday PDF tasks simple, fast, and trustworthy. 
               Too many online tools are cluttered, slow, or invasive. We wanted to build something better.
@@ -75,23 +64,23 @@ export const About: React.FC = () => {
               or converting images for school, we provide lightweight, accessible tools that just work—without 
               complicating your life.
             </p>
-          </div>
+          </motion.div>
         </motion.section>
 
         {/* 3. How EZtify Works */}
         <motion.section 
           initial="hidden"
-          whileInView="visible"
+          whileInView="show"
           viewport={{ once: true, margin: "-50px" }}
-          variants={stagger}
+          variants={staggerContainer}
           className="mb-20"
         >
-          <motion.h2 variants={fadeIn} className="text-2xl md:text-3xl font-heading font-bold text-charcoal-900 dark:text-white mb-8 text-center">
+          <motion.h2 variants={fadeInUp} className="text-2xl md:text-3xl font-heading font-bold text-charcoal-900 dark:text-white mb-8 text-center">
             How EZtify Works
           </motion.h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <motion.div variants={fadeIn} className="bg-white dark:bg-charcoal-900 p-6 rounded-2xl border border-slate-200 dark:border-charcoal-700 shadow-sm hover:border-brand-purple/30 transition-colors">
+            <motion.div variants={fadeInUp} className="bg-white dark:bg-charcoal-900 p-6 rounded-2xl border border-slate-200 dark:border-charcoal-700 shadow-sm hover:border-brand-purple/30 transition-colors">
               <Shield className="w-8 h-8 text-brand-mint mb-4" />
               <h3 className="font-bold text-lg text-charcoal-800 dark:text-white mb-2">Private by Design</h3>
               <p className="text-sm text-charcoal-500 dark:text-slate-400 leading-relaxed">
@@ -99,7 +88,7 @@ export const About: React.FC = () => {
               </p>
             </motion.div>
             
-            <motion.div variants={fadeIn} className="bg-white dark:bg-charcoal-900 p-6 rounded-2xl border border-slate-200 dark:border-charcoal-700 shadow-sm hover:border-brand-purple/30 transition-colors">
+            <motion.div variants={fadeInUp} className="bg-white dark:bg-charcoal-900 p-6 rounded-2xl border border-slate-200 dark:border-charcoal-700 shadow-sm hover:border-brand-purple/30 transition-colors">
               <Cpu className="w-8 h-8 text-brand-blue mb-4" />
               <h3 className="font-bold text-lg text-charcoal-800 dark:text-white mb-2">Local Processing</h3>
               <p className="text-sm text-charcoal-500 dark:text-slate-400 leading-relaxed">
@@ -107,7 +96,7 @@ export const About: React.FC = () => {
               </p>
             </motion.div>
 
-            <motion.div variants={fadeIn} className="bg-white dark:bg-charcoal-900 p-6 rounded-2xl border border-slate-200 dark:border-charcoal-700 shadow-sm hover:border-brand-purple/30 transition-colors">
+            <motion.div variants={fadeInUp} className="bg-white dark:bg-charcoal-900 p-6 rounded-2xl border border-slate-200 dark:border-charcoal-700 shadow-sm hover:border-brand-purple/30 transition-colors">
               <Zap className="w-8 h-8 text-brand-purple mb-4" />
               <h3 className="font-bold text-lg text-charcoal-800 dark:text-white mb-2">Instant Speed</h3>
               <p className="text-sm text-charcoal-500 dark:text-slate-400 leading-relaxed">
@@ -115,7 +104,7 @@ export const About: React.FC = () => {
               </p>
             </motion.div>
 
-            <motion.div variants={fadeIn} className="bg-white dark:bg-charcoal-900 p-6 rounded-2xl border border-slate-200 dark:border-charcoal-700 shadow-sm hover:border-brand-purple/30 transition-colors">
+            <motion.div variants={fadeInUp} className="bg-white dark:bg-charcoal-900 p-6 rounded-2xl border border-slate-200 dark:border-charcoal-700 shadow-sm hover:border-brand-purple/30 transition-colors">
               <Users className="w-8 h-8 text-brand-orange mb-4" />
               <h3 className="font-bold text-lg text-charcoal-800 dark:text-white mb-2">Accessible to All</h3>
               <p className="text-sm text-charcoal-500 dark:text-slate-400 leading-relaxed">
@@ -130,9 +119,9 @@ export const About: React.FC = () => {
         {/* 4. Why People Use EZtify */}
         <motion.section 
           initial="hidden"
-          whileInView="visible"
+          whileInView="show"
           viewport={{ once: true, margin: "-50px" }}
-          variants={fadeIn}
+          variants={fadeInUp}
           className="mb-20"
         >
           <h2 className="text-2xl md:text-3xl font-heading font-bold text-charcoal-900 dark:text-white mb-8 text-center">
@@ -161,9 +150,9 @@ export const About: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-20">
           <motion.section 
             initial="hidden"
-            whileInView="visible"
+            whileInView="show"
             viewport={{ once: true }}
-            variants={fadeIn}
+            variants={fadeInUp}
             className="bg-white dark:bg-charcoal-900 p-8 rounded-3xl border border-slate-200 dark:border-charcoal-700"
           >
             <h3 className="text-xl font-bold text-charcoal-900 dark:text-white mb-4">What's Next?</h3>
@@ -177,9 +166,9 @@ export const About: React.FC = () => {
 
           <motion.section 
             initial="hidden"
-            whileInView="visible"
+            whileInView="show"
             viewport={{ once: true }}
-            variants={fadeIn}
+            variants={fadeInUp}
             className="bg-white dark:bg-charcoal-900 p-8 rounded-3xl border border-slate-200 dark:border-charcoal-700"
           >
             <h3 className="text-xl font-bold text-charcoal-900 dark:text-white mb-4">Who's Behind EZtify?</h3>
@@ -192,9 +181,9 @@ export const About: React.FC = () => {
         {/* 6. Contact */}
         <motion.section 
           initial="hidden"
-          whileInView="visible"
+          whileInView="show"
           viewport={{ once: true }}
-          variants={fadeIn}
+          variants={fadeInUp}
           className="text-center bg-gradient-to-br from-brand-purple to-brand-blue rounded-3xl p-10 text-white shadow-xl shadow-brand-purple/20"
         >
           <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6 text-white">

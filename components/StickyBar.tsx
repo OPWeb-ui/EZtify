@@ -1,6 +1,6 @@
 import React from 'react';
 import { UploadedImage, AppMode } from '../types';
-import { Download, FileDown, Sparkles, FolderArchive, Image as ImageIcon, ZoomIn, ZoomOut, Maximize, Plus } from 'lucide-react';
+import { Download, FileDown, Sparkles, FolderArchive, Image as ImageIcon, ZoomIn, ZoomOut, Maximize, Plus, Loader2, Layers, ChevronsUpDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { buttonTap, buttonHover } from '../utils/animations';
 import { Tooltip } from './Tooltip';
@@ -11,15 +11,18 @@ interface StickyBarProps {
   onGenerate: () => void;
   isGenerating: boolean;
   progress?: number;
+  status?: string;
   mode: AppMode;
   onSecondaryAction?: () => void;
   secondaryLabel?: string;
   secondaryIcon?: React.ReactNode;
-  // Zoom Props
   zoomLevel?: number;
   onZoomIn?: () => void;
   onZoomOut?: () => void;
   onResetZoom?: () => void;
+  showFilmstripToggle?: boolean;
+  onToggleFilmstrip?: () => void;
+  isFilmstripVisible?: boolean;
 }
 
 export const StickyBar: React.FC<StickyBarProps> = ({ 
@@ -28,6 +31,7 @@ export const StickyBar: React.FC<StickyBarProps> = ({
   onGenerate, 
   isGenerating, 
   progress = 0,
+  status,
   mode,
   onSecondaryAction,
   secondaryLabel,
@@ -35,7 +39,10 @@ export const StickyBar: React.FC<StickyBarProps> = ({
   zoomLevel,
   onZoomIn,
   onZoomOut,
-  onResetZoom
+  onResetZoom,
+  showFilmstripToggle,
+  onToggleFilmstrip,
+  isFilmstripVisible
 }) => {
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -46,9 +53,13 @@ export const StickyBar: React.FC<StickyBarProps> = ({
   };
 
   const getActionLabel = () => {
-    if (isGenerating) return `${progress}%`;
+    if (isGenerating) {
+      if (status) return `${status} ${progress > 0 && progress < 100 ? `(${progress}%)` : ''}`.trim();
+      if (progress >= 100) return 'Saving...';
+      return `Processing... (${progress}%)`;
+    }
     if (mode === 'image-to-pdf') return 'Convert & Download';
-    if (mode === 'pdf-to-image') return 'Download'; // Direct download for PDF->Image
+    if (mode === 'pdf-to-image') return 'Download';
     return imageCount > 1 ? 'Download ZIP' : 'Download Image';
   };
 
@@ -66,7 +77,8 @@ export const StickyBar: React.FC<StickyBarProps> = ({
   };
 
   const getActionIcon = () => {
-    if (isGenerating) return <Sparkles className="w-5 h-5 animate-spin" />;
+    if (isGenerating) return <Loader2 className="w-5 h-5 animate-spin" />;
+    
     if (mode === 'image-to-pdf') return <FileDown className="w-5 h-5 group-hover:animate-bounce" />;
     return imageCount > 1 && mode !== 'pdf-to-image' ? <FolderArchive className="w-5 h-5 group-hover:scale-110 transition-transform" /> : <Download className="w-5 h-5 group-hover:translate-y-1 transition-transform" />;
   };
@@ -77,11 +89,10 @@ export const StickyBar: React.FC<StickyBarProps> = ({
       animate={{ y: 0 }}
       exit={{ y: 100 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="fixed bottom-0 left-0 right-0 z-50 glass-panel border-t-0 border-x-0 border-b-0 p-4 md:px-8 bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-xl shadow-[0_-8px_30px_rgba(0,0,0,0.05)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.3)]"
+      className="fixed bottom-0 left-0 right-0 z-[100] border-t border-slate-200/50 dark:border-charcoal-700/50 backdrop-blur-xl bg-white/90 dark:bg-charcoal-900/90 shadow-[0_-8px_30px_rgba(0,0,0,0.05)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.3)] p-4 md:px-8"
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 md:gap-4">
         
-        {/* Info Section - Hidden on very small screens if needed, but usually fits */}
         <div className="flex flex-col gap-0.5 min-w-[60px]">
           <div className="text-sm font-bold text-charcoal-800 dark:text-charcoal-300 flex items-center gap-2">
             <span className="bg-brand-purple/10 text-brand-purple px-2 py-0.5 rounded-md text-xs font-mono">{imageCount} files</span>
@@ -94,36 +105,39 @@ export const StickyBar: React.FC<StickyBarProps> = ({
 
         <div className="flex items-center gap-2 md:gap-3 flex-1 md:flex-none justify-end min-w-0">
           
-          {/* Zoom Controls - Desktop Only */}
+          {showFilmstripToggle && onToggleFilmstrip && (
+            <Tooltip content={isFilmstripVisible ? "Hide Pages" : "View Pages"} side="top">
+              <motion.button
+                onClick={onToggleFilmstrip}
+                whileTap={buttonTap}
+                className={`
+                  md:hidden flex items-center gap-2 px-3 py-3 rounded-xl font-bold text-xs
+                  border shadow-sm transition-all
+                  ${isFilmstripVisible
+                    ? 'bg-brand-purple/10 text-brand-purple border-brand-purple/20'
+                    : 'bg-white dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 border-slate-200 dark:border-charcoal-700'
+                  }
+                `}
+              >
+                <ChevronsUpDown className="w-4 h-4" />
+              </motion.button>
+            </Tooltip>
+          )}
+
           {onZoomIn && onZoomOut && zoomLevel !== undefined && (
              <div className="hidden md:flex items-center gap-1 p-1 bg-white dark:bg-charcoal-800 rounded-xl border border-slate-200 dark:border-charcoal-700 shadow-sm mr-2">
-                <motion.button 
-                  onClick={onZoomOut}
-                  disabled={zoomLevel <= 0.5}
-                  whileTap={buttonTap}
-                  className="p-2 rounded-lg text-charcoal-500 hover:text-brand-purple hover:bg-slate-50 dark:hover:bg-charcoal-700 transition-colors disabled:opacity-30"
-                  title="Zoom Out"
-                >
+                <motion.button onClick={onZoomOut} disabled={zoomLevel <= 0.5} whileTap={buttonTap} className="p-2 rounded-lg text-charcoal-500 hover:text-brand-purple hover:bg-slate-50 dark:hover:bg-charcoal-700 transition-colors disabled:opacity-30" title="Zoom Out">
                   <ZoomOut size={16} />
                 </motion.button>
-                
                 <span className="min-w-[3rem] text-center font-mono text-xs font-bold text-charcoal-600 dark:text-charcoal-400 select-none">
                   {Math.round(zoomLevel * 100)}%
                 </span>
-                
-                <motion.button 
-                  onClick={onZoomIn}
-                  disabled={zoomLevel >= 4}
-                  whileTap={buttonTap}
-                  className="p-2 rounded-lg text-charcoal-500 hover:text-brand-purple hover:bg-slate-50 dark:hover:bg-charcoal-700 transition-colors disabled:opacity-30"
-                  title="Zoom In"
-                >
+                <motion.button onClick={onZoomIn} disabled={zoomLevel >= 4} whileTap={buttonTap} className="p-2 rounded-lg text-charcoal-500 hover:text-brand-purple hover:bg-slate-50 dark:hover:bg-charcoal-700 transition-colors disabled:opacity-30" title="Zoom In">
                   <ZoomIn size={16} />
                 </motion.button>
              </div>
           )}
 
-          {/* Secondary Action Button (Neutral) */}
           {onSecondaryAction && secondaryLabel && (
             <Tooltip content={getSecondaryTooltipText()} side="top">
               <motion.button
@@ -145,7 +159,6 @@ export const StickyBar: React.FC<StickyBarProps> = ({
             </Tooltip>
           )}
 
-          {/* Primary Action Button (The "Money Button" - ALWAYS GREEN) */}
           <Tooltip content={getTooltipText()} side="top">
             <motion.button
               onClick={onGenerate}
@@ -160,22 +173,20 @@ export const StickyBar: React.FC<StickyBarProps> = ({
                 flex-1 md:flex-none min-w-[140px] md:min-w-[160px] max-w-[240px]
               `}
             >
-              {/* Background Layer */}
               {isGenerating ? (
-                // Progress Fill Background
                 <>
                   <div className="absolute inset-0 bg-slate-100 dark:bg-charcoal-800" />
-                  <div 
-                    className="absolute inset-y-0 left-0 transition-all duration-100 ease-linear bg-gradient-to-r from-brand-green via-brand-greenHover to-brand-green"
-                    style={{ width: `${progress}%` }}
+                  <motion.div 
+                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-brand-green via-brand-greenHover to-brand-green"
+                    initial={{ width: '0%' }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 0.2, ease: "linear" }}
                   />
                 </>
               ) : (
-                // Gradient Background - Green Money Button
-                <div className="absolute inset-0 bg-[length:200%_auto] animate-gradient-xy group-hover:opacity-90 bg-gradient-to-r from-brand-green via-brand-greenHover to-brand-green" />
+                <div className="absolute inset-0 bg-gradient-to-r from-brand-green via-brand-greenHover to-brand-green group-hover:opacity-90" />
               )}
 
-              {/* Content Layer */}
               <div className="relative flex items-center justify-center gap-2 z-10 text-white text-xs md:text-sm">
                 {getActionIcon()}
                 <span className="whitespace-nowrap">{getActionLabel()}</span>

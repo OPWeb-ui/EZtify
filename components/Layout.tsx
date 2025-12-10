@@ -1,48 +1,115 @@
-import React, { useState, useEffect, Suspense } from 'react';
-import { Outlet, useLocation, useOutletContext } from 'react-router-dom';
+import React, { useState, useEffect, Suspense, createContext, useContext } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Header } from './Header';
 import { ToastContainer } from './Toast';
-import { ToastMessage, AppMode } from '../types';
+import { ToastMessage, AppMode, ToastAction } from '../types';
 import { nanoid } from 'nanoid';
-import { AnimatePresence, motion } from 'framer-motion';
-import { pageVariants } from '../utils/animations';
-import { PageLoader } from './PageLoader';
+import { AnimatePresence } from 'framer-motion';
+import { PwaInstallPrompt } from './PwaInstallPrompt';
+import { CookieConsentBanner } from './CookieConsentBanner';
+
+// --- CONTEXT DEFINITION ---
+interface LayoutContextType {
+  addToast: (
+    title: string,
+    message: string,
+    type?: 'warning' | 'error' | 'undo',
+    durationOrAction?: number | ToastAction
+  ) => string;
+  removeToast: (id: string) => void;
+}
+
+const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
 
 export const Layout: React.FC = () => {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const location = useLocation();
 
-  // Determine current mode from URL with strict checking
+  // PWA Install Prompt State
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstallPromptVisible, setIsInstallPromptVisible] = useState(false);
+
+  // Cookie Consent State
+  const [showCookieBanner, setShowCookieBanner] = useState(false);
+
+  // Determine current mode from URL
   let currentMode: AppMode = 'home';
   const path = location.pathname;
+  if (path === '/' || path === '') currentMode = 'home';
+  else if (path.includes('images-to-pdf')) currentMode = 'image-to-pdf';
+  else if (path.includes('pdf-to-images')) currentMode = 'pdf-to-image';
+  else if (path.includes('compress-pdf')) currentMode = 'compress-pdf';
+  else if (path.includes('merge-pdf')) currentMode = 'merge-pdf';
+  else if (path.includes('split-pdf')) currentMode = 'split-pdf';
+  else if (path.includes('zip-it')) currentMode = 'zip-files';
 
-  if (path === '/' || path === '') {
-    currentMode = 'home';
-  } else if (path.includes('images-to-pdf')) {
-    currentMode = 'image-to-pdf';
-  } else if (path.includes('pdf-to-images')) {
-    currentMode = 'pdf-to-image';
-  } else if (path.includes('compress-pdf')) {
-    currentMode = 'compress-pdf';
-  } else if (path.includes('merge-pdf')) {
-    currentMode = 'merge-pdf';
-  } else if (path.includes('split-pdf')) {
-    currentMode = 'split-pdf';
-  } else if (path.includes('zip-it')) {
-    currentMode = 'zip-files';
-  }
-
-  // Clear toasts when switching pages
+  // PWA & Cookie Logic on initial mount
   useEffect(() => {
-    setToasts([]);
-  }, [location.pathname]);
+    // PWA Install Prompt
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      const dismissedAt = localStorage.getItem('eztify-install-dismissed-at');
+      const sevenDays = 7 * 24 * 60 * 60 * 1000;
+      if (dismissedAt && Date.now() - parseInt(dismissedAt) < sevenDays) {
+        return;
+      }
+      setDeferredPrompt(e);
+      setIsInstallPromptVisible(true);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-  const addToast = (title: string, message: string, type: 'warning' | 'error' = 'warning', duration?: number) => {
+    // Cookie Consent
+    const consent = localStorage.getItem('eztify-cookie-consent');
+    if (!consent) {
+      // Delay slightly to not interfere with page load animation
+      setTimeout(() => setShowCookieBanner(true), 2000);
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    setIsInstallPromptVisible(false);
+    setDeferredPrompt(null);
+  };
+
+  const handleDismissInstall = () => {
+    setIsInstallPromptVisible(false);
+    localStorage.setItem('eztify-install-dismissed-at', Date.now().toString());
+  };
+
+  const handleAcceptCookies = () => {
+    localStorage.setItem('eztify-cookie-consent', 'accepted');
+    setShowCookieBanner(false);
+  };
+
+  const handleRejectCookies = () => {
+    localStorage.setItem('eztify-cookie-consent', 'rejected');
+    setShowCookieBanner(false);
+  };
+
+  const addToast = (
+    title: string,
+    message: string,
+    type: 'warning' | 'error' | 'undo' = 'warning',
+    durationOrAction?: number | ToastAction
+  ) => {
     const id = nanoid();
-    setToasts(prev => {
-      const updated = [...prev, { id, title, message, type, duration }];
-      return updated.slice(-5);
-    });
+    let toast: ToastMessage = { id, title, message, type };
+
+    if (typeof durationOrAction === 'number') toast.duration = durationOrAction;
+    else if (typeof durationOrAction === 'object') {
+      toast.action = durationOrAction;
+      toast.duration = 6000;
+    }
+
+    setToasts(prev => [...prev, toast].slice(-5));
+    return id;
   };
 
   const removeToast = (id: string) => {
@@ -51,37 +118,48 @@ export const Layout: React.FC = () => {
 
   const isMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
 
+  const contextValue = { addToast, removeToast };
+
   return (
-    <div className="min-h-screen bg-pastel-bg dark:bg-charcoal-950 text-charcoal-600 dark:text-slate-300 flex flex-col font-sans selection:bg-brand-purple/20 dark:selection:bg-brand-purple/40 transition-colors duration-300">
-      <ToastContainer toasts={toasts} onDismiss={removeToast} isMobile={isMobile} />
-      
-      {/* Global Header */}
-      <Header currentMode={currentMode} />
+    <LayoutContext.Provider value={contextValue}>
+      <div className="min-h-screen bg-pastel-bg dark:bg-charcoal-950 text-charcoal-600 dark:text-slate-300 flex flex-col font-sans selection:bg-brand-purple/20 dark:selection:bg-brand-purple/40 transition-colors duration-300">
+        <ToastContainer toasts={toasts} onDismiss={removeToast} isMobile={isMobile} />
+        <Header currentMode={currentMode} />
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col relative w-full pt-16">
-        <AnimatePresence mode="wait">
-          {/* We wrap the Outlet in a motion.div keyed by pathname to trigger transitions */}
-          <motion.div
-            key={location.pathname}
-            variants={pageVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            className="flex-1 flex flex-col"
-          >
-            {/* Suspense acts here to show loader only in content area, not unmounting header */}
-            <Suspense fallback={<PageLoader />}>
-              <Outlet context={{ addToast }} />
-            </Suspense>
-          </motion.div>
+        <main className="flex-1 flex flex-col relative w-full pt-16">
+          <Suspense fallback={<div className="flex-1" />}>
+            <div key={location.pathname} className="flex-1 flex flex-col w-full">
+              <Outlet />
+            </div>
+          </Suspense>
+        </main>
+        
+        <AnimatePresence>
+          {showCookieBanner && (
+            <CookieConsentBanner 
+              onAccept={handleAcceptCookies}
+              onReject={handleRejectCookies}
+            />
+          )}
         </AnimatePresence>
-      </main>
-
-    </div>
+        
+        <AnimatePresence>
+          {isInstallPromptVisible && deferredPrompt && (
+            <PwaInstallPrompt 
+              onInstall={handleInstall} 
+              onDismiss={handleDismissInstall} 
+            />
+          )}
+        </AnimatePresence>
+      </div>
+    </LayoutContext.Provider>
   );
 };
 
-export function useToast() {
-  return useOutletContext<{ addToast: (title: string, msg: string, type?: 'warning'|'error', duration?: number) => void }>();
+export function useLayoutContext() {
+  const context = useContext(LayoutContext);
+  if (context === undefined) {
+    throw new Error('useLayoutContext must be used within a Layout provider');
+  }
+  return context;
 }

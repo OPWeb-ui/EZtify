@@ -4,12 +4,14 @@ import { ZipFile, ZipCompressionLevel } from '../types';
 export const generateGenericZip = async (
   files: ZipFile[],
   compression: ZipCompressionLevel,
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number) => void,
+  onStatusUpdate?: (status: string) => void
 ): Promise<Blob> => {
   const zip = new JSZip();
 
-  // Add files to zip
-  // Append -EZtify suffix to filename before extension
+  onStatusUpdate?.('Preparing files...');
+  await new Promise(resolve => setTimeout(resolve, 0)); 
+
   files.forEach((item) => {
     const originalName = item.file.name;
     const lastDotIndex = originalName.lastIndexOf('.');
@@ -26,13 +28,13 @@ export const generateGenericZip = async (
     zip.file(newName, item.file);
   });
 
-  // Generate ZIP
+  onStatusUpdate?.('Zipping files...');
   const zipBlob = await zip.generateAsync(
     {
       type: 'blob',
       compression: compression,
       compressionOptions: {
-        level: compression === 'STORE' ? 1 : 6 // 1 is fastest for STORE (effectively no comp), 6 is balanced for DEFLATE
+        level: compression === 'STORE' ? 1 : 6
       }
     },
     (metadata) => {
