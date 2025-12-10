@@ -78,12 +78,12 @@ export const Home: React.FC = () => {
       <PageReadyTracker />
       
       {/* 1. Hero & Tools Grid */}
-      <section className="relative px-4 pt-10 pb-16 md:pt-12 md:pb-20 overflow-hidden">
+      <section className="relative px-4 pt-10 pb-16 md:pt-16 md:pb-24 overflow-hidden">
         
         {/* Animated Background Blobs */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
            <motion.div 
-              className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-brand-purple/10 dark:bg-brand-purple/5 rounded-full blur-[100px]"
+              className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-brand-purple/10 dark:bg-brand-purple/5 rounded-full blur-[120px]"
               animate={!shouldReduceMotion ? { scale: [1, 1.1, 1], x: [0, 20, 0], y: [0, -20, 0] } : {}}
               transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
             />
@@ -100,18 +100,18 @@ export const Home: React.FC = () => {
             variants={staggerContainer}
             initial="hidden"
             animate="show"
-            className="text-center mb-10 md:mb-12"
+            className="text-center mb-12 md:mb-16"
           >
             <motion.h1 
               variants={fadeInUp}
-              className="text-3xl md:text-5xl font-heading font-extrabold text-charcoal-900 dark:text-white mb-4 tracking-tight"
+              className="text-4xl md:text-6xl font-heading font-extrabold text-charcoal-900 dark:text-charcoal-200 mb-6 tracking-tight"
             >
               EZ<span className="text-brand-purple">tify</span>
             </motion.h1>
             
             <motion.p 
               variants={fadeInUp}
-              className="text-base md:text-lg text-charcoal-600 dark:text-slate-400 max-w-xl mx-auto leading-relaxed"
+              className="text-base md:text-lg text-charcoal-600 dark:text-charcoal-400 max-w-xl mx-auto leading-relaxed"
             >
               Fast, privacy-first PDF tools that run right in your browser.
             </motion.p>
@@ -123,7 +123,7 @@ export const Home: React.FC = () => {
             variants={{
               visible: { transition: { staggerChildren: 0.05 } }
             }}
-            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-5"
+            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6"
           >
             {tools.map((tool) => (
               <div key={tool.id} className="w-full">
@@ -136,43 +136,43 @@ export const Home: React.FC = () => {
       </section>
 
       {/* 2. Features Grid */}
-      <section className="max-w-5xl mx-auto px-6 py-12 md:py-16 border-t border-brand-purple/5">
-        <div className="text-center mb-10">
-          <h2 className="text-xl md:text-2xl font-heading font-bold text-charcoal-900 dark:text-white mb-2">
+      <section className="max-w-5xl mx-auto px-6 py-12 md:py-20 border-t border-brand-purple/5 dark:border-white/5">
+        <div className="text-center mb-12">
+          <h2 className="text-2xl md:text-3xl font-heading font-bold text-charcoal-900 dark:text-charcoal-200 mb-2 tracking-tight">
             Why use EZtify?
           </h2>
-          <p className="text-charcoal-500 dark:text-slate-400 text-sm">
+          <p className="text-charcoal-500 dark:text-charcoal-400 text-sm">
             Professional grade tools, completely free.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <div className="bg-white dark:bg-charcoal-900 p-5 rounded-2xl border border-slate-100 dark:border-charcoal-800 shadow-xl shadow-brand-purple/5">
-            <div className="w-10 h-10 bg-brand-purple/10 rounded-xl flex items-center justify-center text-brand-purple mb-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white dark:bg-charcoal-800 p-6 rounded-2xl border border-slate-100 dark:border-white/5 shadow-xl shadow-brand-purple/5">
+            <div className="w-10 h-10 bg-brand-purple/10 rounded-xl flex items-center justify-center text-brand-purple mb-4">
               <Shield className="w-5 h-5" />
             </div>
-            <h3 className="text-base font-bold text-charcoal-900 dark:text-white mb-1.5">100% Private</h3>
-            <p className="text-charcoal-600 dark:text-slate-400 leading-relaxed text-xs md:text-sm">
+            <h3 className="text-lg font-bold text-charcoal-900 dark:text-charcoal-200 mb-2 tracking-tight">100% Private</h3>
+            <p className="text-charcoal-600 dark:text-charcoal-400 leading-relaxed text-sm">
               Your files never leave your device. All processing happens locally in your browser using WebAssembly.
             </p>
           </div>
 
-          <div className="bg-white dark:bg-charcoal-900 p-5 rounded-2xl border border-slate-100 dark:border-charcoal-800 shadow-xl shadow-brand-blue/5">
-            <div className="w-10 h-10 bg-brand-blue/10 rounded-xl flex items-center justify-center text-brand-blue mb-3">
+          <div className="bg-white dark:bg-charcoal-800 p-6 rounded-2xl border border-slate-100 dark:border-white/5 shadow-xl shadow-brand-blue/5">
+            <div className="w-10 h-10 bg-brand-blue/10 rounded-xl flex items-center justify-center text-brand-blue mb-4">
               <Zap className="w-5 h-5" />
             </div>
-            <h3 className="text-base font-bold text-charcoal-900 dark:text-white mb-1.5">Blazing Fast</h3>
-            <p className="text-charcoal-600 dark:text-slate-400 leading-relaxed text-xs md:text-sm">
+            <h3 className="text-lg font-bold text-charcoal-900 dark:text-charcoal-200 mb-2 tracking-tight">Blazing Fast</h3>
+            <p className="text-charcoal-600 dark:text-charcoal-400 leading-relaxed text-sm">
               Skip the upload queue. Get instant results powered by your device's hardware.
             </p>
           </div>
 
-          <div className="bg-white dark:bg-charcoal-900 p-5 rounded-2xl border border-slate-100 dark:border-charcoal-800 shadow-xl shadow-brand-mint/5">
-            <div className="w-10 h-10 bg-brand-mint/10 rounded-xl flex items-center justify-center text-brand-mint mb-3">
+          <div className="bg-white dark:bg-charcoal-800 p-6 rounded-2xl border border-slate-100 dark:border-white/5 shadow-xl shadow-brand-mint/5">
+            <div className="w-10 h-10 bg-brand-mint/10 rounded-xl flex items-center justify-center text-brand-mint mb-4">
               <Globe className="w-5 h-5" />
             </div>
-            <h3 className="text-base font-bold text-charcoal-900 dark:text-white mb-1.5">Modern & Accessible</h3>
-            <p className="text-charcoal-600 dark:text-slate-400 leading-relaxed text-xs md:text-sm">
+            <h3 className="text-lg font-bold text-charcoal-900 dark:text-charcoal-200 mb-2 tracking-tight">Modern & Accessible</h3>
+            <p className="text-charcoal-600 dark:text-charcoal-400 leading-relaxed text-sm">
               Use EZtify on any device with a modern browser. Install it as an app for quick access from your home screen.
             </p>
           </div>

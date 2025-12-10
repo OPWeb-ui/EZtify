@@ -7,7 +7,6 @@ import { AdSlot } from '../components/AdSlot';
 import { RotatingText } from '../components/RotatingText';
 import { HeroPill } from '../components/HeroPill';
 import { SplitPageGrid } from '../components/SplitPageGrid';
-import { Skeleton } from '../components/Skeleton';
 import { PageReadyTracker } from '../components/PageReadyTracker';
 import { PdfPage, SplitMode } from '../types';
 import { loadPdfPages, extractPagesToPdf, splitPagesToZip } from '../services/pdfSplitter';
@@ -274,14 +273,15 @@ export const SplitPdfPage: React.FC = () => {
               )}
             </AnimatePresence>
 
+            {/* Standardized Close/Reset Button */}
             <motion.button
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
-              whileHover={{ scale: 1.05, rotate: 90 }}
-              whileTap={buttonTap}
+              whileHover={{ scale: 1.1, rotate: 90 }}
+              whileTap={{ scale: 0.9 }}
               onClick={reset}
-              className="absolute top-8 right-4 z-50 w-10 h-10 flex items-center justify-center rounded-full bg-white/90 dark:bg-charcoal-800/90 text-charcoal-500 dark:text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:text-rose-500 shadow-md backdrop-blur-sm border border-slate-200 dark:border-charcoal-700 transition-colors"
+              className="absolute top-8 right-4 z-50 w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-charcoal-800 text-charcoal-500 dark:text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200 dark:hover:border-rose-800 shadow-md border border-slate-200 dark:border-charcoal-600 transition-all duration-200"
               title="Close and Reset"
             >
               <X size={20} />
@@ -304,27 +304,15 @@ export const SplitPdfPage: React.FC = () => {
                      transition={{ duration: 0.3 }}
                    >
                       {isGenerating && pages.length === 0 ? (
-                        <div className="w-full relative">
-                          <div className="flex justify-between items-center mb-6 px-2">
-                            <Skeleton className="h-8 w-32" />
-                            <Skeleton className="h-8 w-48" />
-                          </div>
-                          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 pb-20">
-                            {Array(12).fill(0).map((_, i) => (
-                              <Skeleton key={i} className="aspect-[3/4] rounded-xl" />
-                            ))}
-                          </div>
-                          {status && (
-                            <div className="absolute inset-0 bg-white/50 dark:bg-charcoal-900/50 backdrop-blur-sm flex items-center justify-center z-10">
-                              <div className="flex items-center gap-2 p-4 bg-white dark:bg-charcoal-800 rounded-lg shadow-md">
-                                <Loader2 className="w-5 h-5 animate-spin text-brand-purple" />
-                                <span className="text-sm font-medium text-charcoal-700 dark:text-slate-200">
-                                  {status}{' '}
-                                  {progress > 0 && progress < 100 && `(${progress}%)`}
-                                </span>
-                              </div>
-                            </div>
-                          )}
+                        <div className="w-full h-[50vh] flex flex-col items-center justify-center">
+                           <Loader2 className="w-12 h-12 animate-spin text-brand-purple mb-4" />
+                           {status && (
+                             <div className="bg-white/80 dark:bg-charcoal-800/80 backdrop-blur-md px-6 py-3 rounded-xl border border-slate-200 dark:border-charcoal-700 shadow-lg">
+                               <p className="text-sm font-bold text-charcoal-600 dark:text-slate-200 animate-pulse">
+                                 {status} {progress > 0 && `(${Math.round(progress)}%)`}
+                               </p>
+                             </div>
+                           )}
                         </div>
                       ) : (
                         <SplitPageGrid 
@@ -439,7 +427,7 @@ export const SplitPdfPage: React.FC = () => {
                          whileTap={{ scale: 0.98 }}
                          onClick={reset}
                          className="w-full py-3 text-charcoal-500 dark:text-slate-400 hover:text-brand-purple font-medium text-sm flex items-center justify-center gap-2"
-                       >
+                         >
                           <RefreshCcw size={14} /> Split another PDF
                        </motion.button>
 

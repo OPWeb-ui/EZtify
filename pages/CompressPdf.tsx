@@ -180,7 +180,20 @@ export const CompressPdfPage: React.FC = () => {
             </AnimatePresence>
 
              <div className="w-full max-w-2xl relative z-10">
-                <motion.button initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} whileHover={{ scale: 1.05, rotate: 90 }} whileTap={buttonTap} onClick={(e) => { e.stopPropagation(); handleReset(); }} className="absolute -top-4 -right-4 md:-right-12 z-50 w-10 h-10 flex items-center justify-center rounded-full bg-white/90 dark:bg-charcoal-800/90 text-charcoal-500 dark:text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:text-rose-500 shadow-md backdrop-blur-sm border border-slate-200 dark:border-charcoal-700 transition-colors" title="Close and Reset"><X size={20} /></motion.button>
+                {/* Standardized Close/Reset Button */}
+                <motion.button 
+                  initial={{ opacity: 0, scale: 0.8 }} 
+                  animate={{ opacity: 1, scale: 1 }} 
+                  exit={{ opacity: 0, scale: 0.8 }} 
+                  whileHover={{ scale: 1.1, rotate: 90 }} 
+                  whileTap={{ scale: 0.9 }} 
+                  onClick={(e) => { e.stopPropagation(); handleReset(); }} 
+                  className="absolute -top-4 -right-4 md:-right-12 z-50 w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-charcoal-800 text-charcoal-500 dark:text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200 dark:hover:border-rose-800 shadow-md border border-slate-200 dark:border-charcoal-600 transition-all duration-200" 
+                  title="Close and Reset"
+                >
+                  <X size={20} />
+                </motion.button>
+
                 <AnimatePresence mode="wait">
                   {results.size === 0 ? (
                     <motion.div key="options" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20, scale: 0.95 }}>

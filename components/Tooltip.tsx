@@ -21,9 +21,9 @@ export const Tooltip: React.FC<TooltipProps> = ({
   const [isVisible, setIsVisible] = useState(false);
 
   const variants = {
-    initial: { opacity: 0, y: side === 'top' ? 4 : side === 'bottom' ? -4 : 0, x: side === 'left' ? 4 : side === 'right' ? -4 : 0, scale: 0.95 },
+    initial: { opacity: 0, y: side === 'top' ? 2 : side === 'bottom' ? -2 : 0, x: side === 'left' ? 2 : side === 'right' ? -2 : 0, scale: 0.95 },
     animate: { opacity: 1, y: 0, x: 0, scale: 1 },
-    exit: { opacity: 0, y: side === 'top' ? 4 : side === 'bottom' ? -4 : 0, x: side === 'left' ? 4 : side === 'right' ? -4 : 0, scale: 0.95 }
+    exit: { opacity: 0, y: side === 'top' ? 2 : side === 'bottom' ? -2 : 0, x: side === 'left' ? 2 : side === 'right' ? -2 : 0, scale: 0.95 }
   };
 
   const positionClasses = {
@@ -51,12 +51,13 @@ export const Tooltip: React.FC<TooltipProps> = ({
             animate="animate"
             exit="exit"
             variants={variants}
-            transition={{ duration: 0.2, delay, ease: "easeOut" }}
+            transition={{ duration: 0.15, delay, ease: "easeOut" }}
             className={`
               absolute z-[100] px-3 py-1.5
-              bg-charcoal-800 dark:bg-white text-white dark:text-charcoal-900
-              text-xs font-medium rounded-lg shadow-xl shadow-charcoal-900/10 pointer-events-none
-              ${maxWidth} text-center leading-snug
+              bg-charcoal-900/90 dark:bg-white/90 backdrop-blur-md
+              text-white dark:text-charcoal-900
+              text-[11px] font-semibold tracking-wide rounded-lg shadow-xl shadow-black/10 pointer-events-none
+              ${maxWidth} text-center leading-snug whitespace-nowrap
               ${positionClasses[side]}
             `}
           >
@@ -64,11 +65,11 @@ export const Tooltip: React.FC<TooltipProps> = ({
             {/* Arrow */}
             <div
               className={`
-                absolute w-2 h-2 rotate-45 bg-charcoal-800 dark:bg-white
-                ${side === 'top' ? 'bottom-[-4px] left-1/2 -translate-x-1/2' : ''}
-                ${side === 'bottom' ? 'top-[-4px] left-1/2 -translate-x-1/2' : ''}
-                ${side === 'left' ? 'right-[-4px] top-1/2 -translate-y-1/2' : ''}
-                ${side === 'right' ? 'left-[-4px] top-1/2 -translate-y-1/2' : ''}
+                absolute w-2 h-2 rotate-45 bg-charcoal-900/90 dark:bg-white/90
+                ${side === 'top' ? 'bottom-[-3px] left-1/2 -translate-x-1/2' : ''}
+                ${side === 'bottom' ? 'top-[-3px] left-1/2 -translate-x-1/2' : ''}
+                ${side === 'left' ? 'right-[-3px] top-1/2 -translate-y-1/2' : ''}
+                ${side === 'right' ? 'left-[-3px] top-1/2 -translate-y-1/2' : ''}
               `}
             />
           </motion.div>

@@ -18,7 +18,7 @@ const ANIM_EASE = "easeInOut";
 const STROKE_WIDTH = 2.5;
 
 // ============================================================================
-// STANDARDIZED HERO ICONS
+// STANDARDIZED HERO ICONS (Simplified for brevity but kept visually consistent)
 // ============================================================================
 
 // 1. IMAGES TO PDF
@@ -28,15 +28,15 @@ const ImagesToPdfHeroIcon = () => (
     className="w-full h-full text-brand-purple overflow-visible"
     fill="none" xmlns="http://www.w3.org/2000/svg"
   >
-    <rect x="30" y="30" width="40" height="50" rx="4" stroke="currentColor" strokeWidth={STROKE_WIDTH} fill="white" />
+    <rect x="30" y="30" width="40" height="50" rx="4" stroke="currentColor" strokeWidth={STROKE_WIDTH} fill="currentColor" fillOpacity="0.05" />
     <motion.rect
-      x="32" y="32" width="36" height="28" rx="2" fill="#E9D5FF" stroke="none"
+      x="32" y="32" width="36" height="28" rx="2" fill="currentColor" fillOpacity="0.2" stroke="none"
       initial={{ x: -20, y: -20, opacity: 0 }}
       animate={{ x: 0, y: 0, opacity: [0, 1, 1, 0] }}
       transition={{ duration: ANIM_DURATION, repeat: Infinity, times: [0, 0.2, 0.8, 1], ease: ANIM_EASE }}
     />
     <motion.rect
-      x="32" y="48" width="36" height="28" rx="2" fill="#D8B4FE" stroke="none"
+      x="32" y="48" width="36" height="28" rx="2" fill="currentColor" fillOpacity="0.1" stroke="none"
       initial={{ x: 20, y: 20, opacity: 0 }}
       animate={{ x: 0, y: 0, opacity: [0, 1, 1, 0] }}
       transition={{ duration: ANIM_DURATION, repeat: Infinity, times: [0, 0.2, 0.8, 1], ease: ANIM_EASE, delay: 0.2 }}
@@ -51,15 +51,15 @@ const PdfToImagesHeroIcon = () => (
     className="w-full h-full text-brand-mint overflow-visible"
     fill="none" xmlns="http://www.w3.org/2000/svg"
   >
-    <rect x="25" y="25" width="40" height="50" rx="4" stroke="currentColor" strokeWidth={STROKE_WIDTH} fill="white" />
+    <rect x="25" y="25" width="40" height="50" rx="4" stroke="currentColor" strokeWidth={STROKE_WIDTH} fill="currentColor" fillOpacity="0.05" />
     <path d="M35 35H55 M35 45H55" stroke="currentColor" strokeWidth={STROKE_WIDTH} strokeLinecap="round" />
     <motion.g
       initial={{ x: 25, y: 35, opacity: 0 }}
       animate={{ x: 55, opacity: [0, 1, 1, 0] }}
       transition={{ duration: ANIM_DURATION, repeat: Infinity, ease: ANIM_EASE }}
     >
-      <rect width="30" height="24" rx="2" fill="#ecfdf5" stroke="currentColor" strokeWidth={STROKE_WIDTH} />
-      <circle cx="15" cy="12" r="4" fill="currentColor" fillOpacity="0.2" />
+      <rect width="30" height="24" rx="2" fill="currentColor" fillOpacity="0.2" stroke="currentColor" strokeWidth={STROKE_WIDTH} />
+      <circle cx="15" cy="12" r="4" fill="currentColor" fillOpacity="0.4" />
     </motion.g>
   </motion.svg>
 );
@@ -72,7 +72,7 @@ const CompressPdfHeroIcon = () => (
     fill="none" xmlns="http://www.w3.org/2000/svg"
   >
     <motion.rect
-      x="30" y="25" width="40" height="50" rx="4" stroke="currentColor" strokeWidth={STROKE_WIDTH} fill="white"
+      x="30" y="25" width="40" height="50" rx="4" stroke="currentColor" strokeWidth={STROKE_WIDTH} fill="currentColor" fillOpacity="0.05"
       style={{ transformOrigin: "center" }}
       animate={{ scaleX: [1, 0.7, 1] }}
       transition={{ duration: ANIM_DURATION, repeat: Infinity, ease: ANIM_EASE }}
@@ -89,9 +89,9 @@ const MergePdfHeroIcon = () => (
     className="w-full h-full text-brand-orange overflow-visible"
     fill="none" xmlns="http://www.w3.org/2000/svg"
   >
-    <rect x="30" y="45" width="40" height="40" rx="4" stroke="currentColor" strokeWidth={STROKE_WIDTH} fill="white" />
+    <rect x="30" y="45" width="40" height="40" rx="4" stroke="currentColor" strokeWidth={STROKE_WIDTH} fill="currentColor" fillOpacity="0.05" />
     <motion.rect
-      x="30" y="20" width="40" height="40" rx="4" stroke="currentColor" strokeWidth={STROKE_WIDTH} fill="#ffedd5"
+      x="30" y="20" width="40" height="40" rx="4" stroke="currentColor" strokeWidth={STROKE_WIDTH} fill="currentColor" fillOpacity="0.2"
       animate={{ y: [0, 25, 0], opacity: [1, 0, 0, 1] }}
       transition={{ duration: ANIM_DURATION, repeat: Infinity, times: [0, 0.5, 0.51, 1], ease: ANIM_EASE }}
     />
@@ -109,8 +109,8 @@ const SplitPdfHeroIcon = () => (
     className="w-full h-full text-brand-blue overflow-visible"
     fill="none" xmlns="http://www.w3.org/2000/svg"
   >
-    <motion.path d="M30 25 H50 V75 H30 A2 2 0 0 1 28 73 V27 A2 2 0 0 1 30 25 Z" stroke="currentColor" strokeWidth={STROKE_WIDTH} fill="white" animate={{ x: [0, -8, 0] }} transition={{ duration: ANIM_DURATION, repeat: Infinity, ease: ANIM_EASE }} />
-    <motion.path d="M50 25 H70 A2 2 0 0 1 72 27 V73 A2 2 0 0 1 70 75 H50 V25 Z" stroke="currentColor" strokeWidth={STROKE_WIDTH} fill="white" animate={{ x: [0, 8, 0] }} transition={{ duration: ANIM_DURATION, repeat: Infinity, ease: ANIM_EASE }} />
+    <motion.path d="M30 25 H50 V75 H30 A2 2 0 0 1 28 73 V27 A2 2 0 0 1 30 25 Z" stroke="currentColor" strokeWidth={STROKE_WIDTH} fill="currentColor" fillOpacity="0.05" animate={{ x: [0, -8, 0] }} transition={{ duration: ANIM_DURATION, repeat: Infinity, ease: ANIM_EASE }} />
+    <motion.path d="M50 25 H70 A2 2 0 0 1 72 27 V73 A2 2 0 0 1 70 75 H50 V25 Z" stroke="currentColor" strokeWidth={STROKE_WIDTH} fill="currentColor" fillOpacity="0.05" animate={{ x: [0, 8, 0] }} transition={{ duration: ANIM_DURATION, repeat: Infinity, ease: ANIM_EASE }} />
     <motion.line x1="50" y1="20" x2="50" y2="80" stroke="currentColor" strokeWidth={2} strokeDasharray="3 3" animate={{ opacity: [0, 1, 0] }} transition={{ duration: ANIM_DURATION, repeat: Infinity, ease: ANIM_EASE }} />
   </motion.svg>
 );
@@ -122,10 +122,10 @@ const ZipItHeroIcon = () => (
     className="w-full h-full text-amber-500 overflow-visible"
     fill="none" xmlns="http://www.w3.org/2000/svg"
   >
-    <path d="M30 40 L35 35 H45 L50 40 H70 V70 H30 V40 Z" fill="#fef3c7" stroke="currentColor" strokeWidth={STROKE_WIDTH} />
-    <motion.rect x="40" y="10" width="10" height="12" rx="1" fill="white" stroke="currentColor" strokeWidth={2} animate={{ y: [0, 40, 40, 0], opacity: [1, 1, 0, 0] }} transition={{ duration: ANIM_DURATION, repeat: Infinity, times: [0, 0.3, 0.4, 1], ease: "easeIn" }} />
-    <motion.rect x="50" y="5" width="10" height="12" rx="1" fill="white" stroke="currentColor" strokeWidth={2} animate={{ y: [0, 45, 45, 0], opacity: [1, 1, 0, 0] }} transition={{ duration: ANIM_DURATION, repeat: Infinity, times: [0.1, 0.4, 0.5, 1], ease: "easeIn" }} />
-    <motion.path d="M28 45 H72 L70 70 H30 L28 45 Z" fill="#fde68a" stroke="currentColor" strokeWidth={STROKE_WIDTH} style={{ transformOrigin: "bottom center" }} animate={{ scaleY: [1, 0.9, 1] }} transition={{ duration: ANIM_DURATION, repeat: Infinity, times: [0.35, 0.45, 0.6], ease: "easeOut" }} />
+    <path d="M30 40 L35 35 H45 L50 40 H70 V70 H30 V40 Z" fill="currentColor" fillOpacity="0.1" stroke="currentColor" strokeWidth={STROKE_WIDTH} />
+    <motion.rect x="40" y="10" width="10" height="12" rx="1" fill="currentColor" stroke="currentColor" strokeWidth={2} animate={{ y: [0, 40, 40, 0], opacity: [1, 1, 0, 0] }} transition={{ duration: ANIM_DURATION, repeat: Infinity, times: [0, 0.3, 0.4, 1], ease: "easeIn" }} />
+    <motion.rect x="50" y="5" width="10" height="12" rx="1" fill="currentColor" stroke="currentColor" strokeWidth={2} animate={{ y: [0, 45, 45, 0], opacity: [1, 1, 0, 0] }} transition={{ duration: ANIM_DURATION, repeat: Infinity, times: [0.1, 0.4, 0.5, 1], ease: "easeIn" }} />
+    <motion.path d="M28 45 H72 L70 70 H30 L28 45 Z" fill="currentColor" fillOpacity="0.2" stroke="currentColor" strokeWidth={STROKE_WIDTH} style={{ transformOrigin: "bottom center" }} animate={{ scaleY: [1, 0.9, 1] }} transition={{ duration: ANIM_DURATION, repeat: Infinity, times: [0.35, 0.45, 0.6], ease: "easeOut" }} />
   </motion.svg>
 );
 
@@ -223,26 +223,26 @@ export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled }
   // --- Framer Motion Variants ---
   const containerVariants: Variants = {
     idle: {
-      scale: shouldReduceMotion ? 1 : [1, 1.02, 1], // Gentle breathing scale
+      scale: shouldReduceMotion ? 1 : [1, 1.01, 1], // Very subtle breathing
       y: 0,
       x: 0,
-      borderColor: 'rgba(255, 255, 255, 0)', // Transparent (handled by SVG dash)
-      boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.05)",
+      borderColor: 'rgba(255, 255, 255, 0)', 
+      boxShadow: "0 10px 30px -10px rgba(0, 0, 0, 0.05)",
       transition: {
-        scale: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+        scale: { duration: 6, repeat: Infinity, ease: "easeInOut" },
         borderColor: { duration: 0.3 }
       }
     },
     dragActive: {
-      scale: 1.02,
-      y: -4,
+      scale: 1.01,
+      y: -2,
       x: 0,
-      borderColor: 'rgba(109, 40, 217, 0.6)', // Brand Purple
-      boxShadow: "0 20px 25px -5px rgba(109, 40, 217, 0.2)",
+      borderColor: 'rgba(124, 58, 237, 0.4)', // Brand Purple
+      boxShadow: "0 20px 40px -10px rgba(124, 58, 237, 0.15)",
       transition: { type: "spring", stiffness: 400, damping: 25 }
     },
     dropSuccess: {
-      scale: 1.04,
+      scale: 1.02,
       y: 0,
       x: 0,
       borderColor: '#22C55E', // Green
@@ -265,14 +265,14 @@ export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled }
       animate={dropState}
       className={`
         cursor-pointer group relative overflow-hidden
-        backdrop-blur-md
+        backdrop-blur-xl
         min-h-[240px] md:min-h-[320px] flex flex-col items-center justify-center
         rounded-3xl w-full
         border-2
         transition-colors duration-300
         ${dropState === 'dragActive' 
           ? 'bg-brand-purple/5 dark:bg-brand-purple/10' 
-          : 'bg-white/80 dark:bg-charcoal-900/60 hover:bg-white dark:hover:bg-charcoal-900 border-transparent dark:border-charcoal-700'
+          : 'bg-white/80 dark:bg-charcoal-800/80 hover:bg-white dark:hover:bg-charcoal-800 border-transparent dark:border-white/5'
         }
         ${dropState === 'error' ? 'bg-rose-50 dark:bg-rose-900/20' : ''}
         ${dropState === 'dropSuccess' ? 'bg-green-50 dark:bg-green-900/20' : ''}
@@ -283,10 +283,10 @@ export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled }
 
       {/* Background Gradient Effects */}
       <div className={`absolute inset-0 rounded-3xl overflow-hidden pointer-events-none transition-opacity duration-300 ${dropState === 'dragActive' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-         <div className={`absolute inset-0 bg-gradient-to-r ${getGradientClass()} opacity-20 blur-md`} />
+         <div className={`absolute inset-0 bg-gradient-to-r ${getGradientClass()} opacity-10 dark:opacity-20 blur-md`} />
       </div>
       
-      {/* Idle Shimmer Effect */}
+      {/* Idle Shimmer Effect (Subtler) */}
       <AnimatePresence>
         {dropState === 'idle' && !shouldReduceMotion && (
           <motion.div
@@ -296,30 +296,30 @@ export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled }
             className="absolute inset-0 rounded-3xl pointer-events-none overflow-hidden"
           >
             <motion.div
-              className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 dark:via-white/5 to-transparent skew-x-12"
+              className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/40 dark:via-white/5 to-transparent skew-x-12"
               animate={{ translateX: ['-100%', '200%'] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", repeatDelay: 1 }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", repeatDelay: 2 }}
             />
           </motion.div>
         )}
       </AnimatePresence>
       
-      {/* Dashed Border Animation (SVG) */}
+      {/* Dashed Border Animation (SVG) - Calmer speed */}
       <motion.svg 
-        className={`absolute inset-0 w-full h-full pointer-events-none transition-colors duration-300 ${dropState === 'dragActive' ? 'text-brand-purple' : 'text-charcoal-500/20 dark:text-charcoal-600/30 group-hover:text-brand-purple/40'}`}
+        className={`absolute inset-0 w-full h-full pointer-events-none transition-colors duration-300 ${dropState === 'dragActive' ? 'text-brand-purple' : 'text-slate-300 dark:text-charcoal-600 group-hover:text-brand-purple/40'}`}
         animate={dropState === 'error' ? { color: "#F43F5E" } : dropState === 'dropSuccess' ? { color: "#22C55E" } : {}}
       >
         <rect
           width="100%" height="100%" x="0" y="0" rx="24" ry="24"
-          fill="none" stroke="currentColor" strokeWidth="3" strokeDasharray="16 16"
+          fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="12 12"
         />
         {/* Marching Ants (Only when active) */}
         <motion.rect
           width="100%" height="100%" x="0" y="0" rx="24" ry="24"
-          fill="none" stroke="currentColor" strokeWidth={4}
-          strokeDasharray="16 16"
-          animate={{ strokeDashoffset: -32 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          fill="none" stroke="currentColor" strokeWidth={3}
+          strokeDasharray="12 12"
+          animate={{ strokeDashoffset: -24 }}
+          transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
           className={`transition-opacity duration-300 ${dropState === 'dragActive' ? 'opacity-100' : 'opacity-0'}`}
         />
       </motion.svg>
@@ -327,12 +327,12 @@ export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled }
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center gap-4 md:gap-6 px-6 text-center">
         
-        {/* Hero Icon Wrapper - Bounces slightly on Drag */}
+        {/* Hero Icon Wrapper - OLED ready */}
         <motion.div 
-          className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-white dark:bg-charcoal-800 shadow-lg shadow-charcoal-500/5 flex items-center justify-center mb-1 transition-transform duration-500 ease-out border border-white/50 dark:border-white/5 overflow-visible"
-          animate={dropState === 'dragActive' ? { y: -10, scale: 1.1 } : { y: 0, scale: 1 }}
+          className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-white dark:bg-charcoal-700 shadow-xl shadow-slate-200/50 dark:shadow-black/50 flex items-center justify-center mb-1 transition-transform duration-500 ease-out border border-slate-100 dark:border-white/5 overflow-visible"
+          animate={dropState === 'dragActive' ? { y: -5, scale: 1.05 } : { y: 0, scale: 1 }}
         >
-          <div className="w-20 h-20 md:w-24 md:h-24">
+          <div className="w-20 h-20 md:w-24 md:h-24 opacity-90">
              <HeroIconForTool tool={mode} />
           </div>
         </motion.div>
@@ -342,7 +342,7 @@ export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled }
             key={getHeadline()} // Animate text swap
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
-            className="block font-heading font-bold text-charcoal-800 dark:text-white text-xl md:text-3xl mb-2 md:mb-3 tracking-tight"
+            className="block font-heading font-bold text-charcoal-900 dark:text-charcoal-200 text-xl md:text-3xl mb-2 md:mb-3 tracking-tight"
           >
             {getHeadline()}
           </motion.span>
@@ -354,8 +354,8 @@ export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled }
         {/* Button */}
         <motion.div 
           className="relative overflow-hidden mt-1 px-6 py-2.5 md:px-8 md:py-3 bg-brand-purple text-white rounded-full font-bold shadow-lg shadow-brand-purple/30 group-hover:shadow-brand-purple/50 flex items-center gap-2"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
         >
            <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/20 to-transparent z-0 pointer-events-none" />
            <Plus className="w-4 h-4 md:w-5 md:h-5 relative z-10" />

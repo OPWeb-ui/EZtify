@@ -30,28 +30,18 @@ export const ShareButton: React.FC = () => {
       <motion.button
         onClick={handleShare}
         aria-label="Share EZtify"
+        whileTap={{ scale: 0.95 }}
         className="
-          relative overflow-hidden group
-          flex items-center gap-2 px-3 py-1.5 md:px-3 md:py-1.5
-          bg-transparent hover:bg-slate-100 dark:hover:bg-charcoal-800
-          text-charcoal-500 hover:text-charcoal-800 dark:text-slate-400 dark:hover:text-white rounded-full
-          border border-slate-200/60 hover:border-slate-300 dark:border-white/10 dark:hover:border-white/20
-          transition-all cursor-pointer outline-none 
-          focus:ring-2 focus:ring-brand-purple/20
+          group relative flex items-center gap-2 h-9 px-3 md:pl-3 md:pr-4 rounded-full
+          bg-white dark:bg-white/5 border border-slate-200/60 dark:border-white/10
+          hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50 dark:hover:bg-white/10
+          text-charcoal-600 dark:text-slate-300
+          text-sm font-medium transition-all duration-200
+          outline-none focus-visible:ring-2 focus-visible:ring-brand-purple/50
         "
-        whileHover={{ 
-          scale: 1.02,
-          backgroundColor: "rgba(241, 245, 249, 0.8)" 
-        }}
-        whileTap={{ scale: 0.96 }}
       >
-        <div className="relative z-10 text-charcoal-400 dark:text-slate-500 group-hover:text-brand-purple transition-colors duration-300">
-          <Share2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
-        </div>
-        
-        <span className="relative z-10 text-xs font-bold tracking-wide hidden md:inline transition-colors duration-300">
-          Share
-        </span>
+        <Share2 className="w-4 h-4 text-charcoal-400 dark:text-slate-400 group-hover:text-brand-purple transition-colors" />
+        <span className="hidden md:inline">Share</span>
       </motion.button>
 
       <ShareModal 

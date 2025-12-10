@@ -13,12 +13,12 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   horizontalListSortingStrategy,
-  verticalListSortingStrategy,
+  rectSortingStrategy,
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { UploadedImage } from '../types';
-import { X, RotateCw, GripHorizontal, GripVertical, Check, Plus, Minus } from 'lucide-react';
+import { X, RotateCw, GripHorizontal, Check, Plus, Minus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { buttonTap } from '../utils/animations';
 
@@ -38,13 +38,14 @@ interface FilmstripProps {
 type ThumbnailSize = 'sm' | 'md' | 'lg';
 
 const SIZES: Record<ThumbnailSize, { width: string; height: string }> = {
-  sm: { width: 'w-20', height: 'h-24' }, // Mobile: ~80px x 96px
-  md: { width: 'w-28', height: 'h-36' }, // Desktop: ~112px x 144px
-  lg: { width: 'w-36', height: 'h-48' }, // Large: ~144px x 192px
+  sm: { width: 'w-20', height: 'h-24' }, // Mobile/Compact
+  md: { width: 'w-28', height: 'h-36' }, // Standard
+  lg: { width: 'w-36', height: 'h-48' }, // Large
 };
 
 interface SortableItemProps {
   image: UploadedImage;
+  index: number;
   isActive: boolean;
   isSelected: boolean;
   onSelect: (e: React.MouseEvent) => void;
@@ -53,10 +54,12 @@ interface SortableItemProps {
   isMobile: boolean;
   sizeClasses: { width: string; height: string };
   direction: 'horizontal' | 'vertical';
+  size: ThumbnailSize;
 }
 
-const SortableItem: React.FC<SortableItemProps> = ({ 
+const SortableItem: React.FC<SortableItemProps> = React.memo(({ 
   image, 
+  index,
   isActive, 
   isSelected, 
   onSelect, 
@@ -64,7 +67,8 @@ const SortableItem: React.FC<SortableItemProps> = ({
   onRotate, 
   isMobile,
   sizeClasses,
-  direction
+  direction,
+  size
 }) => {
   const {
     attributes,
@@ -84,10 +88,13 @@ const SortableItem: React.FC<SortableItemProps> = ({
   const isVertical = direction === 'vertical';
 
   const actionBtnClass = `
-    w-7 h-7 flex items-center justify-center rounded-lg shadow-sm border transition-colors duration-200
+    flex items-center justify-center rounded-lg shadow-sm border transition-colors duration-200
     bg-white/95 dark:bg-charcoal-900/95 border-slate-200 dark:border-charcoal-600 text-charcoal-600 dark:text-slate-300
     hover:scale-110 active:scale-95
+    ${size === 'sm' ? 'w-6 h-6' : 'w-7 h-7'}
   `;
+
+  const iconSize = size === 'sm' ? 12 : 14;
 
   return (
     <motion.div
@@ -96,15 +103,15 @@ const SortableItem: React.FC<SortableItemProps> = ({
       layout
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
+      exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
       onClick={onSelect}
       className={`
         relative group flex-shrink-0 cursor-pointer select-none
-        ${isVertical ? 'w-full rounded-lg' : `${sizeClasses.width} ${sizeClasses.height} rounded-xl`}
-        overflow-hidden border-2 transition-all duration-200
+        ${isVertical ? 'w-full aspect-[3/4]' : `${sizeClasses.width} ${sizeClasses.height}`}
+        rounded-xl overflow-hidden border-2 transition-all duration-200
         ${isActive 
-          ? 'border-brand-purple ring-4 ring-brand-purple/10 scale-105 shadow-xl shadow-brand-purple/10 z-10' 
+          ? 'border-brand-purple ring-4 ring-brand-purple/10 shadow-xl shadow-brand-purple/10 z-10' 
           : isSelected
             ? 'border-brand-purple/60 ring-2 ring-brand-purple/5 bg-brand-purple/5 shadow-md'
             : 'border-slate-200 dark:border-charcoal-700 hover:border-brand-purple/40 shadow-sm hover:shadow-md'
@@ -113,49 +120,61 @@ const SortableItem: React.FC<SortableItemProps> = ({
         bg-white dark:bg-charcoal-800
       `}
     >
+      {/* Image */}
       <img
         src={image.previewUrl}
-        alt="Thumbnail"
-        className={`w-full h-full object-cover transition-opacity ${isSelected && !isActive ? 'opacity-80' : 'opacity-100'}`}
-        style={{ transform: `rotate(${image.rotation}deg)`, aspectRatio: isVertical ? '4/3' : 'auto' }}
+        alt={`Page ${index + 1}`}
+        loading="lazy"
+        className={`w-full h-full object-contain p-1 bg-white dark:bg-charcoal-800 transition-opacity ${isSelected && !isActive ? 'opacity-80' : 'opacity-100'}`}
+        style={{ transform: `rotate(${image.rotation}deg)` }}
       />
 
       <div className={`absolute inset-0 ring-1 ring-inset pointer-events-none ${isSelected ? 'ring-brand-purple/30' : 'ring-black/5 dark:ring-white/5'}`} />
       
+      {/* Selection Checkmark */}
       {isSelected && (
-        <div className="absolute top-1 left-1 z-20 w-4 h-4 bg-brand-purple text-white rounded-full flex items-center justify-center shadow-sm">
+        <div className="absolute top-1.5 left-1.5 z-20 w-4 h-4 bg-brand-purple text-white rounded-full flex items-center justify-center shadow-sm">
           <Check size={10} strokeWidth={3} />
         </div>
       )}
 
-      <div className={`absolute top-1 right-1 z-20 flex flex-col gap-1.5 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+      {/* Page Index Badge (Visible if not selected or small size) */}
+      {!isSelected && (
+        <div className="absolute top-1.5 left-1.5 z-10 bg-black/40 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md backdrop-blur-sm shadow-sm pointer-events-none">
+          {index + 1}
+        </div>
+      )}
+
+      {/* Actions (Hover) */}
+      <div className={`absolute top-1.5 right-1.5 z-20 flex flex-col gap-1.5 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
         <motion.button onClick={onRemove} whileTap={buttonTap} className={`${actionBtnClass} hover:bg-rose-100 dark:hover:bg-rose-900/50 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200`} title="Remove">
-          <X size={14} />
+          <X size={iconSize} />
         </motion.button>
         <motion.button onClick={onRotate} whileTap={buttonTap} className={`${actionBtnClass} hover:bg-brand-purple/10 hover:text-brand-purple hover:border-brand-purple/30`} title="Rotate">
-          <RotateCw size={14} />
+          <RotateCw size={iconSize} />
         </motion.button>
       </div>
       
+      {/* Drag Handle */}
       <div 
         {...attributes} 
         {...listeners}
         onClick={(e) => e.stopPropagation()}
         className={`
-          absolute bottom-1 z-20 w-8 h-4 flex items-center justify-center 
+          absolute bottom-1.5 z-20 h-4 flex items-center justify-center 
           bg-white/90 dark:bg-charcoal-800/90 rounded-full shadow-sm border border-slate-200 dark:border-charcoal-600 
           cursor-grab active:cursor-grabbing hover:bg-brand-purple hover:text-white 
           text-charcoal-400 dark:text-slate-400 transition-colors 
-          ${isVertical ? 'left-1' : 'left-1/2 -translate-x-1/2'}
+          left-1/2 -translate-x-1/2 w-8
           ${isMobile || isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
         `}
         title="Drag to reorder"
       >
-        {isVertical ? <GripVertical size={12} /> : <GripHorizontal size={12} />}
+        <GripHorizontal size={12} />
       </div>
     </motion.div>
   );
-};
+});
 
 export const Filmstrip: React.FC<FilmstripProps> = ({
   images,
@@ -208,24 +227,34 @@ export const Filmstrip: React.FC<FilmstripProps> = ({
 
   const currentSizeClasses = SIZES[size];
   const isVertical = direction === 'vertical';
-  const dndStrategy = isVertical ? verticalListSortingStrategy : horizontalListSortingStrategy;
+  
+  // Use Rect strategy for grid layout capability
+  const dndStrategy = isVertical ? rectSortingStrategy : horizontalListSortingStrategy;
+  
+  // Grid Columns Logic for Vertical Mode
+  const gridCols = size === 'sm' ? 'grid-cols-3' : size === 'md' ? 'grid-cols-2' : 'grid-cols-1';
+  
   const containerClasses = isVertical
-    ? 'flex flex-col gap-3 p-4 overflow-y-auto custom-scrollbar h-full'
+    ? `grid ${gridCols} gap-2 p-3 overflow-y-auto custom-scrollbar h-full content-start w-full`
     : 'flex flex-row items-center gap-3 px-6 py-4 overflow-x-auto custom-scrollbar max-w-full';
 
   return (
-    <div className={`w-full h-full relative group/filmstrip ${className}`}>
+    <div className={`w-full h-full relative group/filmstrip flex flex-col ${className}`}>
       
-      {!isVertical && (
-        <div className="absolute top-1 right-6 z-40 flex items-center gap-1 bg-white/80 dark:bg-charcoal-800/80 backdrop-blur-md rounded-lg border border-slate-200 dark:border-charcoal-600 p-1 shadow-sm opacity-0 group-hover/filmstrip:opacity-100 transition-opacity duration-200">
-          <motion.button whileTap={{ scale: 0.9 }} onClick={handleZoomOut} disabled={size === 'sm'} className="p-1 hover:bg-slate-100 dark:hover:bg-charcoal-700 text-charcoal-600 dark:text-slate-300 rounded disabled:opacity-30 disabled:hover:bg-transparent" title="Smaller Thumbnails">
-            <Minus size={14}/>
+      {/* Zoom Controls - Integrated better */}
+      {!isMobile && (
+        <div className={`
+          absolute z-30 flex items-center gap-1 bg-white/90 dark:bg-charcoal-800/90 backdrop-blur-md rounded-lg border border-slate-200 dark:border-charcoal-600 p-1 shadow-sm transition-opacity duration-200
+          ${isVertical ? 'top-3 right-4 opacity-0 group-hover/filmstrip:opacity-100' : 'top-1 right-6 opacity-0 group-hover/filmstrip:opacity-100'}
+        `}>
+          <motion.button whileTap={{ scale: 0.9 }} onClick={handleZoomOut} disabled={size === 'sm'} className="p-1 hover:bg-slate-100 dark:hover:bg-charcoal-700 text-charcoal-600 dark:text-slate-300 rounded disabled:opacity-30 disabled:hover:bg-transparent" title="Smaller">
+            <Minus size={12}/>
           </motion.button>
           <span className="text-[10px] font-bold text-charcoal-500 dark:text-slate-400 w-4 text-center select-none">
             {size === 'sm' ? 'S' : size === 'md' ? 'M' : 'L'}
           </span>
-          <motion.button whileTap={{ scale: 0.9 }} onClick={handleZoomIn} disabled={size === 'lg'} className="p-1 hover:bg-slate-100 dark:hover:bg-charcoal-700 text-charcoal-600 dark:text-slate-300 rounded disabled:opacity-30 disabled:hover:bg-transparent" title="Larger Thumbnails">
-            <Plus size={14}/>
+          <motion.button whileTap={{ scale: 0.9 }} onClick={handleZoomIn} disabled={size === 'lg'} className="p-1 hover:bg-slate-100 dark:hover:bg-charcoal-700 text-charcoal-600 dark:text-slate-300 rounded disabled:opacity-30 disabled:hover:bg-transparent" title="Larger">
+            <Plus size={12}/>
           </motion.button>
         </div>
       )}
@@ -235,26 +264,30 @@ export const Filmstrip: React.FC<FilmstripProps> = ({
         collisionDetection={closestCenter}
         onDragEnd={handleDragEnd}
       >
-        <SortableContext items={images.map(img => img.id)} strategy={dndStrategy}>
-          <div className={containerClasses}>
-            <AnimatePresence mode="popLayout" initial={false}>
-              {images.map((img) => (
-                <SortableItem
-                  key={img.id}
-                  image={img}
-                  isActive={img.id === activeImageId}
-                  isSelected={selectedImageIds.has(img.id)}
-                  onSelect={(e) => onSelect(img.id, e)}
-                  onRemove={(e) => { e.stopPropagation(); onRemove(img.id); }}
-                  onRotate={(e) => { e.stopPropagation(); onRotate(img.id); }}
-                  isMobile={isMobile}
-                  sizeClasses={currentSizeClasses}
-                  direction={direction}
-                />
-              ))}
-            </AnimatePresence>
-          </div>
-        </SortableContext>
+        <div className="flex-1 min-h-0">
+          <SortableContext items={images.map(img => img.id)} strategy={dndStrategy}>
+            <div className={containerClasses}>
+              <AnimatePresence mode="popLayout" initial={false}>
+                {images.map((img, idx) => (
+                  <SortableItem
+                    key={img.id}
+                    image={img}
+                    index={idx}
+                    isActive={img.id === activeImageId}
+                    isSelected={selectedImageIds.has(img.id)}
+                    onSelect={(e) => onSelect(img.id, e)}
+                    onRemove={(e) => { e.stopPropagation(); onRemove(img.id); }}
+                    onRotate={(e) => { e.stopPropagation(); onRotate(img.id); }}
+                    isMobile={isMobile}
+                    sizeClasses={currentSizeClasses}
+                    direction={direction}
+                    size={size}
+                  />
+                ))}
+              </AnimatePresence>
+            </div>
+          </SortableContext>
+        </div>
       </DndContext>
     </div>
   );

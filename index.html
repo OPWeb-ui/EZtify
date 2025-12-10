@@ -22,35 +22,35 @@
           extend: {
             colors: {
               pastel: {
-                bg: '#FAF9F6', // Premium Off-White / Newspaper White
-                card: 'rgba(255, 255, 255, 0.9)',
+                bg: '#F0F2F5', // Cool Silver/Gray (Light Mode Background)
+                card: '#FFFFFF',
                 border: '#E2E8F0',
               },
-              // Neutral UI Scale (Dark Mode)
+              // True OLED Scale (Midnight Pro) -> Zinc/Slate Palette
               charcoal: {
-                950: '#020617', // Main App Background
-                900: '#0F172A', // Card Background
-                800: '#1E293B', // Secondary BG / Soft Border / Secondary Button
-                700: '#334155', // Strong Border / Secondary Hover
-                600: '#475569', // Disabled Text
-                500: '#94A3B8', // Muted Text
-                400: '#CBD5E1', // Secondary Text
-                300: '#F8FAFC', // Primary Text (Mapped to 300 for ease)
-                200: '#F1F5F9',
-                100: '#F8FAFC',
+                950: '#09090b', // Deep Graphite (Background)
+                900: '#18181b', // Sidebar
+                800: '#27272a',
+                700: '#3f3f46',
+                600: '#52525b',
+                500: '#71717a',
+                400: '#a1a1aa',
+                300: '#d4d4d8',
+                200: '#e4e4e7',
+                100: '#f4f4f5',
               },
               brand: {
                 // Identity
-                purple: '#6D28D9', // Primary 500
-                purpleDark: '#5B21B6', // Primary 600
+                purple: '#7C3AED', // Primary 600
+                purpleDark: '#6D28D9', // Primary 700
                 purpleLight: '#DDD6FE', // Primary 100
-                // Action (Money Button)
+                // Action
                 green: '#22C55E', // Primary Action
                 greenHover: '#16A34A', // Hover
                 greenDark: '#052E1A', // Success BG
-                // Tool Specific (Accents)
-                blue: '#60A5FA', 
-                mint: '#22C55E', // Mapped to green for consistency
+                // Tool Specific
+                blue: '#3B82F6', 
+                mint: '#10B981', 
                 violet: '#8B5CF6',
                 orange: '#F59E0B',
               }
@@ -59,9 +59,17 @@
               sans: ['Inter', 'sans-serif'],
               heading: ['Poppins', 'sans-serif'],
             },
+            letterSpacing: {
+              tight: '-0.02em',
+              tighter: '-0.04em',
+            },
+            transitionTimingFunction: {
+              'signature': 'cubic-bezier(0.16, 1, 0.3, 1)',
+            },
             animation: {
               'float': 'float 6s ease-in-out infinite',
               'shimmer': 'shimmer 4s infinite',
+              'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
             },
             keyframes: {
               float: {
@@ -79,58 +87,87 @@
         },
       }
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
       body {
-        background-color: #FAF9F6;
-        transition: background-color 0.3s ease, color 0.3s ease;
-        /* Very subtle paper noise */
-        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
-        color: #1E293B;
+        background-color: #F0F2F5; /* Cool Silver */
+        transition: background-color 0.3s cubic-bezier(0.16, 1, 0.3, 1), color 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        color: #334155; /* Slate-700 */
         font-family: 'Inter', sans-serif;
         overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
       }
+
+      /* Noise Texture */
+      body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 9999;
+        opacity: 0.03;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+      }
+      .dark body::before {
+        opacity: 0.04;
+      }
+
       .dark body {
-        background-color: #020617; /* Background 900 */
-        color: #F8FAFC; /* Text Primary */
-        background-image: none;
+        background-color: #09090b; /* Deep Graphite */
+        color: #d4d4d8; /* Zinc 300 */
       }
+      
       .glass-panel {
-        background: rgba(255, 255, 255, 0.92);
-        backdrop-filter: blur(24px);
-        -webkit-backdrop-filter: blur(24px);
-        border: 1px solid rgba(109, 40, 217, 0.1);
-        box-shadow: 0 8px 32px rgba(109, 40, 217, 0.05);
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(226, 232, 240, 0.6);
+        box-shadow: 0 4px 20px -1px rgba(0, 0, 0, 0.05);
       }
+      
       .dark .glass-panel {
-        background: rgba(15, 23, 42, 0.9); /* Card BG 900 */
-        border: 1px solid #1E293B; /* Border Soft 800 */
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        background: rgba(24, 24, 27, 0.85); /* Charcoal 900 */
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        box-shadow: 0 4px 30px -1px rgba(0, 0, 0, 0.5);
       }
+
+      /* Custom Scrollbar - Soft Dark Mode */
       .custom-scrollbar::-webkit-scrollbar {
         width: 6px;
         height: 6px;
       }
       .custom-scrollbar::-webkit-scrollbar-track {
-        background: rgba(0,0,0,0.02);
-      }
-      .dark .custom-scrollbar::-webkit-scrollbar-track {
-        background: rgba(255,255,255,0.02);
+        background: transparent;
       }
       .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: rgba(109, 40, 217, 0.2); /* Brand Purple */
-        border-radius: 10px;
+        background: #CBD5E1; 
+        border-radius: 99px;
+      }
+      .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #3f3f46; /* Charcoal 700 */
       }
       .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: rgba(109, 40, 217, 0.4);
+        background: #94A3B8; 
       }
+      .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #52525b; /* Charcoal 600 */
+      }
+
       ::selection {
-        background-color: rgba(109, 40, 217, 0.2);
-        color: #5B21B6;
+        background-color: rgba(124, 58, 237, 0.15);
+        color: #7C3AED;
       }
       .dark ::selection {
-        background-color: rgba(109, 40, 217, 0.4);
+        background-color: rgba(124, 58, 237, 0.3);
         color: #FFFFFF;
+      }
+
+      .font-mono {
+        font-variant-numeric: tabular-nums;
       }
     </style>
   <script type="importmap">

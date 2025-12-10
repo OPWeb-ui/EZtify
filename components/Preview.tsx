@@ -1,14 +1,14 @@
 import React, { useMemo } from 'react';
 import { UploadedImage, PdfConfig } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useDropzone } from 'react-dropzone';
+import { useDropzone, FileRejection } from 'react-dropzone';
 import { RefreshCw, X, Plus } from 'lucide-react';
 
 interface PreviewProps {
   image: UploadedImage | null;
   config: PdfConfig;
   onReplace: (file: File) => void;
-  onAddFiles?: (files: File[]) => void;
+  onAddFiles?: (files: File[], fileRejections: FileRejection[]) => void;
   onDropRejected: (msg: string) => void;
   onClose?: () => void;
   scale: number;
@@ -25,17 +25,20 @@ export const Preview: React.FC<PreviewProps> = ({
 }) => {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop: (acceptedFiles) => {
-      if (acceptedFiles.length > 0) {
-        if (onAddFiles) {
-          onAddFiles(acceptedFiles);
-        } else {
-          onReplace(acceptedFiles[0]);
-        }
+    onDrop: (acceptedFiles, fileRejections) => {
+      if (onAddFiles) {
+        // Pass both accepted and rejected files to parent handler
+        onAddFiles(acceptedFiles, fileRejections);
+      } else if (acceptedFiles.length > 0) {
+        onReplace(acceptedFiles[0]);
       }
     },
-    onDropRejected: () => {
-      onDropRejected("Unsupported file type.");
+    onDropRejected: (fileRejections) => {
+      // Only use the generic error if we are NOT in add-files mode.
+      // If we ARE in add-files mode, the onDrop handler above takes care of passing rejections to the parent.
+      if (!onAddFiles) {
+        onDropRejected("Unsupported file type.");
+      }
     },
     accept: { 'image/*': ['.jpeg', '.jpg', '.png', '.webp'] },
     multiple: !!onAddFiles,
@@ -145,16 +148,17 @@ export const Preview: React.FC<PreviewProps> = ({
           )}
         </AnimatePresence>
 
-        {/* Close Button */}
+        {/* Close Button - Standardized & Accessible */}
         {onClose && (
-          <div className="absolute -top-3 -right-3 z-30">
+          <div className="absolute -top-4 -right-4 z-30">
             <motion.button
               whileHover={{ scale: 1.1, rotate: 90 }}
               whileTap={{ scale: 0.9 }}
               onClick={(e) => { e.stopPropagation(); onClose(); }}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-white dark:bg-charcoal-800 text-charcoal-500 hover:text-rose-500 shadow-md border border-slate-100 dark:border-charcoal-700 transition-colors"
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-charcoal-800 text-charcoal-500 dark:text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200 dark:hover:border-rose-800 shadow-md border border-slate-200 dark:border-charcoal-600 transition-all duration-200"
+              title="Remove"
             >
-              <X size={16} />
+              <X size={20} />
             </motion.button>
           </div>
         )}

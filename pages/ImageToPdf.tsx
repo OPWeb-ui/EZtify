@@ -123,10 +123,22 @@ export const ImageToPdfPage: React.FC = () => {
     return results.filter((img): img is UploadedImage => img !== null);
   }, [addToast]);
 
-  const onDrop = useCallback(async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
-    if (fileRejections.length > 0) {
-      addToast("Invalid File", "Please upload supported image formats only.", "error");
-      return;
+  const onDrop = useCallback(async (acceptedFiles: File[], fileRejections: FileRejection[] = []) => {
+    // Handle File Rejections (Invalid Type or Size)
+    if (fileRejections && fileRejections.length > 0) {
+      const invalidType = fileRejections.find(r => r.errors.some(e => e.code === 'file-invalid-type'));
+      const tooLarge = fileRejections.find(r => r.errors.some(e => e.code === 'file-too-large'));
+
+      if (invalidType) {
+        addToast("Unsupported Format", "Please upload JPG, PNG, WEBP, GIF, or BMP images.", "error");
+      } else if (tooLarge) {
+        addToast("File Too Large", `Max ${MAX_FILE_SIZE_MB}MB per file.`, "error");
+      } else {
+        addToast("Invalid File", "One or more files could not be uploaded.", "error");
+      }
+      
+      // If no valid files were accepted alongside rejections, stop here.
+      if (acceptedFiles.length === 0) return;
     }
     
     if (images.length >= MAX_IMAGE_COUNT) {
@@ -216,10 +228,13 @@ export const ImageToPdfPage: React.FC = () => {
   
   const handleReplace = (file: File) => {
     if (!activeImageId) return;
-    if (!file.type.startsWith('image/')) {
-       addToast("Invalid File", "Please upload an image file.", "error");
+    
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp'];
+    if (!validTypes.includes(file.type)) {
+       addToast("Unsupported Format", "Only JPG, PNG, WEBP, GIF, and BMP images are supported.", "error");
        return;
     }
+
     const objectUrl = URL.createObjectURL(file);
     const img = new Image();
     img.src = objectUrl;
@@ -280,10 +295,10 @@ export const ImageToPdfPage: React.FC = () => {
         ) : (
           <motion.div 
             key="workspace"
-            className="flex h-[calc(100vh-4rem)] w-full overflow-hidden bg-slate-100 dark:bg-black"
+            className="flex h-[calc(100vh-4rem)] w-full overflow-hidden bg-white dark:bg-charcoal-950"
           >
             {/* 1. LEFT SIDEBAR (Settings) - Visible on Desktop/Tablet, Drawer on Mobile */}
-            <div className={`flex-none md:w-80 bg-white dark:bg-charcoal-900 z-30 h-full flex flex-col shadow-xl md:shadow-none border-r border-slate-200 dark:border-charcoal-800 ${isMobile && !isSidebarOpen ? 'hidden' : 'w-full'}`}>
+            <div className={`flex-none md:w-80 bg-white dark:bg-charcoal-900 z-30 h-full flex flex-col shadow-xl md:shadow-none border-r border-slate-200/60 dark:border-white/5 ${isMobile && !isSidebarOpen ? 'hidden' : 'w-full'}`}>
               <Sidebar 
                 mode="image-to-pdf" 
                 config={config} 
@@ -306,9 +321,9 @@ export const ImageToPdfPage: React.FC = () => {
               {isMobile && isSidebarOpen && (
                  <button 
                    onClick={() => setIsSidebarOpen(false)}
-                   className="fixed top-20 right-4 z-[60] p-2 bg-white dark:bg-charcoal-800 rounded-full shadow-lg border border-slate-200 dark:border-charcoal-700 text-charcoal-500"
+                   className="fixed top-20 right-4 z-[60] w-10 h-10 flex items-center justify-center bg-white dark:bg-charcoal-800 rounded-full shadow-xl border border-slate-200 dark:border-charcoal-600 text-charcoal-500 dark:text-slate-400 hover:text-brand-purple"
                  >
-                   <X size={24} />
+                   <X size={20} />
                  </button>
               )}
             </div>
@@ -316,7 +331,7 @@ export const ImageToPdfPage: React.FC = () => {
             {/* 2. CENTER CANVAS (The Desk) */}
             {(!isMobile || !isSidebarOpen) && (
               <div 
-                className="flex-1 relative h-full bg-slate-200/50 dark:bg-[#0c0c0c] overflow-hidden flex flex-col"
+                className="flex-1 relative h-full bg-slate-100 dark:bg-black/20 overflow-hidden flex flex-col"
                 {...getRootProps()}
               >
                 <input {...getInputProps()} />
@@ -421,9 +436,9 @@ export const ImageToPdfPage: React.FC = () => {
 
             {/* 3. RIGHT SIDEBAR (Filmstrip - Desktop Only >= 1024px) */}
             {showRightSidebar && (
-              <div className="flex-none w-72 h-full bg-white dark:bg-charcoal-900 border-l border-slate-200 dark:border-charcoal-800 z-20 flex flex-col">
+              <div className="flex-none w-72 h-full bg-white dark:bg-charcoal-900 border-l border-slate-200 dark:border-white/5 z-20 flex flex-col">
                 <div className="h-14 flex items-center px-5 border-b border-slate-100 dark:border-charcoal-800 bg-white dark:bg-charcoal-900">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-charcoal-500 dark:text-slate-400">Pages ({images.length})</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Pages ({images.length})</h3>
                 </div>
                 <div className="flex-1 overflow-hidden bg-slate-50/50 dark:bg-charcoal-900/50">
                   <Filmstrip 
