@@ -1,3 +1,4 @@
+
 EZtify ⚡ — The Fastest Way to Work With Your Files
 
 Meet EZtify, the all-in-one platform that turns complicated PDF and file tasks into a one-click experience.
@@ -29,6 +30,7 @@ EZtify makes file work easy.
 ➕ Merge PDF
 ✂️ Split PDF
 🗜️ Zip It! (Instant ZIP creation)
+👀 File Viewer (Preview DOCX, XLSX, PPTX)
 
 All tools include:
 - Drag & drop
@@ -43,6 +45,9 @@ All tools include:
 - Framer Motion
 - Browser-based PDF processing
 - JSZip
+- Mammoth (DOCX)
+- SheetJS (XLSX)
+- DOMPurify
 - Vite
 - Cloudflare Pages
 

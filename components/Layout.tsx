@@ -48,6 +48,8 @@ export const Layout: React.FC = () => {
   else if (path.includes('split-pdf')) currentMode = 'split-pdf';
   else if (path.includes('zip-it')) currentMode = 'zip-files';
   else if (path.includes('word-to-pdf')) currentMode = 'word-to-pdf';
+  else if (path.includes('reorder-pdf')) currentMode = 'reorder-pdf';
+  else if (path.includes('pdf-viewer')) currentMode = 'pdf-viewer';
 
   // PWA & Cookie Logic on initial mount
   useEffect(() => {

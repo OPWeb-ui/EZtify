@@ -1,11 +1,9 @@
-
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Logo } from './Logo';
 import { ShareButton } from './ShareButton';
 import { AppMode } from '../types';
-import { ChevronDown, Check, Moon, Sun, Layers, ImageIcon, FileText, Minimize2, FileOutput, Scissors, FolderArchive } from 'lucide-react';
+import { ChevronDown, Check, Moon, Sun, Layers, ImageIcon, FileText, Minimize2, FileOutput, Scissors, FolderArchive, ArrowLeftRight, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from './ThemeProvider';
 
@@ -26,7 +24,9 @@ export const Header: React.FC<HeaderProps> = ({ currentMode }) => {
     { id: 'compress-pdf', label: 'Compress PDF', path: '/compress-pdf', icon: <Minimize2 size={18} /> },
     { id: 'merge-pdf', label: 'Merge PDF', path: '/merge-pdf', icon: <FileOutput size={18} /> },
     { id: 'split-pdf', label: 'Split PDF', path: '/split-pdf', icon: <Scissors size={18} /> },
-    { id: 'zip-files', label: 'Zip Files', path: '/zip-it', icon: <FolderArchive size={18} /> }
+    { id: 'reorder-pdf', label: 'Reorder PDF', path: '/reorder-pdf', icon: <ArrowLeftRight size={18} /> },
+    { id: 'zip-files', label: 'Zip Files', path: '/zip-it', icon: <FolderArchive size={18} /> },
+    { id: 'pdf-viewer', label: 'PDF Viewer', path: '/pdf-viewer', icon: <Eye size={18} /> }
   ] as const;
 
   const activeToolLabel = tools.find(t => t.id === currentMode)?.label || 'Tools';

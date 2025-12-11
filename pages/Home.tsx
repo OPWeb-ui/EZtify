@@ -1,8 +1,6 @@
-
-
 import React, { useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Layers, Image as ImageIcon, Minimize2, FileOutput, Scissors, Shield, Zap, Globe, FolderArchive, ArrowRight, FileText, Presentation, ArrowLeftRight } from 'lucide-react';
+import { Layers, Image as ImageIcon, Minimize2, FileOutput, Scissors, Shield, Zap, Globe, FolderArchive, ArrowRight, FileText, ArrowLeftRight, Eye } from 'lucide-react';
 import { AdSlot } from '../components/AdSlot';
 import { Logo } from '../components/Logo';
 import { FAQ } from '../components/FAQ';
@@ -47,6 +45,15 @@ export const Home: React.FC = () => {
       gradient: 'from-blue-500/20 to-cyan-500/20'
     },
     {
+      id: 'pdf-viewer',
+      title: 'PDF Viewer',
+      desc: 'View PDF files directly in your browser without downloading.',
+      icon: <Eye />,
+      path: '/pdf-viewer',
+      color: 'bg-teal-500/10 border-teal-500/20 text-teal-500',
+      gradient: 'from-teal-500/20 to-emerald-500/20'
+    },
+    {
       id: 'compress-pdf',
       title: 'Compress PDF',
       desc: 'Reduce the file size of your PDF documents while maintaining quality.',
@@ -72,6 +79,15 @@ export const Home: React.FC = () => {
       path: '/split-pdf',
       color: 'bg-brand-blue/10 border-brand-blue/20 text-brand-blue',
       gradient: 'from-brand-blue/20 to-brand-mint/20'
+    },
+    {
+      id: 'reorder-pdf',
+      title: 'Reorder PDF',
+      desc: 'Rearrange, rotate, or delete PDF pages securely.',
+      icon: <ArrowLeftRight />,
+      path: '/reorder-pdf',
+      color: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-500',
+      gradient: 'from-indigo-500/20 to-violet-500/20'
     },
     {
       id: 'zip-files',
@@ -124,7 +140,7 @@ export const Home: React.FC = () => {
               variants={fadeInUp}
               className="text-base md:text-lg text-charcoal-600 dark:text-charcoal-400 max-w-xl mx-auto leading-relaxed"
             >
-              Fast, privacy-first PDF tools that run right in your browser.
+              Fast, privacy-first PDF and File tools that run right in your browser.
             </motion.p>
           </motion.div>
 

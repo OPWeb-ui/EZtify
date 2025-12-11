@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useDropzone, DropzoneOptions, FileRejection, DropEvent } from 'react-dropzone';
 import { motion, useReducedMotion, Variants, AnimatePresence } from 'framer-motion';
-import { Plus, Presentation, ArrowLeftRight, Layers, ImageIcon, Minimize2, FileOutput, Scissors, FolderArchive, FileText } from 'lucide-react';
+import { Plus, ArrowLeftRight, Layers, ImageIcon, Minimize2, FileOutput, Scissors, FolderArchive, FileText, Eye } from 'lucide-react';
 import { AppMode } from '../types';
 import { FileProcessingLoader } from './FileProcessingLoader';
 import { useLayoutContext } from './Layout';
 import { buttonTap } from '../utils/animations';
 
 // --- Limits Configuration ---
-const getToolLimits = (mode: AppMode | 'reorder-pdf' | 'pptx-to-pdf') => {
+const getToolLimits = (mode: AppMode) => {
     const MB = 1024 * 1024;
     switch (mode) {
         case 'image-to-pdf':
@@ -22,11 +22,12 @@ const getToolLimits = (mode: AppMode | 'reorder-pdf' | 'pptx-to-pdf') => {
         case 'zip-files':
             return { maxSize: 100 * MB, maxFiles: 50 };
         case 'word-to-pdf':
-        case 'pptx-to-pdf':
             return { maxSize: 50 * MB, maxFiles: 1 };
         case 'split-pdf':
         case 'reorder-pdf':
             return { maxSize: 100 * MB, maxFiles: 1 };
+        case 'pdf-viewer':
+            return { maxSize: 50 * MB, maxFiles: 1 };
         default:
             return { maxSize: undefined, maxFiles: 0 }; // 0 = unlimited files
     }
@@ -35,7 +36,7 @@ const getToolLimits = (mode: AppMode | 'reorder-pdf' | 'pptx-to-pdf') => {
 // --- MAIN COMPONENT ---
 interface UploadAreaProps {
   onDrop: (acceptedFiles: File[], fileRejections: FileRejection[], event?: DropEvent) => void;
-  mode: AppMode | 'reorder-pdf' | 'pptx-to-pdf';
+  mode: AppMode;
   disabled?: boolean;
   isProcessing?: boolean;
 }
@@ -47,16 +48,15 @@ export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled, 
 
   const limits = getToolLimits(mode);
 
-  const getAcceptForMode = (mode: AppMode | 'reorder-pdf' | 'pptx-to-pdf') => {
+  const getAcceptForMode = (mode: AppMode) => {
     switch (mode) {
         case 'image-to-pdf':
             return { 'image/*': ['.jpeg', '.jpg', '.png', '.webp', '.gif', '.bmp'] };
         case 'word-to-pdf':
             return { 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'] };
-        case 'pptx-to-pdf':
-          return { 'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'] };
         case 'zip-files':
           return undefined; // All files
+        case 'pdf-viewer':
         case 'pdf-to-image':
         case 'compress-pdf':
         case 'merge-pdf':
@@ -93,10 +93,10 @@ export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled, 
             return { icon: <FolderArchive className="w-full h-full text-amber-500" />, title: "Upload Files", description: "Or drop files to archive", buttonLabel: "Select Files" };
         case 'word-to-pdf':
             return { icon: <FileText className="w-full h-full text-blue-500" />, title: "Upload Word File", description: "Or drop a .docx file", buttonLabel: "Select DOCX" };
-        case 'pptx-to-pdf':
-            return { icon: <Presentation className="w-full h-full text-orange-500" />, title: "Upload PowerPoint", description: "Or drop a .pptx file", buttonLabel: "Select PPTX" };
         case 'reorder-pdf':
             return { icon: <ArrowLeftRight className="w-full h-full text-indigo-500" />, title: "Upload PDF", description: "Or drop a file to reorder", buttonLabel: "Select PDF" };
+        case 'pdf-viewer':
+            return { icon: <Eye className="w-full h-full text-teal-500" />, title: "Upload PDF", description: "Preview PDF in browser", buttonLabel: "Select PDF" };
         default:
              return { icon: <Layers className="w-full h-full text-brand-purple" />, title: "Upload Files", description: "Or drop files here", buttonLabel: "Select Files" };
     }

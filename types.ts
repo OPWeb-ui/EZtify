@@ -1,6 +1,6 @@
 
 
-export type AppMode = 'home' | 'image-to-pdf' | 'pdf-to-image' | 'compress-pdf' | 'merge-pdf' | 'split-pdf' | 'zip-files' | 'word-to-pdf';
+export type AppMode = 'home' | 'image-to-pdf' | 'pdf-to-image' | 'compress-pdf' | 'merge-pdf' | 'split-pdf' | 'zip-files' | 'word-to-pdf' | 'pdf-viewer' | 'reorder-pdf';
 
 export interface UploadedImage {
   id: string;

@@ -15,6 +15,8 @@ const MergePdfPage = React.lazy(() => import('./pages/MergePdf').then(module => 
 const SplitPdfPage = React.lazy(() => import('./pages/SplitPdf').then(module => ({ default: module.SplitPdfPage })));
 const ZipFilesPage = React.lazy(() => import('./pages/ZipFiles').then(module => ({ default: module.ZipFilesPage })));
 const WordToPdfPage = React.lazy(() => import('./pages/WordToPdf').then(module => ({ default: module.WordToPdfPage })));
+const ReorderPdfPage = React.lazy(() => import('./pages/ReorderPdf').then(module => ({ default: module.ReorderPdfPage })));
+const PdfViewerPage = React.lazy(() => import('./pages/PdfViewerPage').then(module => ({ default: module.PdfViewerPage })));
 
 const App: React.FC = () => {
   return (
@@ -143,6 +145,21 @@ const App: React.FC = () => {
               } 
             />
 
+            {/* Tool: Reorder PDF */}
+            <Route 
+              path="reorder-pdf" 
+              element={
+                <>
+                  <SEO 
+                    title="Reorder PDF — Organize Pages Online"
+                    description="Rearrange PDF pages securely in your browser."
+                    canonical="https://eztify.com/#/reorder-pdf"
+                  />
+                  <ReorderPdfPage />
+                </>
+              } 
+            />
+
             {/* Tool: Zip Files */}
             <Route 
               path="zip-it" 
@@ -154,6 +171,21 @@ const App: React.FC = () => {
                     canonical="https://eztify.com/#/zip-it"
                   />
                   <ZipFilesPage />
+                </>
+              } 
+            />
+
+            {/* Tool: PDF Viewer */}
+            <Route 
+              path="pdf-viewer" 
+              element={
+                <>
+                  <SEO 
+                    title="PDF Viewer — Preview PDF Online"
+                    description="Preview PDF documents instantly in your browser."
+                    canonical="https://eztify.com/#/pdf-viewer"
+                  />
+                  <PdfViewerPage />
                 </>
               } 
             />
