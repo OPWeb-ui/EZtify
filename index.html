@@ -6,16 +6,18 @@
     <title>EZtify — Turn Images to PDF (Premium & Private)</title>
     <meta name="description" content="Convert JPG, PNG, and WebP images into a single PDF instantly. No upload, 100% private, free, fast, and secure." />
 
-    <!-- LCP Optimization: Preconnect to fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- LCP Optimization -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet" />
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#6D28D9" />
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     
+    <!-- Tailwind CSS (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -24,14 +26,14 @@
           extend: {
             colors: {
               pastel: {
-                bg: '#F6F6F9', // Airy Light BG
+                bg: '#F6F6F9', 
                 card: '#FFFFFF',
                 border: 'rgba(0,0,0,0.06)',
               },
               charcoal: {
-                950: '#0B0C0F', // Deep Graphite (Main Dark BG)
-                900: '#141416', // Card Surface
-                850: '#1A1C1F', // Elevated Surface
+                950: '#0B0C0F',
+                900: '#141416', 
+                850: '#1A1C1F', 
                 800: '#27272a',
                 700: '#3f3f46',
                 600: '#52525b',
@@ -44,10 +46,8 @@
               brand: {
                 purple: '#7C3AED', 
                 purpleDark: '#6D28D9',
-                // Gradients handled in classes usually, but base colors here
                 accentStart: '#9E76FF',
                 accentEnd: '#6E79FF',
-                
                 green: '#22C55E', 
                 blue: '#3B82F6', 
                 mint: '#10B981', 
@@ -88,41 +88,45 @@
         },
       }
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Global Styles -->
     <style>
       html {
         -webkit-tap-highlight-color: transparent;
         height: 100%;
       }
-      
       body {
         background-color: #F6F6F9;
         transition: background-color 0.3s cubic-bezier(0.16, 1, 0.3, 1), color 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       }
     </style>
+
+    <!-- Import Map -->
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@^19.2.1",
+        "react-dom/": "https://esm.sh/react-dom@^19.2.1/",
+        "framer-motion": "https://esm.sh/framer-motion@^12.23.26",
+        "react/": "https://esm.sh/react@^19.2.1/",
+        "jspdf": "https://esm.sh/jspdf@^3.0.4",
+        "lucide-react": "https://esm.sh/lucide-react@^0.559.0",
+        "@dnd-kit/core": "https://esm.sh/@dnd-kit/core@^6.3.1",
+        "@dnd-kit/sortable": "https://esm.sh/@dnd-kit/sortable@^10.0.0",
+        "@dnd-kit/utilities": "https://esm.sh/@dnd-kit/utilities@^3.2.2",
+        "react-dropzone": "https://esm.sh/react-dropzone@^14.3.8",
+        "react-router-dom": "https://esm.sh/react-router-dom@^7.10.1",
+        "nanoid": "https://esm.sh/nanoid@^5.1.6",
+        "jszip": "https://esm.sh/jszip@^3.10.1",
+        "pdf-lib": "https://esm.sh/pdf-lib@^1.17.1",
+        "mammoth": "https://esm.sh/mammoth@^1.11.0",
+        "pdfjs-dist": "https://esm.sh/pdfjs-dist@4.0.379"
+      }
+    }
+    </script>
+
     <script type="module" src="/index.tsx"></script>
-  <script type="importmap">
-{
-  "imports": {
-    "lucide-react": "https://esm.sh/lucide-react@^0.559.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.1/",
-    "react/": "https://esm.sh/react@^19.2.1/",
-    "react": "https://esm.sh/react@^19.2.1",
-    "jspdf": "https://esm.sh/jspdf@^3.0.4",
-    "@dnd-kit/core": "https://esm.sh/@dnd-kit/core@^6.3.1",
-    "@dnd-kit/utilities": "https://esm.sh/@dnd-kit/utilities@^3.2.2",
-    "jszip": "https://esm.sh/jszip@^3.10.1",
-    "mammoth": "https://esm.sh/mammoth@^1.11.0",
-    "framer-motion": "https://esm.sh/framer-motion@^12.23.26",
-    "nanoid": "https://esm.sh/nanoid@^5.1.6",
-    "pdf-lib": "https://esm.sh/pdf-lib@^1.17.1",
-    "react-dropzone": "https://esm.sh/react-dropzone@^14.3.8",
-    "react-router-dom": "https://esm.sh/react-router-dom@^7.10.1",
-    "@dnd-kit/sortable": "https://esm.sh/@dnd-kit/sortable@^10.0.0"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
+  <link rel="stylesheet" href="/index.css">
 </head>
   <body>
     <div id="root"></div>
