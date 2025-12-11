@@ -1,3 +1,5 @@
+
+
 import React, { useState, useCallback } from 'react';
 import { useLayoutContext } from '../components/Layout';
 import { UploadArea } from '../components/UploadArea';
@@ -10,17 +12,18 @@ import { PageReadyTracker } from '../components/PageReadyTracker';
 import { ZipFile, ZipCompressionLevel } from '../types';
 import { generateGenericZip } from '../services/genericZipService';
 import { nanoid } from 'nanoid';
-import { FolderArchive, Download, RefreshCcw, X, File as FileIcon, Archive, CheckCircle, Info, Loader2, Plus } from 'lucide-react';
+import { FolderArchive, Download, RefreshCcw, X, File as FileIcon, Archive, CheckCircle, Loader2, Plus } from 'lucide-react';
 import { useDropzone, FileRejection } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import { buttonTap, staggerContainer, fadeInUp } from '../utils/animations';
-import { Tooltip } from '../components/Tooltip';
+import { DragDropOverlay } from '../components/DragDropOverlay';
 
 export const ZipFilesPage: React.FC = () => {
   const { addToast } = useLayoutContext();
   const [files, setFiles] = useState<ZipFile[]>([]);
-  const [result, setResult] = useState<{ blob: Blob, size: number, count: number } | null>(null);
+  const [result, setResult] = useState<{ blob: Blob, size: number, count: number, fileName: string } | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isProcessingFiles, setIsProcessingFiles] = useState(false);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('');
   const [compressionLevel, setCompressionLevel] = useState<ZipCompressionLevel>('DEFLATE');
@@ -49,8 +52,12 @@ export const ZipFilesPage: React.FC = () => {
     });
 
     if (validNewFiles.length > 0) {
-       setFiles(prev => [...prev, ...validNewFiles]);
-       addToast("Success", `Added ${validNewFiles.length} files to archive.`, "success");
+      setIsProcessingFiles(true);
+      setTimeout(() => {
+        setFiles(prev => [...prev, ...validNewFiles]);
+        addToast("Success", `Added ${validNewFiles.length} files to archive.`, "success");
+        setIsProcessingFiles(false);
+      }, 600);
     }
   }, [files, addToast]);
 
@@ -75,7 +82,18 @@ export const ZipFilesPage: React.FC = () => {
       setTimeout(async () => {
          try {
            const blob = await generateGenericZip(files, compressionLevel, setProgress, setStatus);
-           setResult({ blob, size: blob.size, count: files.length });
+           
+           // Naming Logic
+           let fileName = 'files_EZtify.zip';
+           if (files.length === 1) {
+              const firstFile = files[0].file;
+              const originalName = firstFile.name;
+              const nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
+              const safeName = nameWithoutExt.replace(/[^a-zA-Z0-9\-_]/g, '_');
+              fileName = `${safeName}_EZtify.zip`;
+           }
+
+           setResult({ blob, size: blob.size, count: files.length, fileName });
          } catch (e) {
            console.error(e);
            addToast("Error", "Zip generation failed.", "error");
@@ -96,8 +114,7 @@ export const ZipFilesPage: React.FC = () => {
     const url = URL.createObjectURL(result.blob);
     const link = document.createElement('a');
     link.href = url;
-    const date = new Date().toISOString().slice(0, 10);
-    link.download = `EZtify-Archive-${date}-EZtify.zip`;
+    link.download = result.fileName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -134,15 +151,7 @@ export const ZipFilesPage: React.FC = () => {
                >
                  <motion.div variants={fadeInUp} className="w-full max-w-xl my-4 relative z-20">
                    <HeroPill>Create secure ZIP archives from your files locally in your browser.</HeroPill>
-                   <UploadArea onDrop={onDrop} mode="zip-files" disabled={isGenerating} />
-                   <div className="flex items-center justify-center mt-4">
-                     <Tooltip content="For best performance: Max 100MB per file, 300MB total." side="bottom">
-                        <div className="flex items-center gap-1.5 text-xs text-charcoal-400 dark:text-slate-500 font-medium cursor-help hover:text-charcoal-600 transition-colors">
-                          <Info size={14} />
-                          <span>Max 100MB per file • 300MB total</span>
-                        </div>
-                     </Tooltip>
-                   </div>
+                   <UploadArea onDrop={onDrop} mode="zip-files" disabled={isGenerating} isProcessing={isProcessingFiles} />
                  </motion.div>
                  
                  <motion.div variants={fadeInUp}>
@@ -166,21 +175,13 @@ export const ZipFilesPage: React.FC = () => {
             {...getRootProps({ onClick: (e) => e.stopPropagation() })}
           >
             <input {...getInputProps()} />
-             <AnimatePresence>
-              {isDragActive && (
-                <motion.div 
-                    initial={{ opacity: 0 }} 
-                    animate={{ opacity: 1 }} 
-                    exit={{ opacity: 0 }}
-                    className="absolute inset-0 z-[100] bg-amber-500/10 backdrop-blur-sm flex items-center justify-center border-4 border-dashed border-amber-500 rounded-3xl pointer-events-none"
-                >
-                    <div className="text-center text-amber-500">
-                        <Plus size={64} className="mx-auto mb-4 animate-pulse" />
-                        <p className="text-2xl font-bold">Drop more files to add</p>
-                    </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            
+            <DragDropOverlay 
+              isDragActive={isDragActive} 
+              message="Drop more files" 
+              subMessage="Add to archive" 
+              variant="amber"
+            />
             
             {/* Standardized Close/Reset Button */}
             <motion.button

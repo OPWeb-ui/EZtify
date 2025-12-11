@@ -1,4 +1,6 @@
-export type AppMode = 'home' | 'image-to-pdf' | 'pdf-to-image' | 'compress-pdf' | 'merge-pdf' | 'split-pdf' | 'zip-files';
+
+
+export type AppMode = 'home' | 'image-to-pdf' | 'pdf-to-image' | 'compress-pdf' | 'merge-pdf' | 'split-pdf' | 'zip-files' | 'word-to-pdf';
 
 export interface UploadedImage {
   id: string;
@@ -69,13 +71,29 @@ export interface PdfFile {
   file: File;
 }
 
-export type SplitMode = 'extract' | 'separate';
+export type SplitMode = 'organize' | 'numbers';
+
+export interface Annotation {
+  id: string;
+  type: 'text' | 'highlight' | 'rectangle' | 'redact' | 'checkbox' | 'signature' | 'image';
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  text?: string;
+  color?: string;
+  fontSize?: number;
+  imageData?: string;
+}
 
 export interface PdfPage {
   id: string;
-  pageIndex: number; // 0-based index from original PDF
+  pageIndex: number; // 0-based index from original file
   previewUrl: string;
   selected: boolean;
+  type?: 'original' | 'blank';
+  rotation?: number;
+  annotations?: Annotation[];
 }
 
 export interface ZipFile {
@@ -84,3 +102,13 @@ export interface ZipFile {
 }
 
 export type ZipCompressionLevel = 'STORE' | 'DEFLATE';
+
+export interface PageNumberConfig {
+  position: 'top' | 'bottom';
+  alignment: 'left' | 'center' | 'right';
+  startFrom: number;
+  fontSize: number;
+  fontFamily: string;
+  offsetX: number;
+  offsetY: number;
+}

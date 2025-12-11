@@ -76,6 +76,15 @@ export const generatePDF = async (
     compress: true
   });
 
+  // Set standardized metadata
+  doc.setProperties({
+    title: 'files_EZtify',
+    author: 'EZtify',
+    producer: 'EZtify',
+    subject: 'Generated with EZtify',
+    creator: 'EZtify – Images to PDF'
+  });
+
   const mmPerPx = 0.264583;
 
   for (let i = 0; i < images.length; i++) {
@@ -161,6 +170,13 @@ export const generatePDF = async (
     doc.deletePage(1);
   }
 
-  const date = new Date().toISOString().slice(0, 10);
-  doc.save(`EZtify-${date}-EZtify.pdf`);
+  // Derive filename from first image
+  const firstImage = images[0];
+  const originalName = firstImage.file.name;
+  const nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
+  // Sanitize filename
+  const safeName = nameWithoutExt.replace(/[^a-zA-Z0-9\-_]/g, '_');
+  const finalName = `${safeName}_EZtify.pdf`;
+
+  doc.save(finalName);
 };

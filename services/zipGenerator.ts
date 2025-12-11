@@ -55,7 +55,12 @@ export const generateZip = async (
     );
 
     if (blob && folder) {
-      folder.file(`page-${i + 1}-EZtify.${extension}`, blob);
+      // Try to preserve original name if possible, else page-i
+      const originalName = imgData.file.name;
+      const baseName = originalName.substring(0, originalName.lastIndexOf('.')) || `page-${i + 1}`;
+      const safeName = baseName.replace(/[^a-zA-Z0-9\-_]/g, '_');
+      
+      folder.file(`${safeName}_EZtify.${extension}`, blob);
     }
   }
 
@@ -70,11 +75,17 @@ export const generateZip = async (
   });
   
   // Download
+  // Derive filename from first image
+  const firstImage = images[0];
+  const originalName = firstImage.file.name;
+  const nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
+  const safeName = nameWithoutExt.replace(/[^a-zA-Z0-9\-_]/g, '_');
+  const zipFileName = `${safeName}_EZtify.zip`;
+
   const url = URL.createObjectURL(content);
   const link = document.createElement('a');
   link.href = url;
-  const date = new Date().toISOString().slice(0, 10);
-  link.download = `EZtify-Images-${date}-EZtify.zip`;
+  link.download = zipFileName;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

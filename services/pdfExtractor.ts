@@ -1,5 +1,3 @@
-
-
 import { UploadedImage } from '../types';
 import { nanoid } from 'nanoid';
 import { loadPdfJs } from './pdfProvider';
@@ -33,6 +31,11 @@ export const extractImagesFromPdf = async (
   
   const numPages = pdf.numPages;
   const extractedImages: UploadedImage[] = [];
+  
+  // Derive base name for naming pages
+  const originalName = file.name;
+  const baseName = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
+  const safeBaseName = baseName.replace(/[^a-zA-Z0-9\-_]/g, '_');
 
   for (let i = 1; i <= numPages; i++) {
     onStatusUpdate?.(`Rendering page ${i} of ${numPages}...`);
@@ -69,7 +72,9 @@ export const extractImagesFromPdf = async (
       const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
       
       if (blob) {
-        const file = new File([blob], `page-${i}.jpg`, { type: 'image/jpeg' });
+        // Name format: OriginalName_page-1.jpg
+        const pageFileName = `${safeBaseName}_page-${i}.jpg`;
+        const file = new File([blob], pageFileName, { type: 'image/jpeg' });
         const previewUrl = URL.createObjectURL(blob);
         
         extractedImages.push({

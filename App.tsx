@@ -14,6 +14,7 @@ const CompressPdfPage = React.lazy(() => import('./pages/CompressPdf').then(modu
 const MergePdfPage = React.lazy(() => import('./pages/MergePdf').then(module => ({ default: module.MergePdfPage })));
 const SplitPdfPage = React.lazy(() => import('./pages/SplitPdf').then(module => ({ default: module.SplitPdfPage })));
 const ZipFilesPage = React.lazy(() => import('./pages/ZipFiles').then(module => ({ default: module.ZipFilesPage })));
+const WordToPdfPage = React.lazy(() => import('./pages/WordToPdf').then(module => ({ default: module.WordToPdfPage })));
 
 const App: React.FC = () => {
   return (
@@ -78,6 +79,21 @@ const App: React.FC = () => {
                     canonical="https://eztify.com/#/pdf-to-images"
                   />
                   <PdfToImagePage />
+                </>
+              } 
+            />
+
+            {/* Tool: Word to PDF */}
+            <Route 
+              path="word-to-pdf" 
+              element={
+                <>
+                  <SEO 
+                    title="Word to PDF Online — EZtify"
+                    description="Convert Word (DOCX) to PDF in your browser. Fast, private, and 100% client-side."
+                    canonical="https://eztify.com/#/word-to-pdf"
+                  />
+                  <WordToPdfPage />
                 </>
               } 
             />

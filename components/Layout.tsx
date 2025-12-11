@@ -4,7 +4,7 @@ import { Header } from './Header';
 import { ToastContainer } from './Toast';
 import { ToastMessage, AppMode, ToastAction } from '../types';
 import { nanoid } from 'nanoid';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { PwaInstallPrompt } from './PwaInstallPrompt';
 import { CookieConsentBanner } from './CookieConsentBanner';
 
@@ -42,6 +42,7 @@ export const Layout: React.FC = () => {
   else if (path.includes('merge-pdf')) currentMode = 'merge-pdf';
   else if (path.includes('split-pdf')) currentMode = 'split-pdf';
   else if (path.includes('zip-it')) currentMode = 'zip-files';
+  else if (path.includes('word-to-pdf')) currentMode = 'word-to-pdf';
 
   // PWA & Cookie Logic on initial mount
   useEffect(() => {
@@ -125,15 +126,24 @@ export const Layout: React.FC = () => {
 
   return (
     <LayoutContext.Provider value={contextValue}>
-      <div className="min-h-screen bg-pastel-bg dark:bg-charcoal-950 text-charcoal-600 dark:text-slate-300 flex flex-col font-sans selection:bg-brand-purple/20 dark:selection:bg-brand-purple/40 transition-colors duration-300">
+      <div className="flex flex-col min-h-[100dvh] bg-pastel-bg dark:bg-charcoal-950 text-charcoal-600 dark:text-slate-300 font-sans selection:bg-brand-purple/20 dark:selection:bg-brand-purple/40 transition-colors duration-300 overflow-hidden">
         <ToastContainer toasts={toasts} onDismiss={removeToast} isMobile={isMobile} />
         <Header currentMode={currentMode} />
 
-        <main className="flex-1 flex flex-col relative w-full pt-16">
+        <main className="flex-1 flex flex-col relative w-full pt-safe pt-16 min-h-0 overflow-hidden">
           <Suspense fallback={<div className="flex-1" />}>
-            <div key={location.pathname} className="flex-1 flex flex-col w-full">
-              <Outlet />
-            </div>
+            <AnimatePresence mode="wait">
+              <motion.div 
+                key={location.pathname} 
+                initial={{ opacity: 0, scale: 0.98, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.98, y: -10 }}
+                transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                className="flex-1 flex flex-col w-full min-h-0"
+              >
+                <Outlet />
+              </motion.div>
+            </AnimatePresence>
           </Suspense>
         </main>
         

@@ -1,170 +1,132 @@
+
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useDropzone, DropzoneOptions, FileRejection, DropEvent } from 'react-dropzone';
 import { motion, useReducedMotion, Variants, AnimatePresence } from 'framer-motion';
-import { Plus } from 'lucide-react';
+import { Plus, Presentation } from 'lucide-react';
 import { AppMode } from '../types';
+import { FileProcessingLoader } from './FileProcessingLoader';
 
 interface UploadAreaProps {
   onDrop: DropzoneOptions['onDrop'];
   mode: AppMode;
   disabled?: boolean;
+  isProcessing?: boolean;
 }
 
-// ============================================================================
-// GLOBAL ANIMATION CONSTANTS
-// ============================================================================
-const ANIM_DURATION = 3;
-const ANIM_EASE = "easeInOut";
-const STROKE_WIDTH = 2.5;
+const STROKE_COLOR = "currentColor";
+const FILL_COLOR = "currentColor";
 
-// ============================================================================
-// STANDARDIZED HERO ICONS (Simplified for brevity but kept visually consistent)
-// ============================================================================
+// --- Tool Specific Animated Icons ---
 
-// 1. IMAGES TO PDF
-const ImagesToPdfHeroIcon = () => (
-  <motion.svg
-    viewBox="0 0 100 100"
-    className="w-full h-full text-brand-purple overflow-visible"
-    fill="none" xmlns="http://www.w3.org/2000/svg"
-  >
-    <rect x="30" y="30" width="40" height="50" rx="4" stroke="currentColor" strokeWidth={STROKE_WIDTH} fill="currentColor" fillOpacity="0.05" />
-    <motion.rect
-      x="32" y="32" width="36" height="28" rx="2" fill="currentColor" fillOpacity="0.2" stroke="none"
-      initial={{ x: -20, y: -20, opacity: 0 }}
-      animate={{ x: 0, y: 0, opacity: [0, 1, 1, 0] }}
-      transition={{ duration: ANIM_DURATION, repeat: Infinity, times: [0, 0.2, 0.8, 1], ease: ANIM_EASE }}
-    />
-    <motion.rect
-      x="32" y="48" width="36" height="28" rx="2" fill="currentColor" fillOpacity="0.1" stroke="none"
-      initial={{ x: 20, y: 20, opacity: 0 }}
-      animate={{ x: 0, y: 0, opacity: [0, 1, 1, 0] }}
-      transition={{ duration: ANIM_DURATION, repeat: Infinity, times: [0, 0.2, 0.8, 1], ease: ANIM_EASE, delay: 0.2 }}
-    />
-  </motion.svg>
-);
-
-// 2. PDF TO IMAGES
-const PdfToImagesHeroIcon = () => (
-  <motion.svg
-    viewBox="0 0 100 100"
-    className="w-full h-full text-brand-mint overflow-visible"
-    fill="none" xmlns="http://www.w3.org/2000/svg"
-  >
-    <rect x="25" y="25" width="40" height="50" rx="4" stroke="currentColor" strokeWidth={STROKE_WIDTH} fill="currentColor" fillOpacity="0.05" />
-    <path d="M35 35H55 M35 45H55" stroke="currentColor" strokeWidth={STROKE_WIDTH} strokeLinecap="round" />
-    <motion.g
-      initial={{ x: 25, y: 35, opacity: 0 }}
-      animate={{ x: 55, opacity: [0, 1, 1, 0] }}
-      transition={{ duration: ANIM_DURATION, repeat: Infinity, ease: ANIM_EASE }}
-    >
-      <rect width="30" height="24" rx="2" fill="currentColor" fillOpacity="0.2" stroke="currentColor" strokeWidth={STROKE_WIDTH} />
-      <circle cx="15" cy="12" r="4" fill="currentColor" fillOpacity="0.4" />
+const ImageToPdfIcon = () => (
+  <motion.svg viewBox="0 0 100 100" className="w-full h-full text-brand-purple overflow-visible" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <motion.g animate={{ y: [0, -5, 0] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}>
+      {/* Back Sheet */}
+      <rect x="35" y="25" width="40" height="50" rx="4" fill={FILL_COLOR} fillOpacity="0.1" stroke={STROKE_COLOR} strokeWidth="2.5" />
+      <path d="M75 25 V35 H65" stroke={STROKE_COLOR} strokeWidth="2" strokeLinejoin="round" />
+      {/* Front Sheet */}
+      <motion.g animate={{ x: [-5, 0, -5], y: [5, 0, 5] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}>
+         <rect x="25" y="35" width="40" height="50" rx="4" fill="white" className="dark:fill-charcoal-900" stroke={STROKE_COLOR} strokeWidth="2.5" />
+         <circle cx="38" cy="48" r="4" fill={FILL_COLOR} fillOpacity="0.2" />
+         <rect x="32" y="58" width="26" height="3" rx="1.5" fill={FILL_COLOR} fillOpacity="0.2" />
+         <rect x="32" y="66" width="18" height="3" rx="1.5" fill={FILL_COLOR} fillOpacity="0.2" />
+      </motion.g>
     </motion.g>
   </motion.svg>
 );
 
-// 3. COMPRESS PDF
-const CompressPdfHeroIcon = () => (
-  <motion.svg
-    viewBox="0 0 100 100"
-    className="w-full h-full text-brand-violet overflow-visible"
-    fill="none" xmlns="http://www.w3.org/2000/svg"
-  >
-    <motion.rect
-      x="30" y="25" width="40" height="50" rx="4" stroke="currentColor" strokeWidth={STROKE_WIDTH} fill="currentColor" fillOpacity="0.05"
-      style={{ transformOrigin: "center" }}
-      animate={{ scaleX: [1, 0.7, 1] }}
-      transition={{ duration: ANIM_DURATION, repeat: Infinity, ease: ANIM_EASE }}
-    />
-    <motion.path d="M15 50 H25 M20 45 L25 50 L20 55" stroke="currentColor" strokeWidth={STROKE_WIDTH} strokeLinecap="round" strokeLinejoin="round" animate={{ x: [0, 5, 0] }} transition={{ duration: ANIM_DURATION, repeat: Infinity, ease: ANIM_EASE }} />
-    <motion.path d="M85 50 H75 M80 45 L75 50 L80 55" stroke="currentColor" strokeWidth={STROKE_WIDTH} strokeLinecap="round" strokeLinejoin="round" animate={{ x: [0, -5, 0] }} transition={{ duration: ANIM_DURATION, repeat: Infinity, ease: ANIM_EASE }} />
-  </motion.svg>
-);
-
-// 4. MERGE PDF
-const MergePdfHeroIcon = () => (
-  <motion.svg
-    viewBox="0 0 100 100"
-    className="w-full h-full text-brand-orange overflow-visible"
-    fill="none" xmlns="http://www.w3.org/2000/svg"
-  >
-    <rect x="30" y="45" width="40" height="40" rx="4" stroke="currentColor" strokeWidth={STROKE_WIDTH} fill="currentColor" fillOpacity="0.05" />
-    <motion.rect
-      x="30" y="20" width="40" height="40" rx="4" stroke="currentColor" strokeWidth={STROKE_WIDTH} fill="currentColor" fillOpacity="0.2"
-      animate={{ y: [0, 25, 0], opacity: [1, 0, 0, 1] }}
-      transition={{ duration: ANIM_DURATION, repeat: Infinity, times: [0, 0.5, 0.51, 1], ease: ANIM_EASE }}
-    />
-    <motion.g animate={{ scale: [0, 1, 0] }} transition={{ duration: ANIM_DURATION, repeat: Infinity, times: [0.4, 0.5, 0.6], ease: ANIM_EASE }}>
-       <circle cx="50" cy="65" r="10" fill="white" stroke="currentColor" strokeWidth={STROKE_WIDTH} />
-       <path d="M50 60V70 M45 65H55" stroke="currentColor" strokeWidth={STROKE_WIDTH} strokeLinecap="round" />
+const PdfToImageIcon = () => (
+  <motion.svg viewBox="0 0 100 100" className="w-full h-full text-brand-mint overflow-visible" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="30" y="20" width="40" height="60" rx="4" stroke={STROKE_COLOR} strokeWidth="2.5" fill={FILL_COLOR} fillOpacity="0.05" />
+    <motion.g animate={{ x: [0, 15, 0], y: [0, 10, 0], opacity: [0, 1, 0], scale: [0.8, 1, 0.8] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}>
+       <rect x="55" y="45" width="35" height="40" rx="3" fill="white" className="dark:fill-charcoal-800" stroke={STROKE_COLOR} strokeWidth="2.5" />
+       <circle cx="72.5" cy="60" r="5" fill={FILL_COLOR} fillOpacity="0.2" />
     </motion.g>
   </motion.svg>
 );
 
-// 5. SPLIT PDF
-const SplitPdfHeroIcon = () => (
-  <motion.svg
-    viewBox="0 0 100 100"
-    className="w-full h-full text-brand-blue overflow-visible"
-    fill="none" xmlns="http://www.w3.org/2000/svg"
-  >
-    <motion.path d="M30 25 H50 V75 H30 A2 2 0 0 1 28 73 V27 A2 2 0 0 1 30 25 Z" stroke="currentColor" strokeWidth={STROKE_WIDTH} fill="currentColor" fillOpacity="0.05" animate={{ x: [0, -8, 0] }} transition={{ duration: ANIM_DURATION, repeat: Infinity, ease: ANIM_EASE }} />
-    <motion.path d="M50 25 H70 A2 2 0 0 1 72 27 V73 A2 2 0 0 1 70 75 H50 V25 Z" stroke="currentColor" strokeWidth={STROKE_WIDTH} fill="currentColor" fillOpacity="0.05" animate={{ x: [0, 8, 0] }} transition={{ duration: ANIM_DURATION, repeat: Infinity, ease: ANIM_EASE }} />
-    <motion.line x1="50" y1="20" x2="50" y2="80" stroke="currentColor" strokeWidth={2} strokeDasharray="3 3" animate={{ opacity: [0, 1, 0] }} transition={{ duration: ANIM_DURATION, repeat: Infinity, ease: ANIM_EASE }} />
+const CompressIcon = () => (
+  <motion.svg viewBox="0 0 100 100" className="w-full h-full text-brand-violet overflow-visible" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <motion.path d="M50 20 V40" stroke={STROKE_COLOR} strokeWidth="3" strokeLinecap="round" animate={{ d: ["M50 15 V35", "M50 25 V45", "M50 15 V35"] }} transition={{ duration: 2, repeat: Infinity }} />
+    <motion.path d="M50 80 V60" stroke={STROKE_COLOR} strokeWidth="3" strokeLinecap="round" animate={{ d: ["M50 85 V65", "M50 75 V55", "M50 85 V65"] }} transition={{ duration: 2, repeat: Infinity }} />
+    <rect x="30" y="30" width="40" height="40" rx="4" stroke={STROKE_COLOR} strokeWidth="2.5" fill={FILL_COLOR} fillOpacity="0.1" />
+    <motion.rect x="35" y="42" width="30" height="16" rx="2" fill={FILL_COLOR} fillOpacity="0.2" animate={{ scaleX: [1, 0.8, 1] }} transition={{ duration: 2, repeat: Infinity }} />
   </motion.svg>
 );
 
-// 6. ZIP IT
-const ZipItHeroIcon = () => (
-  <motion.svg
-    viewBox="0 0 100 100"
-    className="w-full h-full text-amber-500 overflow-visible"
-    fill="none" xmlns="http://www.w3.org/2000/svg"
-  >
-    <path d="M30 40 L35 35 H45 L50 40 H70 V70 H30 V40 Z" fill="currentColor" fillOpacity="0.1" stroke="currentColor" strokeWidth={STROKE_WIDTH} />
-    <motion.rect x="40" y="10" width="10" height="12" rx="1" fill="currentColor" stroke="currentColor" strokeWidth={2} animate={{ y: [0, 40, 40, 0], opacity: [1, 1, 0, 0] }} transition={{ duration: ANIM_DURATION, repeat: Infinity, times: [0, 0.3, 0.4, 1], ease: "easeIn" }} />
-    <motion.rect x="50" y="5" width="10" height="12" rx="1" fill="currentColor" stroke="currentColor" strokeWidth={2} animate={{ y: [0, 45, 45, 0], opacity: [1, 1, 0, 0] }} transition={{ duration: ANIM_DURATION, repeat: Infinity, times: [0.1, 0.4, 0.5, 1], ease: "easeIn" }} />
-    <motion.path d="M28 45 H72 L70 70 H30 L28 45 Z" fill="currentColor" fillOpacity="0.2" stroke="currentColor" strokeWidth={STROKE_WIDTH} style={{ transformOrigin: "bottom center" }} animate={{ scaleY: [1, 0.9, 1] }} transition={{ duration: ANIM_DURATION, repeat: Infinity, times: [0.35, 0.45, 0.6], ease: "easeOut" }} />
+const MergeIcon = () => (
+  <motion.svg viewBox="0 0 100 100" className="w-full h-full text-brand-orange overflow-visible" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <motion.g animate={{ x: [0, 10, 0] }} transition={{ duration: 3, repeat: Infinity }}>
+      <rect x="25" y="30" width="30" height="40" rx="3" stroke={STROKE_COLOR} strokeWidth="2.5" fill="white" className="dark:fill-charcoal-900" />
+    </motion.g>
+    <motion.g animate={{ x: [0, -10, 0] }} transition={{ duration: 3, repeat: Infinity }}>
+      <rect x="45" y="30" width="30" height="40" rx="3" stroke={STROKE_COLOR} strokeWidth="2.5" fill={FILL_COLOR} fillOpacity="0.1" />
+    </motion.g>
+    <path d="M35 50 H65" stroke={STROKE_COLOR} strokeWidth="2" strokeDasharray="4 4" />
+  </motion.svg>
+);
+
+const SplitIcon = () => (
+  <motion.svg viewBox="0 0 100 100" className="w-full h-full text-brand-blue overflow-visible" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="30" y="25" width="40" height="50" rx="4" stroke={STROKE_COLOR} strokeWidth="2.5" fill={FILL_COLOR} fillOpacity="0.1" />
+    <path d="M20 50 H80" stroke={STROKE_COLOR} strokeWidth="2" strokeDasharray="6 4" strokeLinecap="round" />
+    <motion.g animate={{ rotate: [0, -15, 0] }} style={{ originX: "50%", originY: "50%" }} transition={{ duration: 2, repeat: Infinity }}>
+       <path d="M65 40 L65 60" stroke={STROKE_COLOR} strokeWidth="2" />
+       <circle cx="65" cy="40" r="3" fill="white" stroke={STROKE_COLOR} strokeWidth="2" />
+       <circle cx="65" cy="60" r="3" fill="white" stroke={STROKE_COLOR} strokeWidth="2" />
+    </motion.g>
+  </motion.svg>
+);
+
+const ZipIcon = () => (
+  <motion.svg viewBox="0 0 100 100" className="w-full h-full text-amber-500 overflow-visible" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M30 30 H70 V80 H30 Z" stroke={STROKE_COLOR} strokeWidth="2.5" fill={FILL_COLOR} fillOpacity="0.1" strokeLinejoin="round" />
+    <path d="M30 30 L40 20 H60 L70 30" stroke={STROKE_COLOR} strokeWidth="2.5" fill="none" strokeLinejoin="round" />
+    <motion.path d="M50 30 V60" stroke={STROKE_COLOR} strokeWidth="3" strokeLinecap="round" animate={{ d: ["M50 30 V40", "M50 30 V70", "M50 30 V40"] }} transition={{ duration: 3, repeat: Infinity }} />
+    <rect x="46" y="55" width="8" height="10" rx="2" fill={FILL_COLOR} />
+  </motion.svg>
+);
+
+const WordIcon = () => (
+  <motion.svg viewBox="0 0 100 100" className="w-full h-full text-blue-500 overflow-visible" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="30" y="20" width="40" height="60" rx="4" stroke={STROKE_COLOR} strokeWidth="2.5" fill={FILL_COLOR} fillOpacity="0.1" />
+    <text x="50" y="55" fontSize="24" fontWeight="bold" fill={STROKE_COLOR} textAnchor="middle" fontFamily="sans-serif">W</text>
+    <motion.path d="M75 75 L85 85 M75 85 L85 75" stroke={STROKE_COLOR} strokeWidth="3" strokeLinecap="round" animate={{ opacity: [0, 1, 0] }} transition={{ duration: 2, repeat: Infinity }} />
   </motion.svg>
 );
 
 const DefaultHeroIcon = () => (
-  <motion.div animate={{ rotate: 360 }} transition={{ duration: 10, repeat: Infinity, ease: "linear" }}>
+  <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}>
     <Plus className="w-16 h-16 text-brand-purple" />
   </motion.div>
 );
 
 const HeroIconForTool: React.FC<{ tool: AppMode }> = ({ tool }) => {
   switch (tool) {
-    case 'image-to-pdf': return <ImagesToPdfHeroIcon />;
-    case 'pdf-to-image': return <PdfToImagesHeroIcon />;
-    case 'compress-pdf': return <CompressPdfHeroIcon />;
-    case 'merge-pdf': return <MergePdfHeroIcon />;
-    case 'split-pdf': return <SplitPdfHeroIcon />;
-    case 'zip-files': return <ZipItHeroIcon />;
+    case 'image-to-pdf': return <ImageToPdfIcon />;
+    case 'pdf-to-image': return <PdfToImageIcon />;
+    case 'compress-pdf': return <CompressIcon />;
+    case 'merge-pdf': return <MergeIcon />;
+    case 'split-pdf': return <SplitIcon />;
+    case 'zip-files': return <ZipIcon />;
+    case 'word-to-pdf': return <WordIcon />;
     default: return <DefaultHeroIcon />;
   }
 };
 
-// ============================================================================
-// UPLOAD AREA COMPONENT
-// ============================================================================
-
-export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled }) => {
+export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled, isProcessing }) => {
   const [dropState, setDropState] = useState<'idle' | 'dragActive' | 'dropSuccess' | 'error'>('idle');
-  const shouldReduceMotion = useReducedMotion();
 
-  // Handle transient states for Success/Error
   const handleDrop = useCallback((acceptedFiles: File[], fileRejections: FileRejection[], event: DropEvent) => {
     if (fileRejections.length > 0) {
       setDropState('error');
-      setTimeout(() => setDropState('idle'), 500); // Shake duration
+      setTimeout(() => setDropState('idle'), 1500);
     } else if (acceptedFiles.length > 0) {
       setDropState('dropSuccess');
-      setTimeout(() => setDropState('idle'), 500); // Success duration
+      // Keep success state until component unmounts or prop changes if we want visuals
+      setTimeout(() => setDropState('idle'), 1500);
     }
-    
     if (onDrop) onDrop(acceptedFiles, fileRejections, event);
   }, [onDrop]);
 
@@ -175,86 +137,26 @@ export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled }
     accept: mode === 'image-to-pdf' 
       ? { 'image/*': ['.jpeg', '.jpg', '.png', '.webp', '.gif', '.bmp'] }
       : mode === 'zip-files'
-        ? undefined 
-        : { 'application/pdf': ['.pdf'] },
-    disabled,
+        ? undefined
+        : mode === 'word-to-pdf'
+          ? { 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'] }
+          : { 'application/pdf': ['.pdf'] },
+    disabled: disabled || isProcessing,
     multiple: mode === 'image-to-pdf' || mode === 'merge-pdf' || mode === 'zip-files' || mode === 'compress-pdf',
     maxSize: mode === 'image-to-pdf' ? 25 * 1024 * 1024 : undefined
   });
 
-  // Sync state if dragged from outside directly (edge case fix)
   useEffect(() => {
     if (isDragActive && dropState === 'idle') {
       setDropState('dragActive');
     }
   }, [isDragActive, dropState]);
 
-  const getGradientClass = () => {
-     switch(mode) {
-      case 'image-to-pdf': return 'from-brand-purple via-brand-blue to-brand-blue';
-      case 'pdf-to-image': return 'from-brand-purple via-brand-mint to-brand-mint';
-      case 'compress-pdf': return 'from-brand-purple via-brand-violet to-brand-violet';
-      case 'merge-pdf': return 'from-brand-purple via-brand-orange to-brand-orange';
-      case 'split-pdf': return 'from-brand-purple via-brand-mint to-brand-blue';
-      case 'zip-files': return 'from-amber-500 via-orange-500 to-amber-500';
-      default: return 'from-brand-purple via-brand-blue to-brand-mint';
-    }
-  };
-
-  const getHeadline = () => {
-    if (dropState === 'dragActive') return "Release to add files";
-    if (mode === 'image-to-pdf') return "Drop images here";
-    if (mode === 'compress-pdf') return "Drop PDFs here";
-    if (mode === 'merge-pdf') return "Drop your PDFs here";
-    if (mode === 'split-pdf') return "Drop PDF here";
-    if (mode === 'zip-files') return "Drop files here";
-    return "Drop PDF here";
-  };
-
-  const getSubtext = () => {
-    if (mode === 'image-to-pdf') return "Supports JPG, PNG, WebP, GIF, BMP";
-    if (mode === 'compress-pdf') return "Reduce file sizes instantly (up to 10 PDFs)";
-    if (mode === 'merge-pdf') return "Combine multiple files into one";
-    if (mode === 'split-pdf') return "Extract pages or split into files";
-    if (mode === 'zip-files') return "Create a ZIP archive instantly";
-    return "Convert any PDF into high-quality images";
-  };
-
-  // --- Framer Motion Variants ---
   const containerVariants: Variants = {
-    idle: {
-      scale: shouldReduceMotion ? 1 : [1, 1.01, 1], // Very subtle breathing
-      y: 0,
-      x: 0,
-      borderColor: 'rgba(255, 255, 255, 0)', 
-      boxShadow: "0 10px 30px -10px rgba(0, 0, 0, 0.05)",
-      transition: {
-        scale: { duration: 6, repeat: Infinity, ease: "easeInOut" },
-        borderColor: { duration: 0.3 }
-      }
-    },
-    dragActive: {
-      scale: 1.01,
-      y: -2,
-      x: 0,
-      borderColor: 'rgba(124, 58, 237, 0.4)', // Brand Purple
-      boxShadow: "0 20px 40px -10px rgba(124, 58, 237, 0.15)",
-      transition: { type: "spring", stiffness: 400, damping: 25 }
-    },
-    dropSuccess: {
-      scale: 1.02,
-      y: 0,
-      x: 0,
-      borderColor: '#22C55E', // Green
-      transition: { type: "spring", stiffness: 500, damping: 30 }
-    },
-    error: {
-      scale: 1,
-      y: 0,
-      x: [-4, 4, -3, 3, 0], // Shake
-      borderColor: '#F43F5E', // Rose
-      transition: { duration: 0.4, ease: "easeInOut" }
-    }
+    idle: { scale: 1, borderColor: 'rgba(0,0,0,0)', boxShadow: "0 4px 12px rgba(0,0,0,0.05)" },
+    dragActive: { scale: 1.02, borderColor: '#7C3AED', boxShadow: "0 20px 40px -5px rgba(124, 58, 237, 0.2)" },
+    dropSuccess: { scale: 1.02, borderColor: '#22C55E' },
+    error: { x: [-4, 4, -3, 3, 0], borderColor: '#F43F5E' }
   };
 
   return (
@@ -263,104 +165,45 @@ export const UploadArea: React.FC<UploadAreaProps> = ({ onDrop, mode, disabled }
       variants={containerVariants}
       initial="idle"
       animate={dropState}
+      whileTap={{ scale: 0.98 }}
       className={`
         cursor-pointer group relative overflow-hidden
-        backdrop-blur-xl
-        min-h-[240px] md:min-h-[320px] flex flex-col items-center justify-center
-        rounded-3xl w-full
-        border-2
-        transition-colors duration-300
-        ${dropState === 'dragActive' 
-          ? 'bg-brand-purple/5 dark:bg-brand-purple/10' 
-          : 'bg-white/80 dark:bg-charcoal-800/80 hover:bg-white dark:hover:bg-charcoal-800 border-transparent dark:border-white/5'
-        }
-        ${dropState === 'error' ? 'bg-rose-50 dark:bg-rose-900/20' : ''}
-        ${dropState === 'dropSuccess' ? 'bg-green-50 dark:bg-green-900/20' : ''}
-        ${disabled ? 'opacity-50 pointer-events-none' : ''}
+        min-h-[260px] flex flex-col items-center justify-center
+        rounded-[24px] w-full
+        bg-white dark:bg-charcoal-900
+        border border-slate-100 dark:border-white/5
+        transition-all duration-300
+        ui-element
+        ${(disabled || isProcessing) ? 'pointer-events-none' : ''}
       `}
     >
       <input {...getInputProps()} />
 
-      {/* Background Gradient Effects */}
-      <div className={`absolute inset-0 rounded-3xl overflow-hidden pointer-events-none transition-opacity duration-300 ${dropState === 'dragActive' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-         <div className={`absolute inset-0 bg-gradient-to-r ${getGradientClass()} opacity-10 dark:opacity-20 blur-md`} />
-      </div>
-      
-      {/* Idle Shimmer Effect (Subtler) */}
       <AnimatePresence>
-        {dropState === 'idle' && !shouldReduceMotion && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 rounded-3xl pointer-events-none overflow-hidden"
-          >
-            <motion.div
-              className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/40 dark:via-white/5 to-transparent skew-x-12"
-              animate={{ translateX: ['-100%', '200%'] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", repeatDelay: 2 }}
-            />
-          </motion.div>
-        )}
+        {isProcessing && <FileProcessingLoader />}
       </AnimatePresence>
-      
-      {/* Dashed Border Animation (SVG) - Calmer speed */}
-      <motion.svg 
-        className={`absolute inset-0 w-full h-full pointer-events-none transition-colors duration-300 ${dropState === 'dragActive' ? 'text-brand-purple' : 'text-slate-300 dark:text-charcoal-600 group-hover:text-brand-purple/40'}`}
-        animate={dropState === 'error' ? { color: "#F43F5E" } : dropState === 'dropSuccess' ? { color: "#22C55E" } : {}}
-      >
-        <rect
-          width="100%" height="100%" x="0" y="0" rx="24" ry="24"
-          fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="12 12"
-        />
-        {/* Marching Ants (Only when active) */}
-        <motion.rect
-          width="100%" height="100%" x="0" y="0" rx="24" ry="24"
-          fill="none" stroke="currentColor" strokeWidth={3}
-          strokeDasharray="12 12"
-          animate={{ strokeDashoffset: -24 }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-          className={`transition-opacity duration-300 ${dropState === 'dragActive' ? 'opacity-100' : 'opacity-0'}`}
-        />
-      </motion.svg>
 
       {/* Content */}
-      <div className="relative z-10 flex flex-col items-center gap-4 md:gap-6 px-6 text-center">
+      <div className={`relative z-10 flex flex-col items-center gap-5 px-6 text-center transition-opacity duration-300 ${isProcessing ? 'opacity-0' : 'opacity-100'}`}>
         
-        {/* Hero Icon Wrapper - OLED ready */}
-        <motion.div 
-          className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-white dark:bg-charcoal-700 shadow-xl shadow-slate-200/50 dark:shadow-black/50 flex items-center justify-center mb-1 transition-transform duration-500 ease-out border border-slate-100 dark:border-white/5 overflow-visible"
-          animate={dropState === 'dragActive' ? { y: -5, scale: 1.05 } : { y: 0, scale: 1 }}
-        >
-          <div className="w-20 h-20 md:w-24 md:h-24 opacity-90">
-             <HeroIconForTool tool={mode} />
-          </div>
-        </motion.div>
+        <div className="w-24 h-24 rounded-2xl bg-pastel-bg dark:bg-charcoal-850 flex items-center justify-center shadow-inner">
+           <HeroIconForTool tool={mode} />
+        </div>
         
         <div>
-          <motion.span 
-            key={getHeadline()} // Animate text swap
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="block font-heading font-bold text-charcoal-900 dark:text-charcoal-200 text-xl md:text-3xl mb-2 md:mb-3 tracking-tight"
-          >
-            {getHeadline()}
-          </motion.span>
-          <p className="text-charcoal-500 dark:text-charcoal-400 text-xs md:text-base font-medium max-w-[260px] mx-auto leading-relaxed">
-             {getSubtext()}
+          <span className="block font-heading font-bold text-charcoal-900 dark:text-white text-xl md:text-2xl tracking-tight">
+            {dropState === 'dragActive' ? "Release to Add" : "Tap to Select"}
+          </span>
+          <p className="text-charcoal-500 dark:text-charcoal-400 text-sm font-medium mt-1.5">
+             or drag files here
           </p>
         </div>
 
-        {/* Button */}
-        <motion.div 
-          className="relative overflow-hidden mt-1 px-6 py-2.5 md:px-8 md:py-3 bg-brand-purple text-white rounded-full font-bold shadow-lg shadow-brand-purple/30 group-hover:shadow-brand-purple/50 flex items-center gap-2"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-           <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/20 to-transparent z-0 pointer-events-none" />
-           <Plus className="w-4 h-4 md:w-5 md:h-5 relative z-10" />
-           <span className="text-sm md:text-base relative z-10">Select Files</span>
-        </motion.div>
+        {/* Button Visual */}
+        <div className="px-6 py-3 bg-charcoal-900 dark:bg-white text-white dark:text-charcoal-900 rounded-full font-bold text-sm shadow-lg shadow-charcoal-900/10 flex items-center gap-2 mt-2 transform group-hover:scale-105 transition-transform duration-300">
+           <Plus className="w-4 h-4" />
+           <span>Select Files</span>
+        </div>
 
       </div>
     </motion.div>

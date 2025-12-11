@@ -51,6 +51,15 @@ export const compressPDF = async (
       compress: true
     });
 
+    // Set standardized metadata
+    doc.setProperties({
+        title: 'files_EZtify',
+        author: 'EZtify',
+        producer: 'EZtify',
+        subject: 'Generated with EZtify',
+        creator: 'EZtify – Compress PDF'
+    });
+
     const mmPerPx = 0.264583;
 
     for (let i = 0; i < extractedImages.length; i++) {
@@ -115,14 +124,20 @@ export const compressPDF = async (
 
     if (onProgress) onProgress(100);
 
-    // FIX: Return a complete CompressionResult object as per the function's type signature.
+    // Derive filename
+    const originalName = file.name;
+    const nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
+    // Sanitize filename
+    const safeName = nameWithoutExt.replace(/[^a-zA-Z0-9\-_]/g, '_');
+    const fileName = `${safeName}_EZtify.pdf`;
+
     return {
       id: pdfFile.id,
       originalFileName: file.name,
       originalSize,
       newSize,
       blob: pdfBlob,
-      fileName: file.name.replace('.pdf', '') + '_compressed-EZtify.pdf'
+      fileName: fileName
     };
 
   } catch (error) {

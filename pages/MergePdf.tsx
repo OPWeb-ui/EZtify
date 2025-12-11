@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { useLayoutContext } from '../components/Layout';
 import { UploadArea } from '../components/UploadArea';
@@ -15,12 +16,14 @@ import { Plus, CheckCircle, Download, RefreshCcw, X, Loader2 } from 'lucide-reac
 import { useDropzone, FileRejection } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import { buttonTap, staggerContainer, fadeInUp } from '../utils/animations';
+import { DragDropOverlay } from '../components/DragDropOverlay';
 
 export const MergePdfPage: React.FC = () => {
   const { addToast } = useLayoutContext();
   const [files, setFiles] = useState<PdfFile[]>([]);
-  const [result, setResult] = useState<{ blob: Blob, size: number, count: number } | null>(null);
+  const [result, setResult] = useState<{ blob: Blob, size: number, count: number, fileName: string } | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isProcessingFiles, setIsProcessingFiles] = useState(false); // New loading state
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('');
   const [shouldShake, setShouldShake] = useState(false);
@@ -38,18 +41,25 @@ export const MergePdfPage: React.FC = () => {
 
     if (acceptedFiles.length === 0) return;
     
-    const newFiles = acceptedFiles
-      .filter(f => f.type === 'application/pdf')
-      .map(file => ({ id: nanoid(), file }));
+    setIsProcessingFiles(true);
     
-    if (newFiles.length < acceptedFiles.length) {
-      addToast("Ignored Files", "Only PDF files are supported.", "warning");
-    }
-    
-    if (newFiles.length > 0) {
-        setFiles(prev => [...prev, ...newFiles]);
-        addToast("Success", `Added ${newFiles.length} files to merge.`, "success");
-    }
+    // Simulate short processing delay for UX smoothness
+    setTimeout(() => {
+        const newFiles = acceptedFiles
+          .filter(f => f.type === 'application/pdf')
+          .map(file => ({ id: nanoid(), file }));
+        
+        if (newFiles.length < acceptedFiles.length) {
+          addToast("Ignored Files", "Only PDF files are supported.", "warning");
+        }
+        
+        if (newFiles.length > 0) {
+            setFiles(prev => [...prev, ...newFiles]);
+            addToast("Success", `Added ${newFiles.length} files to merge.`, "success");
+        }
+        setIsProcessingFiles(false);
+    }, 600);
+
   }, [addToast]);
 
   const { getRootProps, getInputProps, open, isDragActive } = useDropzone({
@@ -77,7 +87,15 @@ export const MergePdfPage: React.FC = () => {
       setTimeout(async () => {
         try {
           const blob = await mergePdfs(files, setProgress, setStatus);
-          setResult({ blob, size: blob.size, count: files.length });
+          
+          // Derive filename from FIRST file
+          const firstFile = files[0].file;
+          const originalName = firstFile.name;
+          const nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
+          const safeName = nameWithoutExt.replace(/[^a-zA-Z0-9\-_]/g, '_');
+          const fileName = `${safeName}_EZtify.pdf`;
+
+          setResult({ blob, size: blob.size, count: files.length, fileName });
         } catch (e) {
           addToast("Error", "Merge failed.", "error");
         } finally {
@@ -104,7 +122,7 @@ export const MergePdfPage: React.FC = () => {
     const url = URL.createObjectURL(result.blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `EZtify-Merged-EZtify.pdf`;
+    link.download = result.fileName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -130,7 +148,7 @@ export const MergePdfPage: React.FC = () => {
                >
                  <motion.div variants={fadeInUp} className="w-full max-w-xl my-4 relative z-20">
                    <HeroPill>Combine multiple PDF files into one organized document in seconds.</HeroPill>
-                   <UploadArea onDrop={onDrop} mode="merge-pdf" disabled={isGenerating} />
+                   <UploadArea onDrop={onDrop} mode="merge-pdf" disabled={isGenerating} isProcessing={isProcessingFiles} />
                  </motion.div>
                  <motion.div variants={fadeInUp}>
                    <RotatingText />
@@ -153,21 +171,13 @@ export const MergePdfPage: React.FC = () => {
             {...getRootProps({ onClick: (e) => e.stopPropagation() })}
           >
             <input {...getInputProps()} />
-            <AnimatePresence>
-              {isDragActive && (
-                <motion.div 
-                    initial={{ opacity: 0 }} 
-                    animate={{ opacity: 1 }} 
-                    exit={{ opacity: 0 }}
-                    className="absolute inset-0 z-[100] bg-brand-orange/10 backdrop-blur-sm flex items-center justify-center border-4 border-dashed border-brand-orange rounded-3xl pointer-events-none"
-                >
-                    <div className="text-center text-brand-orange">
-                        <Plus size={64} className="mx-auto mb-4 animate-pulse" />
-                        <p className="text-2xl font-bold">Drop more PDFs to add</p>
-                    </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            
+            <DragDropOverlay 
+              isDragActive={isDragActive} 
+              message="Drop more PDFs" 
+              subMessage="They will be added to the list" 
+              variant="orange"
+            />
 
             {/* Standardized Close/Reset Button */}
             <motion.button

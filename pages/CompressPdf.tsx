@@ -1,3 +1,5 @@
+
+
 import React, { useState, useCallback } from 'react';
 import { useLayoutContext } from '../components/Layout';
 import { UploadArea } from '../components/UploadArea';
@@ -15,6 +17,7 @@ import { Minimize2, CheckCircle, ArrowLeft, Download, RefreshCcw, X, Loader2, Pl
 import { motion, AnimatePresence } from 'framer-motion';
 import { buttonTap, staggerContainer, fadeInUp } from '../utils/animations';
 import { useDropzone, FileRejection } from 'react-dropzone';
+import { DragDropOverlay } from '../components/DragDropOverlay';
 
 export const CompressPdfPage: React.FC = () => {
   const { addToast } = useLayoutContext();
@@ -22,6 +25,7 @@ export const CompressPdfPage: React.FC = () => {
   const [level, setLevel] = useState<CompressionLevel>('normal');
   const [results, setResults] = useState<Map<string, CompressionResult>>(new Map());
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isProcessingFiles, setIsProcessingFiles] = useState(false);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('');
 
@@ -46,11 +50,15 @@ export const CompressPdfPage: React.FC = () => {
       .map(file => ({ id: nanoid(), file }));
 
     if (newPdfFiles.length > 0) {
-        setFiles(prev => [...prev, ...newPdfFiles]);
-        setResults(new Map());
-        addToast("Success", `Added ${newPdfFiles.length} PDFs for compression.`, "success");
+        setIsProcessingFiles(true);
+        setTimeout(() => {
+          setFiles(prev => [...prev, ...newPdfFiles]);
+          setResults(new Map());
+          addToast("Success", `Added ${newPdfFiles.length} PDFs for compression.`, "success");
+          setIsProcessingFiles(false);
+        }, 600);
     }
-  }, [addToast, files]);
+  }, [addToast, files.length]);
 
   const { getRootProps, getInputProps, open, isDragActive } = useDropzone({
     onDrop,
@@ -119,18 +127,38 @@ export const CompressPdfPage: React.FC = () => {
   const downloadAllAsZip = async () => {
     const zip = new JSZip();
     let fileCount = 0;
+    
+    // Determine zip filename
+    // If only 1 file processed, use that base name + .zip
+    // If multiple, use files_EZtify.zip
+    
+    let baseNameForZip = 'files';
+    const successfulResults: CompressionResult[] = [];
+
     results.forEach(result => {
       if(result.status === 'Success') {
         zip.file(result.fileName, result.blob);
+        successfulResults.push(result);
         fileCount++;
       }
     });
+
     if(fileCount === 0) {
       addToast("No files to download", "No files were compressed successfully.", "error");
       return;
     }
+    
+    // Handle Zip naming convention
+    if (fileCount === 1) {
+        const firstFile = successfulResults[0];
+        const originalName = firstFile.originalFileName;
+        const nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
+        const safeName = nameWithoutExt.replace(/[^a-zA-Z0-9\-_]/g, '_');
+        baseNameForZip = safeName;
+    }
+
     const zipBlob = await zip.generateAsync({ type: "blob" });
-    downloadResult(zipBlob, `EZtify-Compressed-Files.zip`);
+    downloadResult(zipBlob, `${baseNameForZip}_EZtify.zip`);
   }
 
   return (
@@ -144,7 +172,7 @@ export const CompressPdfPage: React.FC = () => {
                <motion.div variants={staggerContainer} initial="hidden" animate="show" className="relative z-10 w-full max-w-2xl flex flex-col items-center text-center">
                  <motion.div variants={fadeInUp} className="w-full max-w-xl my-4 relative z-20">
                    <HeroPill>Reduce the file size of your PDF documents while maintaining quality.</HeroPill>
-                   <UploadArea onDrop={onDrop} mode="compress-pdf" disabled={isGenerating} />
+                   <UploadArea onDrop={onDrop} mode="compress-pdf" disabled={isGenerating} isProcessing={isProcessingFiles} />
                  </motion.div>
                  <motion.div variants={fadeInUp}><RotatingText /></motion.div>
                </motion.div>
@@ -159,25 +187,15 @@ export const CompressPdfPage: React.FC = () => {
           <motion.div 
             key="workspace" 
             className="flex-1 flex flex-col items-center justify-center p-6 relative bg-white/50 dark:bg-charcoal-900/50 min-h-[calc(100vh-4rem)] outline-none"
-            {...getRootProps()}
+            {...getRootProps({ onClick: (e) => e.stopPropagation() })}
           >
              <input {...getInputProps()} />
              
-             <AnimatePresence>
-              {isDragActive && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 z-50 bg-brand-purple/10 backdrop-blur-sm flex items-center justify-center border-4 border-dashed border-brand-purple rounded-3xl pointer-events-none"
-                >
-                  <div className="text-center text-brand-purple">
-                    <Plus size={64} className="mx-auto mb-4 animate-pulse" />
-                    <p className="text-2xl font-bold">Drop more PDFs to add</p>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+             <DragDropOverlay 
+                isDragActive={isDragActive} 
+                message="Drop more PDFs" 
+                variant="violet"
+             />
 
              <div className="w-full max-w-2xl relative z-10">
                 {/* Standardized Close/Reset Button */}

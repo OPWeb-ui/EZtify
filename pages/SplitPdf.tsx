@@ -1,3 +1,5 @@
+
+
 import React, { useState, useCallback } from 'react';
 import { useLayoutContext } from '../components/Layout';
 import { UploadArea } from '../components/UploadArea';
@@ -8,35 +10,84 @@ import { RotatingText } from '../components/RotatingText';
 import { HeroPill } from '../components/HeroPill';
 import { SplitPageGrid } from '../components/SplitPageGrid';
 import { PageReadyTracker } from '../components/PageReadyTracker';
-import { PdfPage, SplitMode } from '../types';
-import { loadPdfPages, extractPagesToPdf, splitPagesToZip } from '../services/pdfSplitter';
-import { Download, RefreshCcw, CheckCircle, Scissors, X, Loader2, ListFilter, Plus } from 'lucide-react';
+import { PdfPage, SplitMode, PageNumberConfig } from '../types';
+import { loadPdfPages, savePdfWithModifications } from '../services/pdfSplitter';
+import { Download, CheckCircle, Scissors, X, Loader2, LayoutGrid, Hash, ArrowLeftRight, Eye, EyeOff, RefreshCcw, Minus, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { buttonTap, staggerContainer, fadeInUp } from '../utils/animations';
+import { staggerContainer, fadeInUp } from '../utils/animations';
 import { useDropzone, FileRejection } from 'react-dropzone';
+import { SEO } from '../components/SEO';
+import { EZDropdown } from '../components/EZDropdown';
+import { DragDropOverlay } from '../components/DragDropOverlay';
+
+// --- Toggle Button ---
+interface ModeToggleProps {
+  mode: SplitMode;
+  current: SplitMode;
+  label: string;
+  icon: React.ReactNode;
+  onClick: (mode: SplitMode) => void;
+}
+
+const ModeToggle: React.FC<ModeToggleProps> = ({ mode, current, label, icon, onClick }) => (
+  <button
+    onClick={() => onClick(mode)}
+    className={`
+      flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all whitespace-nowrap
+      ${current === mode 
+        ? 'bg-white dark:bg-charcoal-700 shadow-sm text-brand-purple ring-1 ring-black/5 dark:ring-white/10' 
+        : 'text-charcoal-500 hover:text-charcoal-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-charcoal-800'
+      }
+    `}
+  >
+    {icon} {label}
+  </button>
+);
+
+const fontOptions = [
+  { label: 'Helvetica', value: 'Helvetica' },
+  { label: 'Helvetica Bold', value: 'Helvetica-Bold' },
+  { label: 'Helvetica Oblique', value: 'Helvetica-Oblique' },
+  { label: 'Helvetica Bold Oblique', value: 'Helvetica-BoldOblique' },
+  { label: 'Times New Roman', value: 'Times-Roman' },
+  { label: 'Times New Roman Bold', value: 'Times-Roman-Bold' },
+  { label: 'Times New Roman Italic', value: 'Times-Roman-Italic' },
+  { label: 'Courier', value: 'Courier' },
+  { label: 'Courier Bold', value: 'Courier-Bold' },
+  { label: 'Courier Oblique', value: 'Courier-Oblique' },
+];
 
 export const SplitPdfPage: React.FC = () => {
   const { addToast } = useLayoutContext();
   const [file, setFile] = useState<File | null>(null);
   const [pages, setPages] = useState<PdfPage[]>([]);
-  const [splitMode, setSplitMode] = useState<SplitMode>('extract');
+  const [mode, setMode] = useState<SplitMode>('organize');
+  
+  // Page Numbers State
+  const [numberingConfig, setNumberingConfig] = useState<PageNumberConfig>({
+    position: 'bottom',
+    alignment: 'center',
+    startFrom: 1,
+    fontSize: 12,
+    fontFamily: 'Helvetica',
+    offsetX: 0,
+    offsetY: 0,
+  });
+  
+  // Visibility State for Badges/Numbers
+  const [showBadges, setShowBadges] = useState(true);
+
   const [result, setResult] = useState<{ blob: Blob, name: string } | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isProcessingFiles, setIsProcessingFiles] = useState(false);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('');
-  const [customRange, setCustomRange] = useState('');
 
   const onDrop = useCallback(async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
     if (fileRejections.length > 0) {
-      const isImage = fileRejections.some(r => r.file.type.startsWith('image/'));
-      if (isImage) {
-        addToast("Incorrect File Type", "Image detected. Please upload a PDF file.", "error");
-      } else {
-        addToast("Invalid File", "Please upload a PDF file.", "error");
-      }
+      addToast("Invalid File", "Please upload a PDF file.", "error");
       return;
     }
-
     if (acceptedFiles.length === 0) return;
     const f = acceptedFiles[0];
     
@@ -45,35 +96,32 @@ export const SplitPdfPage: React.FC = () => {
       return;
     }
     
-    if (f.size > 50 * 1024 * 1024) {
-      addToast("Large File", "Loading preview might take a moment.", "warning");
-    }
-
-    setFile(f);
-    setIsGenerating(true);
-    setStatus('Loading PDF...');
-    setProgress(0);
+    setIsProcessingFiles(true);
+    const startTime = Date.now();
     
     try {
-      const loadedPages = await loadPdfPages(f, setProgress, setStatus);
+      // The loadPdfPages has its own progress/status which we can ignore for this loader
+      const loadedPages = await loadPdfPages(f, () => {}, () => {});
+      
+      const elapsedTime = Date.now() - startTime;
+      if (elapsedTime < 800) {
+        await new Promise(resolve => setTimeout(resolve, 800 - elapsedTime));
+      }
+
       if (loadedPages.length === 0) {
         addToast("Error", "No pages found in PDF.", "error");
         setFile(null);
       } else {
-        if (loadedPages.length === 1) {
-           addToast("Single Page PDF", "This document only has one page. Nothing to split.", "warning", 5000);
-        }
+        setFile(f);
         setPages(loadedPages);
-        addToast("Success", `Successfully loaded ${loadedPages.length} pages.`, "success");
+        addToast("Success", `Loaded ${loadedPages.length} pages.`, "success");
       }
     } catch (e) {
       console.error(e);
-      addToast("Error", "Failed to load PDF pages.", "error");
+      addToast("Error", "Failed to load PDF.", "error");
       setFile(null);
     } finally {
-      setIsGenerating(false);
-      setProgress(0);
-      setStatus('');
+      setIsProcessingFiles(false);
     }
   }, [addToast]);
 
@@ -85,20 +133,9 @@ export const SplitPdfPage: React.FC = () => {
     multiple: false,
   });
 
-  const togglePageSelection = (id: string) => {
-    setPages(prev => prev.map(p => p.id === id ? { ...p, selected: !p.selected } : p));
-  };
-
-  const handleSelectAll = () => {
-    setPages(prev => prev.map(p => ({ ...p, selected: true })));
-  };
-
-  const handleDeselectAll = () => {
-    setPages(prev => prev.map(p => ({ ...p, selected: false })));
-  };
-
-  const handleInvertSelection = () => {
-    setPages(prev => prev.map(p => ({ ...p, selected: !p.selected })));
+  // --- PAGE ACTIONS ---
+  const handleReorder = (newPages: PdfPage[]) => {
+    setPages(newPages);
   };
 
   const handleRemovePage = (id: string) => {
@@ -109,77 +146,43 @@ export const SplitPdfPage: React.FC = () => {
     setPages(prev => prev.filter(p => !p.selected));
   };
 
-  const parsePageRange = (rangeStr: string, totalPages: number): number[] => {
-    const indices = new Set<number>();
-    const parts = rangeStr.split(',');
-
-    parts.forEach(part => {
-      const trimmed = part.trim();
-      if (!trimmed) return;
-
-      if (trimmed.includes('-')) {
-        const [start, end] = trimmed.split('-').map(n => parseInt(n, 10));
-        if (!isNaN(start) && !isNaN(end)) {
-          const s = Math.max(1, Math.min(start, end));
-          const e = Math.min(totalPages, Math.max(start, end));
-          for (let i = s; i <= e; i++) {
-            indices.add(i - 1);
-          }
-        }
-      } else {
-        const pageNum = parseInt(trimmed, 10);
-        if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
-          indices.add(pageNum - 1);
-        }
-      }
-    });
-
-    return Array.from(indices);
+  const handleTogglePage = (id: string) => {
+    setPages(prev => prev.map(p => p.id === id ? { ...p, selected: !p.selected } : p));
   };
 
-  const handleRangeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setCustomRange(val);
-
-    if (!val.trim()) return;
-
-    const selectedIndices = parsePageRange(val, pages.length);
-    setPages(prev => prev.map((p, idx) => ({
-      ...p,
-      selected: selectedIndices.includes(idx)
-    })));
-  };
-
-  const handleSplit = async () => {
+  // --- EXPORT ---
+  const handleExport = async (action: 'download' | 'split' | 'numbers') => {
     if (!file) return;
-    const selectedIndices = pages.filter(p => p.selected).map(p => p.pageIndex);
     
-    if (selectedIndices.length === 0) {
-      addToast("No Selection", "Please select at least one page.", "warning");
-      return;
+    if (action === 'split') {
+      const selected = pages.filter(p => p.selected);
+      if (selected.length === 0) {
+        addToast("No Selection", "Select pages to extract.", "warning");
+        return;
+      }
     }
 
     setIsGenerating(true);
     setProgress(0);
-    setStatus('Starting...');
+    setStatus('Processing...');
 
     try {
       setTimeout(async () => {
-        let blob: Blob;
-        let filename: string;
-
         try {
-          if (splitMode === 'extract') {
-            blob = await extractPagesToPdf(file, selectedIndices, setProgress, setStatus);
-            filename = `EZtify-Extracted-EZtify.pdf`;
-          } else {
-            blob = await splitPagesToZip(file, selectedIndices, setProgress, setStatus);
-            filename = `EZtify-Split-Pages-EZtify.zip`;
-          }
-          setResult({ blob, name: filename });
-        } catch (innerError) {
-          console.error(innerError);
-          addToast("Error", "Operation failed.", "error");
+          const pagesToProcess = action === 'split' ? pages.filter(p => p.selected) : pages;
+          const configToUse = action === 'numbers' ? numberingConfig : undefined;
+          
+          const blob = await savePdfWithModifications(file, pagesToProcess, configToUse, setProgress, setStatus);
+          
+          const originalName = file.name;
+          const nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
+          const safeName = nameWithoutExt.replace(/[^a-zA-Z0-9\-_]/g, '_');
+          const suffix = action === 'split' ? '_split' : action === 'numbers' ? '_numbered' : '_organized';
+          
+          setResult({ blob, name: `${safeName}${suffix}_EZtify.pdf` });
+        } catch (e) {
+          console.error(e);
+          addToast("Error", "Processing failed.", "error");
         } finally {
           setIsGenerating(false);
           setProgress(0);
@@ -188,8 +191,6 @@ export const SplitPdfPage: React.FC = () => {
       }, 50);
     } catch (e) {
       setIsGenerating(false);
-      setProgress(0);
-      setStatus('');
     }
   };
 
@@ -209,233 +210,183 @@ export const SplitPdfPage: React.FC = () => {
     setFile(null);
     setPages([]);
     setResult(null);
-    setCustomRange('');
     setStatus('');
+    setMode('organize');
+    setShowBadges(true);
   };
 
   return (
     <>
+      <SEO 
+        title="Split PDF Online – EZtify"
+        description="Split, organize, and number PDF pages online. 100% private, secure, and client-side."
+        canonical="https://eztify.pages.dev/#/split-pdf"
+      />
       <PageReadyTracker />
       <AnimatePresence mode="wait">
         {!file ? (
-          <motion.div
-            key="hero"
-            className="flex-1 flex flex-col overflow-y-auto custom-scrollbar"
-          >
+          <motion.div key="hero" className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
             <section className="flex-1 flex flex-col items-center justify-center p-4 pt-8 pb-10 relative">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] blur-[120px] rounded-full pointer-events-none bg-brand-mint/10" />
-                <motion.div 
-                  variants={staggerContainer}
-                  initial="hidden"
-                  animate="show"
-                  className="relative z-10 w-full max-w-2xl flex flex-col items-center text-center"
-                >
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] blur-[120px] rounded-full pointer-events-none bg-brand-blue/10" />
+                <motion.div variants={staggerContainer} initial="hidden" animate="show" className="relative z-10 w-full max-w-2xl flex flex-col items-center text-center">
                   <motion.div variants={fadeInUp} className="w-full max-w-xl my-4 relative z-20">
-                    <HeroPill>Extract specific pages or split a document into multiple separate files.</HeroPill>
-                    <UploadArea onDrop={onDrop} mode="split-pdf" disabled={isGenerating} />
+                    <HeroPill>Split, extract, reorder, or number PDF pages instantly in your browser.</HeroPill>
+                    <UploadArea onDrop={onDrop} mode="split-pdf" disabled={isGenerating} isProcessing={isProcessingFiles} />
                   </motion.div>
-                  <motion.div variants={fadeInUp}>
-                    <RotatingText />
-                  </motion.div>
+                  <motion.div variants={fadeInUp}><RotatingText /></motion.div>
                 </motion.div>
             </section>
-
             <AdSlot zone="hero" />
-
             <div className="w-full bg-gradient-to-b from-transparent to-white/40 dark:to-charcoal-900/40 pb-20 pt-10 border-t border-brand-purple/5 dark:border-white/5">
               <HowItWorks mode="split-pdf" />
-              <AdSlot zone="footer" />
-              <FAQ />
+              <AdSlot zone="footer" /><FAQ />
             </div>
           </motion.div>
         ) : (
-          <motion.div
-            key="workspace"
-            className="flex-1 flex flex-col items-center p-6 relative bg-white/50 dark:bg-charcoal-900/50 min-h-[calc(100vh-4rem)] outline-none"
-            {...getRootProps({
-              onClick: (e: React.MouseEvent) => e.stopPropagation()
-            })}
-          >
+          <motion.div key="workspace" className="flex-1 flex flex-col items-center relative bg-white/50 dark:bg-charcoal-900/50 min-h-[calc(100vh-4rem)] outline-none" {...getRootProps({ onClick: (e) => e.stopPropagation() })}>
             <input {...getInputProps()} />
-            <AnimatePresence>
-              {isDragActive && (
-                <motion.div 
-                  initial={{ opacity: 0 }} 
-                  animate={{ opacity: 1 }} 
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 z-[100] bg-brand-mint/10 backdrop-blur-sm flex items-center justify-center border-4 border-dashed border-brand-mint rounded-3xl pointer-events-none"
-                >
-                    <div className="text-center text-brand-mint">
-                        <Plus size={64} className="mx-auto mb-4 animate-pulse" />
-                        <p className="text-2xl font-bold">Drop new PDF to start over</p>
-                    </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            
+            <DragDropOverlay 
+              isDragActive={isDragActive} 
+              message="Drop new PDF to replace" 
+              variant="blue"
+            />
 
-            {/* Standardized Close/Reset Button */}
-            <motion.button
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              whileHover={{ scale: 1.1, rotate: 90 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={reset}
-              className="absolute top-8 right-4 z-50 w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-charcoal-800 text-charcoal-500 dark:text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200 dark:hover:border-rose-800 shadow-md border border-slate-200 dark:border-charcoal-600 transition-all duration-200"
-              title="Close and Reset"
-            >
-              <X size={20} />
-            </motion.button>
+            {/* --- TOP TOOLBAR --- */}
+            <div className="w-full bg-slate-100/80 dark:bg-charcoal-900/90 backdrop-blur-md border-b border-slate-200 dark:border-charcoal-700 sticky top-0 z-40">
+               <div className="max-w-xl mx-auto p-2 flex items-center gap-2">
+                  {/* Mode Toggles */}
+                  <div className="bg-slate-200/50 dark:bg-charcoal-800 p-1 rounded-xl flex flex-1 min-w-0">
+                    <ModeToggle mode="organize" current={mode} label="Organize" icon={<LayoutGrid size={16} />} onClick={setMode} />
+                    <ModeToggle mode="numbers" current={mode} label="Page Numbers" icon={<Hash size={16} />} onClick={setMode} />
+                  </div>
+                  
+                  {/* Show/Hide Badges Toggle */}
+                  <button 
+                    onClick={() => setShowBadges(!showBadges)} 
+                    className={`
+                      p-2.5 rounded-xl transition-colors flex-shrink-0
+                      ${showBadges 
+                        ? 'text-brand-purple bg-brand-purple/10 hover:bg-brand-purple/20' 
+                        : 'text-charcoal-400 hover:bg-slate-200 dark:hover:bg-charcoal-800 hover:text-charcoal-700 dark:hover:text-white'
+                      }
+                    `}
+                    title={showBadges ? "Hide Page Numbers" : "Show Page Numbers"}
+                  >
+                    {showBadges ? <Eye size={20} /> : <EyeOff size={20} />}
+                  </button>
 
-            <div className="w-full max-w-5xl relative z-10 flex flex-col h-full">
-              
-              <div className="text-center mb-8">
-                 <h3 className="text-lg font-bold text-charcoal-800 dark:text-white truncate">{file.name}</h3>
-                 <p className="text-sm text-charcoal-500 dark:text-slate-400">Select pages to split or extract</p>
-              </div>
-
-              <AnimatePresence mode="wait">
-                {!result ? (
-                   <motion.div 
-                     key="grid"
-                     initial={{ opacity: 0, y: 10 }}
-                     animate={{ opacity: 1, y: 0 }}
-                     exit={{ opacity: 0, y: -10 }}
-                     transition={{ duration: 0.3 }}
-                   >
-                      {isGenerating && pages.length === 0 ? (
-                        <div className="w-full h-[50vh] flex flex-col items-center justify-center">
-                           <Loader2 className="w-12 h-12 animate-spin text-brand-purple mb-4" />
-                           {status && (
-                             <div className="bg-white/80 dark:bg-charcoal-800/80 backdrop-blur-md px-6 py-3 rounded-xl border border-slate-200 dark:border-charcoal-700 shadow-lg">
-                               <p className="text-sm font-bold text-charcoal-600 dark:text-slate-200 animate-pulse">
-                                 {status} {progress > 0 && `(${Math.round(progress)}%)`}
-                               </p>
-                             </div>
-                           )}
-                        </div>
-                      ) : (
-                        <SplitPageGrid 
-                           pages={pages} 
-                           onTogglePage={togglePageSelection}
-                           onSelectAll={handleSelectAll}
-                           onDeselectAll={handleDeselectAll}
-                           onInvertSelection={handleInvertSelection}
-                           onRemovePage={handleRemovePage}
-                           onRemoveSelected={handleRemoveSelected}
-                           onReorder={setPages}
-                        />
-                      )}
-                      
-                      {pages.length > 0 && (
-                        <>
-                          <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-xl border-t border-slate-200 dark:border-charcoal-700 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-50">
-                             <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-                                
-                                <div className="flex-1 w-full md:w-auto min-w-[200px]">
-                                   <div className="relative group">
-                                      <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-charcoal-400 dark:text-slate-500">
-                                         <ListFilter size={16} />
-                                      </div>
-                                      <input
-                                        type="text"
-                                        placeholder="Range (e.g. 1-5, 8, 11-13)"
-                                        value={customRange}
-                                        onChange={handleRangeChange}
-                                        className="w-full pl-10 pr-4 py-2.5 bg-slate-100 dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 rounded-xl text-sm font-mono text-charcoal-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-purple/50 focus:border-transparent transition-all placeholder:text-charcoal-400 dark:placeholder:text-slate-600"
-                                      />
-                                   </div>
-                                </div>
-
-                                <div className="flex bg-slate-100 dark:bg-charcoal-800 rounded-lg p-1 border border-slate-200 dark:border-charcoal-700 shrink-0">
-                                   <motion.button
-                                     whileTap={buttonTap}
-                                     whileHover={{ backgroundColor: splitMode !== 'extract' ? "rgba(255,255,255,0.5)" : undefined }}
-                                     onClick={() => setSplitMode('extract')}
-                                     className={`px-3 py-2 rounded-md text-xs md:text-sm font-bold transition-all ${splitMode === 'extract' ? 'bg-white dark:bg-charcoal-700 shadow-sm text-brand-purple' : 'text-charcoal-500 dark:text-slate-400'}`}
-                                   >
-                                     Extract Selected
-                                   </motion.button>
-                                   <motion.button
-                                     whileTap={buttonTap}
-                                     whileHover={{ backgroundColor: splitMode !== 'separate' ? "rgba(255,255,255,0.5)" : undefined }}
-                                     onClick={() => setSplitMode('separate')}
-                                     className={`px-3 py-2 rounded-md text-xs md:text-sm font-bold transition-all ${splitMode === 'separate' ? 'bg-white dark:bg-charcoal-700 shadow-sm text-brand-purple' : 'text-charcoal-500 dark:text-slate-400'}`}
-                                   >
-                                     Split into Files
-                                   </motion.button>
-                                </div>
-                                
-                                <motion.button
-                                  whileHover={{ scale: 1.02 }}
-                                  whileTap={{ scale: 0.96 }}
-                                  onClick={handleSplit}
-                                  disabled={isGenerating || pages.filter(p => p.selected).length === 0}
-                                  className="w-full md:w-auto px-8 py-3 rounded-xl bg-brand-purple text-white font-bold shadow-lg shadow-brand-purple/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shrink-0"
-                                >
-                                   {isGenerating ? (
-                                     <>
-                                       <Loader2 className="w-4 h-4 animate-spin" />
-                                       <span className="text-xs">
-                                         {status || 'Processing...'}{' '}
-                                         {progress > 0 && progress < 100 && `(${progress}%)`}
-                                       </span>
-                                     </>
-                                   ) : (
-                                     <>
-                                       <Scissors size={18} />
-                                       {splitMode === 'extract' ? 'Extract' : 'Split'}
-                                     </>
-                                   )}
-                                </motion.button>
-                             </div>
-                          </div>
-                          <div className="h-40 md:h-32" /> 
-                        </>
-                      )}
-                   </motion.div>
-                ) : (
-                   <motion.div 
-                     key="result"
-                     initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                     animate={{ opacity: 1, scale: 1, y: 0 }}
-                     transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                     className="flex-1 flex flex-col items-center justify-center max-w-md mx-auto w-full"
-                   >
-                       <div className="w-full bg-brand-mint/10 border border-brand-mint/20 rounded-2xl p-8 text-center mb-6">
-                          <div className="text-brand-mint mb-4 flex justify-center"><CheckCircle size={64} /></div>
-                          <h3 className="text-2xl font-bold text-charcoal-800 dark:text-white">Ready!</h3>
-                          <p className="text-charcoal-500 dark:text-slate-400 mt-2">
-                             Your files have been processed successfully.
-                          </p>
-                          <div className="mt-4 text-xs font-mono text-charcoal-400 dark:text-slate-500 bg-white dark:bg-charcoal-800 py-1 px-3 rounded-full inline-block border border-brand-mint/20">
-                            {result.name}
-                          </div>
-                       </div>
-
-                       <motion.button
-                         whileHover={{ scale: 1.02 }}
-                         whileTap={{ scale: 0.96 }}
-                         onClick={downloadResult}
-                         className="w-full py-4 rounded-xl bg-brand-purple text-white font-bold text-lg shadow-lg shadow-brand-purple/30 hover:shadow-brand-purple/50 transition-all flex items-center justify-center gap-2 mb-4"
-                       >
-                          <Download size={20} /> Download Now
-                       </motion.button>
-
-                       <motion.button
-                         whileHover={{ scale: 1.02 }}
-                         whileTap={{ scale: 0.98 }}
-                         onClick={reset}
-                         className="w-full py-3 text-charcoal-500 dark:text-slate-400 hover:text-brand-purple font-medium text-sm flex items-center justify-center gap-2"
-                         >
-                          <RefreshCcw size={14} /> Split another PDF
-                       </motion.button>
-
-                       <AdSlot zone="sidebar" className="mt-8" />
-                   </motion.div>
-                )}
-              </AnimatePresence>
+                  {/* Close Button */}
+                  <button 
+                    onClick={reset}
+                    className="p-2.5 rounded-xl transition-colors flex-shrink-0 text-charcoal-400 hover:bg-rose-100 hover:text-rose-500 dark:hover:bg-rose-900/30"
+                    title="Close"
+                  >
+                    <X size={20} />
+                  </button>
+               </div>
             </div>
+
+            {/* --- SETTINGS BAR (Numbers Mode) --- */}
+            {mode === 'numbers' && (
+               <div className="w-full bg-white dark:bg-charcoal-800 border-b border-slate-200 dark:border-charcoal-700 p-4 animate-in slide-in-from-top-2">
+                  <div className="max-w-xl mx-auto space-y-4">
+                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <EZDropdown label="Position" value={numberingConfig.position} options={[{ label: 'Bottom', value: 'bottom' },{ label: 'Top', value: 'top' }]} onChange={(val) => setNumberingConfig({...numberingConfig, position: val})} fullWidth />
+                        <EZDropdown label="Align" value={numberingConfig.alignment} options={[{ label: 'Left', value: 'left' },{ label: 'Center', value: 'center' },{ label: 'Right', value: 'right' }]} onChange={(val) => setNumberingConfig({...numberingConfig, alignment: val})} fullWidth />
+                        <EZDropdown label="Font" value={numberingConfig.fontFamily} options={fontOptions} onChange={(val) => setNumberingConfig({...numberingConfig, fontFamily: val})} fullWidth />
+                        <div className="relative w-full h-10 flex items-center bg-slate-100 dark:bg-charcoal-700 rounded-xl border border-slate-200 dark:border-charcoal-600 overflow-hidden">
+                           <button onClick={() => setNumberingConfig(c => ({...c, startFrom: Math.max(1, c.startFrom - 1)}))} className="w-10 h-full flex items-center justify-center text-charcoal-500 hover:bg-slate-200 dark:hover:bg-charcoal-600 active:scale-95 transition-all border-r border-slate-200 dark:border-charcoal-600"><Minus size={14} /></button>
+                           <div className="flex-1 flex items-center justify-center px-1"><span className="text-[10px] font-bold text-charcoal-400 dark:text-slate-500 uppercase tracking-wider mr-1">Start</span><input type="number" value={numberingConfig.startFrom} onChange={(e) => setNumberingConfig({...numberingConfig, startFrom: Math.max(1, parseInt(e.target.value) || 1)})} className="bg-transparent outline-none text-center font-bold text-charcoal-800 dark:text-white w-8 p-0 text-sm" min="1"/></div>
+                           <button onClick={() => setNumberingConfig(c => ({...c, startFrom: c.startFrom + 1}))} className="w-10 h-full flex items-center justify-center text-charcoal-500 hover:bg-slate-200 dark:hover:bg-charcoal-600 active:scale-95 transition-all border-l border-slate-200 dark:border-charcoal-600"><Plus size={14} /></button>
+                        </div>
+                     </div>
+                     <div className="space-y-3 pt-2">
+                        <div className="flex justify-between items-center gap-4"><label className="text-xs font-bold text-slate-500 dark:text-charcoal-500 uppercase tracking-wide flex-shrink-0">Font Size</label><input type="range" min="8" max="48" step="1" value={numberingConfig.fontSize} onChange={(e) => setNumberingConfig({...numberingConfig, fontSize: parseInt(e.target.value)})} className="w-full h-1.5 bg-slate-200 dark:bg-charcoal-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-brand-purple [&::-webkit-slider-thumb]:shadow-md" /><span className="text-xs bg-slate-100 dark:bg-charcoal-950 px-2 py-0.5 rounded text-slate-600 dark:text-charcoal-400 font-mono font-bold w-12 text-center">{numberingConfig.fontSize}pt</span></div>
+                        <div className="flex justify-between items-center gap-4"><label className="text-xs font-bold text-slate-500 dark:text-charcoal-500 uppercase tracking-wide flex-shrink-0">X Offset</label><input type="range" min="-100" max="100" step="1" value={numberingConfig.offsetX} onChange={(e) => setNumberingConfig({...numberingConfig, offsetX: parseInt(e.target.value)})} className="w-full h-1.5 bg-slate-200 dark:bg-charcoal-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-brand-purple [&::-webkit-slider-thumb]:shadow-md" /><span className="text-xs bg-slate-100 dark:bg-charcoal-950 px-2 py-0.5 rounded text-slate-600 dark:text-charcoal-400 font-mono font-bold w-12 text-center">{numberingConfig.offsetX}pt</span></div>
+                        <div className="flex justify-between items-center gap-4"><label className="text-xs font-bold text-slate-500 dark:text-charcoal-500 uppercase tracking-wide flex-shrink-0">Y Offset</label><input type="range" min="-100" max="100" step="1" value={numberingConfig.offsetY} onChange={(e) => setNumberingConfig({...numberingConfig, offsetY: parseInt(e.target.value)})} className="w-full h-1.5 bg-slate-200 dark:bg-charcoal-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-brand-purple [&::-webkit-slider-thumb]:shadow-md" /><span className="text-xs bg-slate-100 dark:bg-charcoal-950 px-2 py-0.5 rounded text-slate-600 dark:text-charcoal-400 font-mono font-bold w-12 text-center">{numberingConfig.offsetY}pt</span></div>
+                     </div>
+                  </div>
+               </div>
+            )}
+
+            {/* --- MAIN GRID --- */}
+            <div className="w-full max-w-7xl p-4 pb-32 flex-1">
+                 <AnimatePresence mode="wait">
+                    {!result ? (
+                       <SplitPageGrid 
+                          pages={pages}
+                          onTogglePage={handleTogglePage}
+                          onSelectAll={() => setPages(p => p.map(x => ({ ...x, selected: true })))}
+                          onDeselectAll={() => setPages(p => p.map(x => ({ ...x, selected: false })))}
+                          onInvertSelection={() => setPages(p => p.map(x => ({ ...x, selected: !x.selected })))}
+                          onRemovePage={handleRemovePage}
+                          onRemoveSelected={handleRemoveSelected}
+                          onReorder={handleReorder}
+                          useVisualIndexing={true}
+                          numberingConfig={mode === 'numbers' ? numberingConfig : undefined}
+                          isReorderDisabled={mode === 'numbers'}
+                          showBadges={showBadges}
+                       />
+                    ) : (
+                       <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center min-h-[50vh]">
+                          <div className="bg-brand-mint/10 border border-brand-mint/20 rounded-3xl p-8 text-center max-w-md w-full shadow-lg">
+                             <CheckCircle size={64} className="text-brand-mint mx-auto mb-4" />
+                             <h3 className="text-2xl font-bold text-charcoal-800 dark:text-white mb-2">Ready!</h3>
+                             <p className="text-charcoal-500 dark:text-slate-400 mb-6 truncate max-w-xs mx-auto">{result.name}</p>
+                             <button onClick={downloadResult} className="w-full py-4 rounded-xl bg-brand-purple text-white font-bold text-lg shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                                <Download size={20} /> Download PDF
+                             </button>
+                             <button onClick={() => setResult(null)} className="w-full mt-4 py-3 text-charcoal-500 hover:text-brand-purple font-medium flex items-center justify-center gap-2">
+                                <RefreshCcw size={16} /> Continue Editing
+                             </button>
+                          </div>
+                       </motion.div>
+                    )}
+                 </AnimatePresence>
+            </div>
+
+            {/* --- BOTTOM ACTION BAR --- */}
+            {!result && (
+               <div className="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-xl border-t border-slate-200 dark:border-charcoal-700 p-4 z-50">
+                  <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+                     <div className="hidden md:block text-xs font-medium text-charcoal-400 dark:text-slate-500">
+                        {pages.length} Pages • Drag to reorder
+                     </div>
+
+                     <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+                        {mode === 'organize' ? (
+                           <>
+                             <button
+                                onClick={() => handleExport('split')}
+                                disabled={isGenerating || pages.filter(p => p.selected).length === 0}
+                                className="px-4 py-3.5 rounded-xl border-2 border-slate-200 dark:border-charcoal-600 font-bold text-charcoal-600 dark:text-slate-300 hover:border-brand-purple/50 hover:text-brand-purple transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
+                             >
+                                <Scissors size={18} /> Split Selected
+                             </button>
+                             <button
+                                onClick={() => handleExport('download')}
+                                disabled={isGenerating || pages.length === 0}
+                                className="flex-1 md:flex-none px-8 py-3.5 rounded-xl bg-brand-purple text-white font-bold shadow-lg shadow-brand-purple/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 min-w-[200px] text-sm"
+                             >
+                                {isGenerating ? <Loader2 className="animate-spin" /> : <ArrowLeftRight size={18} />}
+                                {isGenerating ? 'Processing...' : 'Download Organized PDF'}
+                             </button>
+                           </>
+                        ) : (
+                           <button
+                              onClick={() => handleExport('numbers')}
+                              disabled={isGenerating || pages.length === 0}
+                              className="flex-1 md:flex-none px-8 py-3.5 rounded-xl bg-brand-purple text-white font-bold shadow-lg shadow-brand-purple/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 min-w-[200px] text-sm"
+                           >
+                              {isGenerating ? <Loader2 className="animate-spin" /> : <Hash size={18} />}
+                              {isGenerating ? 'Processing...' : 'Apply Numbers & Download'}
+                           </button>
+                        )}
+                     </div>
+                  </div>
+               </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

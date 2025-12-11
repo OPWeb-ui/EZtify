@@ -11,6 +11,15 @@ export const mergePdfs = async (
   onStatusUpdate?.('Preparing to merge...');
   const mergedPdf = await PDFDocument.create();
 
+  // Set standardized metadata
+  mergedPdf.setTitle('files_EZtify');
+  mergedPdf.setAuthor('EZtify');
+  mergedPdf.setProducer('EZtify');
+  mergedPdf.setSubject('Generated with EZtify');
+  mergedPdf.setCreator('EZtify – Merge PDF');
+  mergedPdf.setCreationDate(new Date());
+  mergedPdf.setModificationDate(new Date());
+
   for (let i = 0; i < files.length; i++) {
     onStatusUpdate?.(`Merging file ${i + 1} of ${files.length}...`);
     if (onProgress) {
