@@ -1,87 +1,68 @@
-EZtify ⚡
-Your Go-To Hub for PDF & File Tools
-EZtify is a modern, fast, and privacy-focused web platform that gives you everything you need to work with PDFs and files — directly in your browser. Convert, compress, merge, split, and zip your files with a smooth, distraction-free experience.
+EZtify ⚡ — The Fastest Way to Work With Your Files
 
-No installs. No complexity. Just powerful tools that work instantly.
+Meet EZtify, the all-in-one platform that turns complicated PDF and file tasks into a one-click experience.
+No installs. No waiting. No confusing menus.
+Just instant tools that feel effortless.
 
-🚀 Live App
-https://eztify.pages.dev/#/
+Try it now → https://eztify.pages.dev/#/
 
-💡 Why EZtify?
-Most file tools today are:
-Cluttered
-Slow
-Or difficult to use across devices
+-----
 
-EZtify is built to be different:
-✅ Instant in-browser processing
-✅ Clean, modern user interface
-✅ Optimized for speed & performance
-✅ Smooth, purposeful animations
-✅ Built for desktop & mobile
-✅ SEO-optimized tool pages
-✅ Installable as a PWA
+🚀 Work Faster. Work Smarter.
 
-EZtify is designed to feel simple, fast, and professional.
+Most file tools are slow, bloated, or filled with ads.
+EZtify is built for pure speed and simplicity:
+⚡ Lightning-fast in-browser processing
+🎨 Modern, clean, smooth UI
+📱 Optimized for desktop, mobile & tablet
+🔍 SEO-friendly tool pages
 
-🧰 Available Tools
-Images to PDF
-PDF to Images
-Compress PDF
-Merge PDF
-Split PDF
-Zip It! (Create ZIP archives instantly)
-All tools support:
-Drag & drop
-Add more files after upload
-Real-time feedback
-Smooth animations
+Whether you're a student, office worker, freelancer, or business —
+EZtify makes file work easy.
 
-🔐 Privacy by Design
-EZtify processes your files directly inside your device:
-No background transfers
-No file storage
-No tracking of file contents
-Your files remain under your control at all times.
+-----
 
-⚠️ File size limits apply to ensure stable performance.
+🧰 Everything You Need. All in One Place.
+🖼️ Images → PDF
+📄 PDF → Images
+📉 Compress PDF
+➕ Merge PDF
+✂️ Split PDF
+🗜️ Zip It! (Instant ZIP creation)
 
-⚙️ Technology
-EZtify is built on a modern, production-grade stack:
-React + TypeScript
-Framer Motion for UI interactions
-Browser-based PDF processing
-JSZip for ZIP creation
-Vite for fast builds
-Cloudflare Pages for global delivery
-Progressive Web App (PWA) support
+All tools include:
+- Drag & drop
+- Add more files anytime
+- Real-time feedback
+- Zero hassle
 
-📲 Install Like an App
-EZtify can be installed directly on:
-Desktop
-Mobile phones
-Tablets
+-----
 
-Enjoy a native-app-like experience with faster reloads and smooth interactions.
+⚙️ Built With Modern Tech
+- React + TypeScript
+- Framer Motion
+- Browser-based PDF processing
+- JSZip
+- Vite
+- Cloudflare Pages
+
+The result?
+A platform that feels instant, light, and incredibly smooth.
+
+-----
+
 📈 Built for Growth
-Separate SEO-friendly tool pages
-Optimized Core Web Vitals
-Lazy-loaded heavy libraries
-Lightweight animation system
-Scalable architecture for future tools
-EZtify is engineered to grow into a complete productivity platform.
+- SEO-optimized architecture
+- Fast Core Web Vitals
+- Lazy-loaded libraries
+- Modular, scalable system
+- New features roll out continuously - this is just the beginning.
 
-🧪 Product Status
-EZtify is under active development.
-New tools, performance upgrades, and user-experience improvements are shipped continuously.
+-----
 
-💬 Contact & Business Inquiries
-For partnerships, feature requests, or business discussions:
+🤝 Contact & Partnerships
+      For collaborations and business inquiries:
 📧 eztifyapps@gmail.com
 
-📜 License
-
-This project is not open-source.
-Commercial use, redistribution, or resale of the platform or its source code requires explicit permission from the owner.
-
-EZtify — Simple. Fast. Powerful.
+      EZtify — Simple. Fast. Powerful.
+      Your new everyday file toolbox.

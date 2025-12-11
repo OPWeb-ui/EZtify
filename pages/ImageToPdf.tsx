@@ -1,12 +1,10 @@
-
-
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLayoutContext } from '../components/Layout';
 import { PageReadyTracker } from '../components/PageReadyTracker';
 import { UploadedImage, PdfConfig, PdfPage } from '../types';
 import { generatePDF } from '../services/pdfGenerator';
 import { nanoid } from 'nanoid';
-import { Plus, X, FileDown, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Plus, X, FileDown, Loader2, Image as ImageIcon, Settings } from 'lucide-react';
 import { useDropzone, FileRejection } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import { staggerContainer, fadeInUp } from '../utils/animations';
@@ -21,7 +19,7 @@ import { AdSlot } from '../components/AdSlot';
 import { DragDropOverlay } from '../components/DragDropOverlay';
 
 export const ImageToPdfPage: React.FC = () => {
-  const { addToast } = useLayoutContext();
+  const { addToast, isMobile } = useLayoutContext();
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [activeImageId, setActiveImageId] = useState<string | null>(null);
   const [selectedImageIds, setSelectedImageIds] = useState<Set<string>>(new Set());
@@ -30,6 +28,10 @@ export const ImageToPdfPage: React.FC = () => {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('');
 
+  // State for mobile options dropdown
+  const [isOptionsOpen, setIsOptionsOpen] = useState(false);
+  const optionsRef = useRef<HTMLDivElement>(null);
+
   const [config, setConfig] = useState<PdfConfig>({
     pageSize: 'a4',
     orientation: 'portrait',
@@ -37,6 +39,20 @@ export const ImageToPdfPage: React.FC = () => {
     margin: 10,
     quality: 1.0
   });
+
+  // Effect to close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (optionsRef.current && !optionsRef.current.contains(event.target as Node)) {
+        setIsOptionsOpen(false);
+      }
+    };
+    if (isOptionsOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOptionsOpen]);
+
 
   const MAX_FILE_SIZE_MB = 25;
   const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
@@ -151,6 +167,12 @@ export const ImageToPdfPage: React.FC = () => {
     setSelectedImageIds(new Set());
   };
 
+  const handleRotate = (id: string) => {
+    setImages(prev => prev.map(img => 
+      img.id === id ? { ...img, rotation: ((img.rotation || 0) + 90) % 360 } : img
+    ));
+  };
+
   const handleGenerate = async () => {
     if (images.length === 0) return;
     setIsGenerating(true);
@@ -232,67 +254,101 @@ export const ImageToPdfPage: React.FC = () => {
               variant="purple"
             />
 
-            {/* 1. STUDIO MODE BAR (Sticky Top) */}
-            <div className="w-full bg-slate-100/80 dark:bg-charcoal-900/90 backdrop-blur-md border-b border-slate-200 dark:border-charcoal-700 sticky top-0 z-40">
-               <div className="max-w-7xl mx-auto p-2 flex items-center gap-3">
-                  <div className="flex items-center">
-                     <span className="font-bold text-charcoal-800 dark:text-white text-sm">Images to PDF</span>
-                  </div>
+            {/* 1. UNIFIED CONTROL TOOLBAR */}
+            <div className="w-full bg-white dark:bg-charcoal-800 border-b border-slate-200 dark:border-charcoal-700 sticky top-0 z-40 p-3 animate-in slide-in-from-top-2">
+                <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+                    {/* LEFT: Settings */}
+                    <div className="flex items-center gap-2">
+                        {/* -- Desktop Settings -- */}
+                        <div className="hidden md:flex items-center gap-2">
+                            <EZDropdown
+                               label="Size"
+                               value={config.pageSize}
+                               options={[ { label: 'Auto', value: 'auto' }, { label: 'A4', value: 'a4' }, { label: 'Letter', value: 'letter' } ]}
+                               onChange={(v) => setConfig({ ...config, pageSize: v })}
+                             />
+                             <EZDropdown
+                               label="Orient"
+                               value={config.orientation}
+                               options={[ { label: 'Portrait', value: 'portrait' }, { label: 'Landscape', value: 'landscape' } ]}
+                               onChange={(v) => setConfig({ ...config, orientation: v })}
+                             />
+                             <EZDropdown
+                               label="Fit"
+                               value={config.fitMode}
+                               options={[ { label: 'Contain', value: 'contain' }, { label: 'Cover', value: 'cover' }, { label: 'Fill', value: 'fill' } ]}
+                               onChange={(v) => setConfig({ ...config, fitMode: v })}
+                             />
+                        </div>
 
-                  <div className="flex items-center gap-2 ml-auto">
-                     <button 
-                       onClick={openAdd} 
-                       className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-600 text-charcoal-700 dark:text-slate-200 font-bold text-xs hover:border-brand-purple/50 hover:text-brand-purple transition-all shadow-sm"
-                     >
-                       <Plus size={16} /> Add Images
-                     </button>
-                     <button onClick={handleReset} className="p-2 text-charcoal-400 hover:bg-rose-100 hover:text-rose-500 rounded-lg transition-colors" title="Close">
-                       <X size={20} />
-                     </button>
-                  </div>
-               </div>
-            </div>
+                        {/* -- Mobile Settings -- */}
+                        <div className="md:hidden relative" ref={optionsRef}>
+                           <button onClick={() => setIsOptionsOpen(!isOptionsOpen)} className="flex items-center gap-1.5 px-3 h-10 rounded-lg bg-slate-100 dark:bg-charcoal-700 text-charcoal-700 dark:text-slate-200 font-bold text-xs">
+                             <Settings size={14} />
+                             <span>Options</span>
+                           </button>
+                           <AnimatePresence>
+                             {isOptionsOpen && (
+                               <motion.div
+                                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                 animate={{ opacity: 1, y: 0, scale: 1 }}
+                                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                 className="absolute top-full left-0 mt-2 z-50 bg-white dark:bg-charcoal-800 p-3 rounded-xl shadow-lg border border-slate-200 dark:border-charcoal-700 space-y-3 w-60"
+                               >
+                                 <EZDropdown label="Size" value={config.pageSize} options={[ { label: 'Auto', value: 'auto' }, { label: 'A4', value: 'a4' }, { label: 'Letter', value: 'letter' } ]} onChange={(v) => setConfig({ ...config, pageSize: v })} fullWidth />
+                                 <EZDropdown label="Orient" value={config.orientation} options={[ { label: 'Portrait', value: 'portrait' }, { label: 'Landscape', value: 'landscape' } ]} onChange={(v) => setConfig({ ...config, orientation: v })} fullWidth />
+                                 <EZDropdown label="Fit" value={config.fitMode} options={[ { label: 'Contain', value: 'contain' }, { label: 'Cover', value: 'cover' }, { label: 'Fill', value: 'fill' } ]} onChange={(v) => setConfig({ ...config, fitMode: v })} fullWidth />
+                               </motion.div>
+                             )}
+                           </AnimatePresence>
+                        </div>
 
-            {/* 2. CONTROL TOOLBAR (Settings) */}
-            <div className="w-full bg-white dark:bg-charcoal-800 border-b border-slate-200 dark:border-charcoal-700 p-3 animate-in slide-in-from-top-2">
-                <div className="max-w-2xl mx-auto grid grid-cols-3 gap-3">
-                    <EZDropdown
-                       label="Size"
-                       value={config.pageSize}
-                       options={[
-                         { label: 'Auto', value: 'auto' },
-                         { label: 'A4', value: 'a4' },
-                         { label: 'Letter', value: 'letter' },
-                       ]}
-                       onChange={(v) => setConfig({ ...config, pageSize: v })}
-                       fullWidth
-                     />
-                     <EZDropdown
-                       label="Orient"
-                       value={config.orientation}
-                       options={[
-                         { label: 'Portrait', value: 'portrait' },
-                         { label: 'Landscape', value: 'landscape' },
-                       ]}
-                       onChange={(v) => setConfig({ ...config, orientation: v })}
-                       fullWidth
-                     />
-                     <EZDropdown
-                       label="Fit"
-                       value={config.fitMode}
-                       options={[
-                         { label: 'Contain', value: 'contain' },
-                         { label: 'Cover', value: 'cover' },
-                         { label: 'Fill', value: 'fill' },
-                       ]}
-                       onChange={(v) => setConfig({ ...config, fitMode: v })}
-                       fullWidth
-                     />
+                         <div className="hidden lg:block text-xs font-medium text-charcoal-400 dark:text-slate-500 pl-4 border-l border-slate-200 dark:border-charcoal-700 ml-2">
+                            {images.length} Images • Drag to reorder
+                         </div>
+                    </div>
+                    {/* RIGHT: Actions */}
+                    <div className="flex items-center gap-2">
+                       <button 
+                         onClick={openAdd} 
+                         className="flex items-center gap-2 px-3 h-10 rounded-lg bg-white dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-600 text-charcoal-700 dark:text-slate-200 font-bold text-xs hover:border-brand-purple/50 hover:text-brand-purple transition-all shadow-sm"
+                       >
+                         <Plus size={16} />
+                         <span className="hidden md:inline">Add Images</span>
+                       </button>
+
+                       <motion.button
+                         whileHover={{ scale: 1.02 }}
+                         whileTap={{ scale: 0.96 }}
+                         onClick={handleGenerate}
+                         disabled={isGenerating || images.length === 0}
+                         className="px-4 md:px-5 h-10 rounded-xl bg-brand-purple text-white font-bold shadow-lg shadow-brand-purple/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm relative overflow-hidden"
+                       >
+                          {isGenerating ? (
+                            <>
+                              <div className="absolute inset-0 bg-black/10" />
+                              <motion.div className="absolute inset-y-0 left-0 bg-white/20" initial={{ width: '0%' }} animate={{ width: `${progress}%` }} transition={{ duration: 0.2 }} />
+                              <Loader2 className="w-4 h-4 animate-spin relative z-10" />
+                              <span className="relative z-10 text-xs">{status || 'Processing...'}</span>
+                            </>
+                          ) : (
+                            <>
+                              <FileDown size={16} />
+                              <span className="md:hidden">Download</span>
+                              <span className="hidden md:inline">Convert &amp; Download</span>
+                            </>
+                          )}
+                       </motion.button>
+                       
+                       <button onClick={handleReset} className="p-2.5 text-charcoal-400 hover:bg-rose-100 hover:text-rose-500 rounded-lg transition-colors" title="Close">
+                         <X size={20} />
+                       </button>
+                    </div>
                 </div>
             </div>
 
-            {/* 3. MAIN CANVAS */}
-            <div className="w-full max-w-7xl p-4 pb-32 flex-1">
+            {/* 2. MAIN CANVAS */}
+            <div className="w-full max-w-7xl p-4 md:p-6 flex-1">
                <SplitPageGrid
                  pages={gridPages}
                  onTogglePage={handleGridToggle}
@@ -309,46 +365,10 @@ export const ImageToPdfPage: React.FC = () => {
                  onRemovePage={handleRemove}
                  onRemoveSelected={handleDeleteSelected}
                  onReorder={handleGridReorder}
+                 onRotate={handleRotate}
                  useVisualIndexing={true}
+                 isMobile={isMobile}
                />
-            </div>
-
-            {/* 4. STICKY BOTTOM CTA */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-xl border-t border-slate-200 dark:border-charcoal-700 p-4 z-50">
-               <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-                  <div className="hidden md:block text-xs font-medium text-charcoal-400 dark:text-slate-500">
-                     {images.length} Images • Drag to reorder
-                  </div>
-                  
-                  <div className="w-full md:w-auto">
-                     <motion.button
-                       whileHover={{ scale: 1.02 }}
-                       whileTap={{ scale: 0.96 }}
-                       onClick={handleGenerate}
-                       disabled={isGenerating || images.length === 0}
-                       className="w-full md:w-auto px-8 py-3.5 rounded-xl bg-brand-purple text-white font-bold shadow-lg shadow-brand-purple/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 min-w-[240px] text-sm relative overflow-hidden"
-                     >
-                        {isGenerating ? (
-                          <>
-                            <div className="absolute inset-0 bg-black/10" />
-                            <motion.div 
-                              className="absolute inset-y-0 left-0 bg-white/20" 
-                              initial={{ width: '0%' }} 
-                              animate={{ width: `${progress}%` }} 
-                              transition={{ duration: 0.2 }} 
-                            />
-                            <Loader2 className="w-4 h-4 animate-spin relative z-10" />
-                            <span className="relative z-10">{status || 'Processing...'}</span>
-                          </>
-                        ) : (
-                          <>
-                            <FileDown size={18} />
-                            Convert to PDF & Download
-                          </>
-                        )}
-                     </motion.button>
-                  </div>
-               </div>
             </div>
           </motion.div>
         )}

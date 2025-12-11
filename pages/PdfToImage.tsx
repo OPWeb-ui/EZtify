@@ -1,6 +1,4 @@
-
-
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useLayoutContext } from '../components/Layout';
 import { UploadArea } from '../components/UploadArea';
 import { HowItWorks } from '../components/HowItWorks';
@@ -12,7 +10,7 @@ import { PageReadyTracker } from '../components/PageReadyTracker';
 import { UploadedImage, PdfConfig, ExportConfig, PdfPage } from '../types';
 import { extractImagesFromPdf } from '../services/pdfExtractor';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Loader2, Download, Image as ImageIcon } from 'lucide-react';
+import { X, Plus, Loader2, Download, Image as ImageIcon, Settings } from 'lucide-react';
 import { useDropzone, FileRejection } from 'react-dropzone';
 import { staggerContainer, fadeInUp, buttonTap } from '../utils/animations';
 import { EZDropdown } from '../components/EZDropdown';
@@ -20,7 +18,7 @@ import { SplitPageGrid } from '../components/SplitPageGrid';
 import { DragDropOverlay } from '../components/DragDropOverlay';
 
 export const PdfToImagePage: React.FC = () => {
-  const { addToast } = useLayoutContext();
+  const { addToast, isMobile } = useLayoutContext();
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [selectedImageIds, setSelectedImageIds] = useState<Set<string>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
@@ -29,11 +27,29 @@ export const PdfToImagePage: React.FC = () => {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('');
 
+  // State for mobile options dropdown
+  const [isOptionsOpen, setIsOptionsOpen] = useState(false);
+  const optionsRef = useRef<HTMLDivElement>(null);
+
   const [exportConfig, setExportConfig] = useState<ExportConfig>({
     format: 'png',
     quality: 1.0,
     scale: 1
   });
+  
+  // Effect to close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (optionsRef.current && !optionsRef.current.contains(event.target as Node)) {
+        setIsOptionsOpen(false);
+      }
+    };
+    if (isOptionsOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOptionsOpen]);
+
 
   const processPdf = async (file: File) => {
     // We are already inside a processing block, so no need to double toggle
@@ -108,6 +124,12 @@ export const PdfToImagePage: React.FC = () => {
     setSelectedImageIds(new Set());
   };
 
+  const handleRotate = (id: string) => {
+    setImages(prev => prev.map(img => 
+      img.id === id ? { ...img, rotation: ((img.rotation || 0) + 90) % 360 } : img
+    ));
+  };
+
   const handleGenerate = async () => {
     if (images.length === 0) return;
     setIsGenerating(true);
@@ -131,8 +153,11 @@ export const PdfToImagePage: React.FC = () => {
               await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
               
               const isRotatedSideways = imgData.rotation === 90 || imgData.rotation === 270;
-              canvas.width = isRotatedSideways ? img.height : img.width;
-              canvas.height = isRotatedSideways ? img.width : img.height;
+              const srcWidth = img.width;
+              const srcHeight = img.height;
+
+              canvas.width = isRotatedSideways ? srcHeight : srcWidth;
+              canvas.height = isRotatedSideways ? srcWidth : srcHeight;
               
               if (exportConfig.format === 'jpeg') {
                   ctx.fillStyle = '#FFFFFF';
@@ -141,7 +166,7 @@ export const PdfToImagePage: React.FC = () => {
               
               ctx.translate(canvas.width / 2, canvas.height / 2);
               ctx.rotate((imgData.rotation * Math.PI) / 180);
-              ctx.drawImage(img, -img.width / 2, -img.height / 2);
+              ctx.drawImage(img, -srcWidth / 2, -srcHeight / 2);
               
               const mimeType = exportConfig.format === 'png' ? 'image/png' : 'image/jpeg';
               const extension = exportConfig.format === 'png' ? 'png' : 'jpg';
@@ -199,6 +224,11 @@ export const PdfToImagePage: React.FC = () => {
     });
   };
 
+  const formatOptions = [
+    { label: 'PNG Image', value: 'png' },
+    { label: 'JPG Image', value: 'jpeg' },
+  ];
+
   return (
     <>
       <PageReadyTracker />
@@ -232,45 +262,84 @@ export const PdfToImagePage: React.FC = () => {
               variant="mint"
             />
 
-            {/* 1. STUDIO MODE BAR */}
-            <div className="w-full bg-slate-100/80 dark:bg-charcoal-900/90 backdrop-blur-md border-b border-slate-200 dark:border-charcoal-700 sticky top-0 z-40">
-               <div className="max-w-7xl mx-auto p-2 flex items-center gap-3">
-                  <div className="flex items-center">
-                     <span className="font-bold text-charcoal-800 dark:text-white text-sm">PDF to Images</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 ml-auto">
-                     <button 
-                       onClick={openAdd} 
-                       className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-600 text-charcoal-700 dark:text-slate-200 font-bold text-xs hover:border-brand-mint/50 hover:text-brand-mint transition-all shadow-sm"
-                     >
-                       <Plus size={16} /> Add PDF
-                     </button>
-                     <button onClick={handleReset} className="p-2 text-charcoal-400 hover:bg-rose-100 hover:text-rose-500 rounded-lg transition-colors" title="Close">
-                       <X size={20} />
-                     </button>
-                  </div>
-               </div>
-            </div>
-
-            {/* 2. CONTROL TOOLBAR */}
-            <div className="w-full bg-white dark:bg-charcoal-800 border-b border-slate-200 dark:border-charcoal-700 p-3 animate-in slide-in-from-top-2">
-                <div className="max-w-md mx-auto">
-                    <EZDropdown
-                       label="Format"
-                       value={exportConfig.format}
-                       options={[
-                         { label: 'PNG Image', value: 'png' },
-                         { label: 'JPG Image', value: 'jpeg' },
-                       ]}
-                       onChange={(v) => setExportConfig({ ...exportConfig, format: v })}
-                       fullWidth
-                    />
+            {/* 1. UNIFIED CONTROL TOOLBAR */}
+            <div className="w-full bg-white dark:bg-charcoal-800 border-b border-slate-200 dark:border-charcoal-700 sticky top-0 z-40 p-3 animate-in slide-in-from-top-2">
+                <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+                    {/* LEFT: Settings & Info */}
+                    <div className="flex items-center gap-2">
+                        {/* -- Desktop Settings -- */}
+                        <div className="hidden md:flex items-center gap-2">
+                           <EZDropdown label="Format" value={exportConfig.format} options={formatOptions} onChange={(v) => setExportConfig({ ...exportConfig, format: v })} />
+                        </div>
+                        {/* -- Mobile Settings -- */}
+                        <div className="md:hidden relative" ref={optionsRef}>
+                           <button onClick={() => setIsOptionsOpen(!isOptionsOpen)} className="flex items-center gap-1.5 px-3 h-10 rounded-lg bg-slate-100 dark:bg-charcoal-700 text-charcoal-700 dark:text-slate-200 font-bold text-xs">
+                             <Settings size={14} />
+                             <span>Options</span>
+                           </button>
+                           <AnimatePresence>
+                             {isOptionsOpen && (
+                               <motion.div
+                                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                 animate={{ opacity: 1, y: 0, scale: 1 }}
+                                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                 className="absolute top-full left-0 mt-2 z-50 bg-white dark:bg-charcoal-800 p-3 rounded-xl shadow-lg border border-slate-200 dark:border-charcoal-700 space-y-3 w-60"
+                               >
+                                 <EZDropdown label="Format" value={exportConfig.format} options={formatOptions} onChange={(v) => setExportConfig({ ...exportConfig, format: v })} fullWidth />
+                               </motion.div>
+                             )}
+                           </AnimatePresence>
+                        </div>
+                        <div className="hidden lg:block text-xs font-medium text-charcoal-400 dark:text-slate-500 pl-4 border-l border-slate-200 dark:border-charcoal-700 ml-2">
+                           {selectedImageIds.size > 0 ? `${selectedImageIds.size} Selected` : `${images.length} Images Extracted`}
+                        </div>
+                    </div>
+                    {/* RIGHT: Actions */}
+                    <div className="flex items-center gap-2">
+                       <button 
+                         onClick={openAdd} 
+                         className="flex items-center gap-2 px-3 h-10 rounded-lg bg-white dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-600 text-charcoal-700 dark:text-slate-200 font-bold text-xs hover:border-brand-purple/50 hover:text-brand-purple transition-all shadow-sm"
+                       >
+                         <Plus size={16} /> <span className="hidden md:inline">Add PDF</span>
+                       </button>
+                       <motion.button
+                         whileHover={{ scale: 1.02 }}
+                         whileTap={{ scale: 0.96 }}
+                         onClick={handleGenerate}
+                         disabled={isGenerating || images.length === 0}
+                         className="px-4 md:px-5 h-10 rounded-xl bg-brand-purple text-white font-bold shadow-lg shadow-brand-purple/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm relative overflow-hidden"
+                       >
+                          {isGenerating ? (
+                            <>
+                              <div className="absolute inset-0 bg-black/10" />
+                              <motion.div 
+                                className="absolute inset-y-0 left-0 bg-white/20" 
+                                initial={{ width: '0%' }} 
+                                animate={{ width: `${progress}%` }} 
+                                transition={{ duration: 0.2 }} 
+                              />
+                              <Loader2 className="w-4 h-4 animate-spin relative z-10" />
+                              <span className="relative z-10 text-xs">{status || 'Processing...'}</span>
+                            </>
+                          ) : (
+                            <>
+                              <Download size={16} />
+                              <span className="md:hidden">Download</span>
+                              <span className="hidden md:inline">
+                                {selectedImageIds.size > 0 ? 'Download Selected' : 'Download'}
+                              </span>
+                            </>
+                          )}
+                       </motion.button>
+                       <button onClick={handleReset} className="p-2.5 text-charcoal-400 hover:bg-rose-100 hover:text-rose-500 rounded-lg transition-colors" title="Close">
+                         <X size={20} />
+                       </button>
+                    </div>
                 </div>
             </div>
 
-            {/* 3. MAIN CANVAS */}
-            <div className="w-full max-w-7xl p-4 pb-32 flex-1">
+            {/* 2. MAIN CANVAS */}
+            <div className="w-full max-w-7xl p-4 md:p-6 flex-1">
                <SplitPageGrid
                  pages={gridPages}
                  onTogglePage={handleGridToggle}
@@ -287,46 +356,10 @@ export const PdfToImagePage: React.FC = () => {
                  onRemovePage={handleRemove}
                  onRemoveSelected={handleDeleteSelected}
                  onReorder={() => {}} // Reorder irrelevant usually but supported visually
+                 onRotate={handleRotate}
                  useVisualIndexing={true}
+                 isMobile={isMobile}
                />
-            </div>
-
-            {/* 4. STICKY BOTTOM CTA */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-xl border-t border-slate-200 dark:border-charcoal-700 p-4 z-50">
-               <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-                  <div className="hidden md:block text-xs font-medium text-charcoal-400 dark:text-slate-500">
-                     {selectedImageIds.size > 0 ? `${selectedImageIds.size} Selected` : `${images.length} Images Extracted`}
-                  </div>
-                  
-                  <div className="w-full md:w-auto">
-                     <motion.button
-                       whileHover={{ scale: 1.02 }}
-                       whileTap={{ scale: 0.96 }}
-                       onClick={handleGenerate}
-                       disabled={isGenerating || images.length === 0}
-                       className="w-full md:w-auto px-8 py-3.5 rounded-xl bg-brand-mint text-white font-bold shadow-lg shadow-brand-mint/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 min-w-[240px] text-sm relative overflow-hidden"
-                     >
-                        {isGenerating ? (
-                          <>
-                            <div className="absolute inset-0 bg-black/10" />
-                            <motion.div 
-                              className="absolute inset-y-0 left-0 bg-white/20" 
-                              initial={{ width: '0%' }} 
-                              animate={{ width: `${progress}%` }} 
-                              transition={{ duration: 0.2 }} 
-                            />
-                            <Loader2 className="w-4 h-4 animate-spin relative z-10" />
-                            <span className="relative z-10">{status || 'Processing...'}</span>
-                          </>
-                        ) : (
-                          <>
-                            <Download size={18} />
-                            {selectedImageIds.size > 0 ? 'Download Selected Images' : 'Convert to Images & Download'}
-                          </>
-                        )}
-                     </motion.button>
-                  </div>
-               </div>
             </div>
           </motion.div>
         )}

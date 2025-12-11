@@ -17,6 +17,7 @@ interface LayoutContextType {
     durationOrAction?: number | ToastAction
   ) => string;
   removeToast: (id: string) => void;
+  isMobile: boolean;
 }
 
 const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
@@ -25,6 +26,10 @@ export const Layout: React.FC = () => {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const location = useLocation();
 
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  );
+  
   // PWA Install Prompt State
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallPromptVisible, setIsInstallPromptVisible] = useState(false);
@@ -65,9 +70,14 @@ export const Layout: React.FC = () => {
       // Delay slightly to not interfere with page load animation
       setTimeout(() => setShowCookieBanner(true), 2000);
     }
+    
+    // Mobile Detection
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('resize', handleResize);
     };
   }, []);
 
@@ -120,9 +130,7 @@ export const Layout: React.FC = () => {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
-  const isMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
-
-  const contextValue = { addToast, removeToast };
+  const contextValue = { addToast, removeToast, isMobile };
 
   return (
     <LayoutContext.Provider value={contextValue}>

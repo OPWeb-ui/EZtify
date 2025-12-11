@@ -1,5 +1,3 @@
-
-
 import React, { useState } from 'react';
 import {
   DndContext,
@@ -24,7 +22,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PdfPage, PageNumberConfig } from '../types';
-import { Check, Trash2, ArrowLeftRight, SquareCheck, SquareX } from 'lucide-react';
+import { Check, Trash2, ArrowLeftRight, SquareCheck, SquareX, RotateCw } from 'lucide-react';
 import { buttonTap } from '../utils/animations';
 
 interface SplitPageGridProps {
@@ -41,6 +39,7 @@ interface SplitPageGridProps {
   isReorderDisabled?: boolean;
   onRotate?: (id: string) => void;
   showBadges?: boolean;
+  isMobile?: boolean;
 }
 
 interface PageCardProps {
@@ -49,10 +48,12 @@ interface PageCardProps {
   useVisualIndexing?: boolean;
   onToggle?: (id: string) => void;
   onRemove?: (id: string) => void;
+  onRotate?: (id: string) => void;
   isOverlay?: boolean;
   isDragging?: boolean;
   numberingConfig?: PageNumberConfig;
   showBadges?: boolean;
+  isMobile?: boolean;
 }
 
 const dropAnimation: DropAnimation = {
@@ -71,10 +72,12 @@ const PageCard: React.FC<PageCardProps> = ({
   useVisualIndexing, 
   onToggle, 
   onRemove, 
+  onRotate,
   isOverlay, 
   isDragging,
   numberingConfig,
-  showBadges = true
+  showBadges = true,
+  isMobile
 }) => {
   // Numbering Preview Logic
   const getNumberPreviewStyle = () => {
@@ -121,17 +124,57 @@ const PageCard: React.FC<PageCardProps> = ({
       `}
       onClick={onToggle ? (e) => onToggle(page.id) : undefined}
     >
-      {/* Controls Overlay (Only visible in normal mode, not numbering) */}
+      {/* Controls Overlay */}
       {!isOverlay && !numberingConfig && !isDragging && (
-        <div className="absolute top-2 right-2 z-30 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-           <button 
-             onClick={(e) => { e.stopPropagation(); onRemove?.(page.id); }}
-             className="p-1.5 rounded-full bg-white/90 shadow-sm text-rose-500 hover:text-rose-600 hover:bg-white"
-             title="Delete Page"
-           >
-             <Trash2 size={14} />
-           </button>
-        </div>
+        <>
+            {/* Desktop: Grouped */}
+            {!isMobile && (
+                <div className="absolute top-2 right-2 z-30 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {onRotate && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onRotate(page.id); }}
+                            className="p-1.5 rounded-full bg-white/90 shadow-sm text-blue-500 hover:text-blue-600 hover:bg-white"
+                            title="Rotate Page"
+                        >
+                            <RotateCw size={14} />
+                        </button>
+                    )}
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onRemove?.(page.id); }}
+                        className="p-1.5 rounded-full bg-white/90 shadow-sm text-rose-500 hover:text-rose-600 hover:bg-white"
+                        title="Delete Page"
+                    >
+                        <Trash2 size={14} />
+                    </button>
+                </div>
+            )}
+
+            {/* Mobile: Split */}
+            {isMobile && (
+                <>
+                    {onRotate && (
+                        <div className="absolute top-2 left-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onRotate(page.id); }}
+                                className="p-1.5 rounded-full bg-white/90 shadow-sm text-blue-500 hover:text-blue-600 hover:bg-white"
+                                title="Rotate Page"
+                            >
+                                <RotateCw size={14} />
+                            </button>
+                        </div>
+                    )}
+                    <div className="absolute top-2 right-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onRemove?.(page.id); }}
+                            className="p-1.5 rounded-full bg-white/90 shadow-sm text-rose-500 hover:text-rose-600 hover:bg-white"
+                            title="Delete Page"
+                        >
+                            <Trash2 size={14} />
+                        </button>
+                    </div>
+                </>
+            )}
+        </>
       )}
 
       {/* Image Container */}
@@ -209,7 +252,7 @@ const SortablePage: React.FC<SortablePageProps> = (props) => {
 };
 
 export const SplitPageGrid: React.FC<SplitPageGridProps> = (props) => {
-  const { pages, onReorder, isReorderDisabled, showBadges = true } = props;
+  const { pages, onReorder, isReorderDisabled, onRotate, showBadges = true, isMobile } = props;
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
@@ -272,16 +315,18 @@ export const SplitPageGrid: React.FC<SplitPageGridProps> = (props) => {
                   index={index}
                   onToggle={!props.numberingConfig ? props.onTogglePage : undefined}
                   onRemove={props.onRemovePage}
+                  onRotate={onRotate}
                   useVisualIndexing={props.useVisualIndexing}
                   numberingConfig={props.numberingConfig}
                   showBadges={showBadges}
+                  isMobile={isMobile}
                 />
               ))}
             </AnimatePresence>
           </div>
         </SortableContext>
         <DragOverlay dropAnimation={dropAnimation}>
-          {activePage && <PageCard page={activePage} index={pages.indexOf(activePage)} useVisualIndexing={true} isOverlay numberingConfig={props.numberingConfig} showBadges={showBadges} />}
+          {activePage && <PageCard page={activePage} index={pages.indexOf(activePage)} useVisualIndexing={true} isOverlay numberingConfig={props.numberingConfig} showBadges={showBadges} onRotate={onRotate} isMobile={isMobile} />}
         </DragOverlay>
       </DndContext>
     </div>

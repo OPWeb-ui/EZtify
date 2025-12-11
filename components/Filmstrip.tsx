@@ -133,14 +133,14 @@ const SortableItem: React.FC<SortableItemProps> = React.memo(({
       
       {/* Selection Checkmark */}
       {isSelected && (
-        <div className="absolute top-1.5 left-1.5 z-20 w-4 h-4 bg-brand-purple text-white rounded-full flex items-center justify-center shadow-sm">
+        <div className={`absolute z-20 w-4 h-4 bg-brand-purple text-white rounded-full flex items-center justify-center shadow-sm ${isMobile ? 'bottom-1.5 left-1.5' : 'top-1.5 left-1.5'}`}>
           <Check size={10} strokeWidth={3} />
         </div>
       )}
 
       {/* Page Index Badge (Visible if not selected or small size) */}
       {!isSelected && (
-        <div className="absolute top-1.5 left-1.5 z-10 bg-black/40 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md backdrop-blur-sm shadow-sm pointer-events-none">
+        <div className={`absolute z-10 bg-black/40 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md backdrop-blur-sm shadow-sm pointer-events-none ${isMobile ? 'bottom-1.5 left-1.5' : 'top-1.5 left-1.5'}`}>
           {index + 1}
         </div>
       )}
@@ -150,10 +150,20 @@ const SortableItem: React.FC<SortableItemProps> = React.memo(({
         <motion.button onClick={onRemove} whileTap={buttonTap} className={`${actionBtnClass} hover:bg-rose-100 dark:hover:bg-rose-900/50 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200`} title="Remove">
           <X size={iconSize} />
         </motion.button>
-        <motion.button onClick={onRotate} whileTap={buttonTap} className={`${actionBtnClass} hover:bg-brand-purple/10 hover:text-brand-purple hover:border-brand-purple/30`} title="Rotate">
-          <RotateCw size={iconSize} />
-        </motion.button>
+        {!isMobile && (
+            <motion.button onClick={onRotate} whileTap={buttonTap} className={`${actionBtnClass} hover:bg-brand-purple/10 hover:text-brand-purple hover:border-brand-purple/30`} title="Rotate">
+                <RotateCw size={iconSize} />
+            </motion.button>
+        )}
       </div>
+
+      {isMobile && (
+          <div className={`absolute top-1.5 left-1.5 z-20 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+            <motion.button onClick={onRotate} whileTap={buttonTap} className={`${actionBtnClass} hover:bg-brand-purple/10 hover:text-brand-purple hover:border-brand-purple/30`} title="Rotate">
+                <RotateCw size={iconSize} />
+            </motion.button>
+          </div>
+      )}
       
       {/* Drag Handle */}
       <div 

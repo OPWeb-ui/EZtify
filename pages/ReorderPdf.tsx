@@ -1,5 +1,4 @@
 
-
 import React, { useState, useCallback } from 'react';
 import { useLayoutContext } from '../components/Layout';
 import { UploadArea } from '../components/UploadArea';
@@ -21,11 +20,12 @@ import { SEO } from '../components/SEO';
 import { DragDropOverlay } from '../components/DragDropOverlay';
 
 export const ReorderPdfPage: React.FC = () => {
-  const { addToast } = useLayoutContext();
+  const { addToast, isMobile } = useLayoutContext();
   const [file, setFile] = useState<File | null>(null);
   const [pages, setPages] = useState<PdfPage[]>([]);
-  // History stack for Undo functionality (stores arrays of page IDs)
-  const [history, setHistory] = useState<string[][]>([]);
+  
+  // Re-implementing history with full objects for robust undo/redo including deletion
+  const [fullHistory, setFullHistory] = useState<PdfPage[][]>([]);
   
   const [result, setResult] = useState<{ blob: Blob, name: string } | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -72,7 +72,7 @@ export const ReorderPdfPage: React.FC = () => {
       } else {
         setFile(f);
         setPages(loadedPages);
-        setHistory([]); // Reset history
+        setFullHistory([]); // Reset history
         addToast("Success", `Successfully loaded ${loadedPages.length} pages.`, "success");
       }
     } catch (e) {
@@ -91,37 +91,6 @@ export const ReorderPdfPage: React.FC = () => {
     multiple: false,
   });
 
-  const saveToHistory = (currentPages: PdfPage[]) => {
-    // Save current order of IDs
-    const currentOrder = currentPages.map(p => p.id);
-    setHistory(prev => [...prev, currentOrder].slice(-20)); // Keep last 20 states
-  };
-
-  const handleReorder = (newPages: PdfPage[]) => {
-    // Only save history if order actually changed
-    if (JSON.stringify(newPages.map(p => p.id)) !== JSON.stringify(pages.map(p => p.id))) {
-       saveToHistory(pages);
-       setPages(newPages);
-    }
-  };
-
-  const handleUndo = () => {
-    if (history.length === 0) return;
-    const previousOrderIds = history[history.length - 1];
-    const newHistory = history.slice(0, -1);
-    
-    // Reconstruct pages array based on previous ID order
-    // Note: We need to handle potential deleted pages. If a page was deleted, it's gone from 'pages'.
-    // However, if we support undoing deletion, we need to store full page objects in history or keep a master list.
-    // For simplicity given the requirement "Undo last move", let's try to restore order.
-    // If we want full undo including undelete, we should store the full 'pages' array in history.
-    
-    // Let's modify history to store full objects for robust undo/redo including deletion
-  };
-  
-  // Re-implementing history with full objects for robust undo/redo including deletion
-  const [fullHistory, setFullHistory] = useState<PdfPage[][]>([]);
-  
   const pushHistory = (currentPages: PdfPage[]) => {
     setFullHistory(prev => [...prev, currentPages].slice(-10));
   };
@@ -141,17 +110,6 @@ export const ReorderPdfPage: React.FC = () => {
   const handleRemovePage = (id: string) => {
     pushHistory(pages);
     setPages(prev => prev.filter(p => p.id !== id));
-  };
-
-  const handleResetOrder = () => {
-    if (fullHistory.length > 0) {
-        // Reset to very first state if we want "Reset to Original"
-        // Or just reload the file. 
-        // Let's implement "Reset to Original" by finding the original sorted by index
-        pushHistory(pages);
-        const sorted = [...pages].sort((a, b) => a.pageIndex - b.pageIndex);
-        setPages(sorted);
-    }
   };
 
   // Mock selection handlers required by SplitPageGrid, but we won't use selection for anything other than visual feedback or deletion
@@ -187,7 +145,7 @@ export const ReorderPdfPage: React.FC = () => {
           const originalName = file.name;
           const nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
           const safeName = nameWithoutExt.replace(/[^a-zA-Z0-9\-_]/g, '_');
-          const fileName = `${safeName}_EZtify.pdf`;
+          const fileName = `${safeName}_reordered_EZtify.pdf`;
 
           setResult({ blob, name: fileName });
         } catch (innerError) {
@@ -269,7 +227,7 @@ export const ReorderPdfPage: React.FC = () => {
         ) : (
           <motion.div
             key="workspace"
-            className="flex-1 flex flex-col items-center p-6 relative bg-white/50 dark:bg-charcoal-900/50 min-h-[calc(100vh-4rem)] outline-none"
+            className="flex-1 flex flex-col items-center relative bg-white/50 dark:bg-charcoal-900/50 min-h-[calc(100vh-4rem)] outline-none"
             {...getRootProps({
               onClick: (e: React.MouseEvent) => e.stopPropagation()
             })}
@@ -282,156 +240,115 @@ export const ReorderPdfPage: React.FC = () => {
               variant="indigo"
             />
 
-            {/* Standardized Close/Reset Button */}
-            <motion.button
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              whileHover={{ scale: 1.1, rotate: 90 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={reset}
-              className="absolute top-8 right-4 z-50 w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-charcoal-800 text-charcoal-500 dark:text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200 dark:hover:border-rose-800 shadow-md border border-slate-200 dark:border-charcoal-600 transition-all duration-200"
-              title="Close and Reset"
-            >
-              <X size={20} />
-            </motion.button>
-
-            <div className="w-full max-w-5xl relative z-10 flex flex-col h-full">
-              
-              <div className="text-center mb-8">
-                 <h3 className="text-lg font-bold text-charcoal-800 dark:text-white truncate">{file.name}</h3>
-                 <div className="flex items-center justify-center gap-2 text-sm text-charcoal-500 dark:text-slate-400">
-                    <Info size={14} />
-                    <span>Drag pages to reorder</span>
-                 </div>
-              </div>
-
-              <AnimatePresence mode="wait">
-                {!result ? (
-                   <motion.div 
-                     key="grid"
-                     initial={{ opacity: 0, y: 10 }}
-                     animate={{ opacity: 1, y: 0 }}
-                     exit={{ opacity: 0, y: -10 }}
-                     transition={{ duration: 0.3 }}
-                   >
-                      {isGenerating && pages.length === 0 ? (
-                        <div className="w-full h-[50vh] flex flex-col items-center justify-center">
-                           <Loader2 className="w-12 h-12 animate-spin text-brand-purple mb-4" />
-                           {status && (
-                             <div className="bg-white/80 dark:bg-charcoal-800/80 backdrop-blur-md px-6 py-3 rounded-xl border border-slate-200 dark:border-charcoal-700 shadow-lg">
-                               <p className="text-sm font-bold text-charcoal-600 dark:text-slate-200 animate-pulse">
-                                 {status} {progress > 0 && `(${Math.round(progress)}%)`}
-                               </p>
-                             </div>
-                           )}
+            <AnimatePresence mode="wait">
+              {!result ? (
+                 <motion.div 
+                   key="grid-view"
+                   className="w-full flex-1 flex flex-col"
+                   initial={{ opacity: 0 }}
+                   animate={{ opacity: 1 }}
+                   exit={{ opacity: 0 }}
+                 >
+                    {/* --- UNIFIED TOP TOOLBAR --- */}
+                    <div className="w-full bg-white dark:bg-charcoal-800 border-b border-slate-200 dark:border-charcoal-700 sticky top-0 z-40 p-2 animate-in slide-in-from-top-2">
+                      <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
+                        {/* LEFT */}
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                           <h3 className="text-sm font-bold text-charcoal-800 dark:text-white truncate">{file.name}</h3>
                         </div>
-                      ) : (
-                        <SplitPageGrid 
-                           pages={pages} 
-                           onTogglePage={handleTogglePage}
-                           onSelectAll={handleSelectAll}
-                           onDeselectAll={handleDeselectAll}
-                           onInvertSelection={handleInvertSelection}
-                           onRemovePage={handleRemovePage}
-                           onRemoveSelected={handleRemoveSelected}
-                           onReorder={handleReorderWithHistory}
-                           useVisualIndexing={true} // IMPORTANT: Show 1,2,3 based on current grid
-                        />
-                      )}
-                      
-                      {pages.length > 0 && (
-                        <>
-                          <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-xl border-t border-slate-200 dark:border-charcoal-700 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-50">
-                             <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-                                
-                                <div className="flex items-center gap-2 text-xs font-medium text-charcoal-400 dark:text-slate-500">
-                                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                                   Your pages never leave your device.
-                                </div>
+                        {/* CENTER */}
+                        <div className="hidden md:flex items-center gap-2 text-xs font-medium text-charcoal-400 dark:text-slate-500">
+                           <Info size={14} />
+                           <span>{pages.length} Pages • Drag to reorder</span>
+                        </div>
+                        {/* RIGHT */}
+                        <div className="flex items-center gap-2">
+                           <div className="hidden md:flex items-center gap-2">
+                              <motion.button whileTap={buttonTap} onClick={popHistory} disabled={fullHistory.length === 0 || isGenerating} className="px-3 py-2 rounded-lg bg-slate-100 dark:bg-charcoal-700 text-charcoal-600 dark:text-slate-200 font-bold disabled:opacity-50 flex items-center gap-2 text-xs">
+                                 <Undo2 size={16} /> Undo
+                              </motion.button>
+                              <motion.button onClick={handleGenerate} disabled={isGenerating || pages.length === 0} className="px-4 py-2.5 rounded-lg bg-brand-purple text-white font-bold shadow-lg shadow-brand-purple/20 disabled:opacity-50 flex items-center justify-center gap-2 text-sm">
+                                 {isGenerating ? <Loader2 className="animate-spin w-4 h-4" /> : <Download size={16} />}
+                                 {isGenerating ? 'Saving...' : 'Download'}
+                              </motion.button>
+                           </div>
+                           <button onClick={reset} className="p-2.5 rounded-lg text-charcoal-400 hover:bg-rose-100 hover:text-rose-500 transition-colors">
+                              <X size={20} />
+                           </button>
+                        </div>
+                      </div>
+                    </div>
+                   
+                    <div className="w-full max-w-7xl mx-auto p-4 md:p-6 flex-1 pb-32">
+                      <SplitPageGrid 
+                         pages={pages} 
+                         onTogglePage={handleTogglePage}
+                         onSelectAll={handleSelectAll}
+                         onDeselectAll={handleDeselectAll}
+                         onInvertSelection={handleInvertSelection}
+                         onRemovePage={handleRemovePage}
+                         onRemoveSelected={handleRemoveSelected}
+                         onReorder={handleReorderWithHistory}
+                         useVisualIndexing={true}
+                      />
+                    </div>
+                    
+                    {/* -- MOBILE BOTTOM BAR -- */}
+                    {isMobile && pages.length > 0 && (
+                      <div className="fixed bottom-0 left-0 right-0 p-3 bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-xl border-t border-slate-200 dark:border-charcoal-700 z-50">
+                        <div className="flex gap-3 w-full">
+                           <motion.button whileTap={buttonTap} onClick={popHistory} disabled={fullHistory.length === 0 || isGenerating} className="px-4 py-3 rounded-xl bg-slate-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-slate-300 font-bold disabled:opacity-50 flex items-center justify-center gap-2 text-sm">
+                              <Undo2 size={18} />
+                           </motion.button>
+                           <motion.button onClick={handleGenerate} disabled={isGenerating || pages.length === 0} className="flex-1 px-4 py-3 rounded-xl bg-brand-purple text-white font-bold shadow-lg shadow-brand-purple/30 disabled:opacity-50 flex items-center justify-center gap-2 text-sm">
+                              {isGenerating ? <Loader2 className="animate-spin" /> : <Download size={18} />}
+                              {isGenerating ? 'Saving...' : 'Download'}
+                           </motion.button>
+                        </div>
+                      </div>
+                    )}
+                 </motion.div>
+              ) : (
+                 <motion.div 
+                   key="result"
+                   initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                   animate={{ opacity: 1, scale: 1, y: 0 }}
+                   transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                   className="flex-1 flex flex-col items-center justify-center max-w-md mx-auto w-full"
+                 >
+                     <div className="w-full bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-8 text-center mb-6">
+                        <div className="text-indigo-500 mb-4 flex justify-center"><CheckCircle size={64} /></div>
+                        <h3 className="text-2xl font-bold text-charcoal-800 dark:text-white">Done!</h3>
+                        <p className="text-charcoal-500 dark:text-slate-400 mt-2">
+                           Your PDF has been reordered successfully.
+                        </p>
+                        <div className="mt-4 text-xs font-mono text-charcoal-400 dark:text-slate-500 bg-white dark:bg-charcoal-800 py-1 px-3 rounded-full inline-block border border-indigo-500/20">
+                          {result.name}
+                        </div>
+                     </div>
 
-                                <div className="flex gap-3 w-full md:w-auto">
-                                   <motion.button
-                                      whileTap={buttonTap}
-                                      onClick={popHistory}
-                                      disabled={fullHistory.length === 0}
-                                      className="px-4 py-3 rounded-xl bg-slate-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-slate-300 font-bold disabled:opacity-50 flex items-center gap-2"
-                                   >
-                                      <Undo2 size={18} />
-                                      <span className="hidden sm:inline">Undo</span>
-                                   </motion.button>
+                     <motion.button
+                       whileHover={{ scale: 1.02 }}
+                       whileTap={{ scale: 0.96 }}
+                       onClick={downloadResult}
+                       className="w-full py-4 rounded-xl bg-brand-purple text-white font-bold text-lg shadow-lg shadow-brand-purple/30 hover:shadow-brand-purple/50 transition-all flex items-center justify-center gap-2 mb-4"
+                     >
+                        <Download size={20} /> Download PDF
+                     </motion.button>
 
-                                   <motion.button
-                                      whileHover={{ scale: 1.02 }}
-                                      whileTap={{ scale: 0.96 }}
-                                      onClick={handleGenerate}
-                                      disabled={isGenerating || pages.length === 0}
-                                      className="flex-1 md:flex-none px-8 py-3 rounded-xl bg-brand-purple text-white font-bold shadow-lg shadow-brand-purple/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-w-[200px]"
-                                   >
-                                      {isGenerating ? (
-                                        <>
-                                          <Loader2 className="w-4 h-4 animate-spin" />
-                                          <span className="text-xs">
-                                            {status || 'Saving...'}{' '}
-                                            {progress > 0 && progress < 100 && `(${progress}%)`}
-                                          </span>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <ArrowLeftRight size={18} />
-                                          Apply Order & Download
-                                        </>
-                                      )}
-                                   </motion.button>
-                                </div>
-                             </div>
-                          </div>
-                          <div className="h-40 md:h-32" /> 
-                        </>
-                      )}
-                   </motion.div>
-                ) : (
-                   <motion.div 
-                     key="result"
-                     initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                     animate={{ opacity: 1, scale: 1, y: 0 }}
-                     transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                     className="flex-1 flex flex-col items-center justify-center max-w-md mx-auto w-full"
-                   >
-                       <div className="w-full bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-8 text-center mb-6">
-                          <div className="text-indigo-500 mb-4 flex justify-center"><CheckCircle size={64} /></div>
-                          <h3 className="text-2xl font-bold text-charcoal-800 dark:text-white">Done!</h3>
-                          <p className="text-charcoal-500 dark:text-slate-400 mt-2">
-                             Your PDF has been reordered successfully.
-                          </p>
-                          <div className="mt-4 text-xs font-mono text-charcoal-400 dark:text-slate-500 bg-white dark:bg-charcoal-800 py-1 px-3 rounded-full inline-block border border-indigo-500/20">
-                            {result.name}
-                          </div>
-                       </div>
-
-                       <motion.button
-                         whileHover={{ scale: 1.02 }}
-                         whileTap={{ scale: 0.96 }}
-                         onClick={downloadResult}
-                         className="w-full py-4 rounded-xl bg-brand-purple text-white font-bold text-lg shadow-lg shadow-brand-purple/30 hover:shadow-brand-purple/50 transition-all flex items-center justify-center gap-2 mb-4"
+                     <motion.button
+                       whileHover={{ scale: 1.02 }}
+                       whileTap={{ scale: 0.98 }}
+                       onClick={reset}
+                       className="w-full py-3 text-charcoal-500 dark:text-slate-400 hover:text-brand-purple font-medium text-sm flex items-center justify-center gap-2"
                        >
-                          <Download size={20} /> Download PDF
-                       </motion.button>
+                        <RefreshCcw size={14} /> Reorder another PDF
+                     </motion.button>
 
-                       <motion.button
-                         whileHover={{ scale: 1.02 }}
-                         whileTap={{ scale: 0.98 }}
-                         onClick={reset}
-                         className="w-full py-3 text-charcoal-500 dark:text-slate-400 hover:text-brand-purple font-medium text-sm flex items-center justify-center gap-2"
-                         >
-                          <RefreshCcw size={14} /> Reorder another PDF
-                       </motion.button>
-
-                       <AdSlot zone="sidebar" className="mt-8" />
-                   </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                     <AdSlot zone="sidebar" className="mt-8" />
+                 </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
