@@ -10,7 +10,7 @@ Try it now → https://eztify.pages.dev/#/
 
 🚀 Work Faster. Work Smarter.
 
-Most file tools are slow & bloated.
+Most file tools are slow, bloated, or filled with ads.
 EZtify is built for pure speed and simplicity:
 ⚡ Lightning-fast in-browser processing
 🎨 Modern, clean, smooth UI
