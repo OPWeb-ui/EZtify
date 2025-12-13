@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   DndContext,
@@ -18,7 +19,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { PdfFile } from '../types';
-import { FileText, GripVertical, X } from 'lucide-react';
+import { FileText, GripVertical, X, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { buttonTap } from '../utils/animations';
 
@@ -70,17 +71,38 @@ const SortableItem: React.FC<{ file: PdfFile; onRemove: () => void }> = ({ file,
          layout: { duration: 0.3 }
       }}
       className={`
-        relative flex items-center gap-4 p-4 bg-white dark:bg-charcoal-800 rounded-xl border border-slate-200 dark:border-charcoal-700
+        relative flex items-center gap-4 p-3 bg-white dark:bg-charcoal-800 rounded-xl border border-slate-200 dark:border-charcoal-700
         ${isDragging ? 'border-brand-purple ring-2 ring-brand-purple/20' : 'hover:border-brand-purple/30'}
-        mb-3 origin-center cursor-grab active:cursor-grabbing select-none
+        mb-3 origin-center cursor-grab active:cursor-grabbing select-none group
       `}
     >
       <div className="text-charcoal-400 dark:text-slate-500">
         <GripVertical size={20} />
       </div>
 
-      <div className="w-10 h-10 bg-rose-50 dark:bg-rose-900/30 rounded-lg flex items-center justify-center flex-shrink-0 text-rose-500 dark:text-rose-400">
-        <FileText size={20} />
+      <div className="w-12 h-16 bg-slate-100 dark:bg-charcoal-700 rounded-lg overflow-hidden flex-shrink-0 relative shadow-inner border border-slate-200 dark:border-charcoal-600 flex items-center justify-center">
+         <AnimatePresence mode="wait">
+            {file.previewUrl ? (
+               <motion.img 
+                  key="thumb"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  src={file.previewUrl} 
+                  alt="preview" 
+                  className="w-full h-full object-cover" 
+               />
+            ) : (
+               <motion.div 
+                  key="icon"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="text-slate-400"
+               >
+                  <Loader2 size={16} className="animate-spin" />
+               </motion.div>
+            )}
+         </AnimatePresence>
       </div>
 
       <div className="flex-1 min-w-0">
@@ -93,7 +115,8 @@ const SortableItem: React.FC<{ file: PdfFile; onRemove: () => void }> = ({ file,
           e.stopPropagation();
           onRemove();
         }}
-        whileTap={buttonTap}
+        whileHover={{ scale: 1.1, rotate: 90 }}
+        whileTap={{ scale: 0.9 }}
         onPointerDown={(e) => e.stopPropagation()}
         className="p-2 text-charcoal-400 dark:text-slate-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-full transition-colors cursor-pointer"
       >

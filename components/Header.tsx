@@ -1,11 +1,13 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Logo } from './Logo';
 import { ShareButton } from './ShareButton';
 import { AppMode } from '../types';
-import { ChevronDown, Check, Moon, Sun, Layers, ImageIcon, FileText, Minimize2, FileOutput, Scissors, FolderArchive, ArrowLeftRight, Eye } from 'lucide-react';
+import { ChevronDown, Check, Moon, Sun } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from './ThemeProvider';
+import { toolCategories, allTools } from '../utils/tool-list';
 
 interface HeaderProps {
   currentMode: AppMode;
@@ -17,19 +19,7 @@ export const Header: React.FC<HeaderProps> = ({ currentMode }) => {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
 
-  const tools = [
-    { id: 'image-to-pdf', label: 'Images to PDF', path: '/images-to-pdf', icon: <Layers size={18} /> },
-    { id: 'pdf-to-image', label: 'PDF to Images', path: '/pdf-to-images', icon: <ImageIcon size={18} /> },
-    { id: 'word-to-pdf', label: 'Word to PDF', path: '/word-to-pdf', icon: <FileText size={18} /> },
-    { id: 'compress-pdf', label: 'Compress PDF', path: '/compress-pdf', icon: <Minimize2 size={18} /> },
-    { id: 'merge-pdf', label: 'Merge PDF', path: '/merge-pdf', icon: <FileOutput size={18} /> },
-    { id: 'split-pdf', label: 'Split PDF', path: '/split-pdf', icon: <Scissors size={18} /> },
-    { id: 'reorder-pdf', label: 'Reorder PDF', path: '/reorder-pdf', icon: <ArrowLeftRight size={18} /> },
-    { id: 'zip-files', label: 'Zip Files', path: '/zip-it', icon: <FolderArchive size={18} /> },
-    { id: 'pdf-viewer', label: 'PDF Viewer', path: '/pdf-viewer', icon: <Eye size={18} /> }
-  ] as const;
-
-  const activeToolLabel = tools.find(t => t.id === currentMode)?.label || 'Tools';
+  const activeToolLabel = allTools.find(t => t.id === currentMode)?.title || 'Tools';
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -99,30 +89,35 @@ export const Header: React.FC<HeaderProps> = ({ currentMode }) => {
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 8 }}
                   transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                  className="absolute top-full left-1/2 mt-3 w-64 bg-white dark:bg-charcoal-850 rounded-2xl shadow-layer-3 dark:shadow-layer-dark-3 ring-1 ring-black/5 dark:ring-white/10 overflow-hidden origin-top"
+                  className="absolute top-full left-1/2 mt-3 w-[48rem] max-w-[95vw] max-h-[80vh] overflow-y-auto custom-scrollbar bg-white dark:bg-charcoal-850 rounded-2xl shadow-layer-3 dark:shadow-layer-dark-3 ring-1 ring-black/5 dark:ring-white/10 origin-top"
                   style={{ x: "-50%" }}
                 >
-                  <div className="max-h-[60vh] overflow-y-auto custom-scrollbar p-2">
-                    {tools.map((tool) => (
-                      <button
-                        key={tool.id}
-                        onClick={() => handleToolSelect(tool.path)}
-                        className={`
-                          w-full flex items-center justify-between px-3 py-3 text-sm font-semibold transition-colors text-left outline-none relative rounded-lg
-                          ${currentMode === tool.id 
-                            ? 'text-brand-purple bg-brand-purple/5' 
-                            : 'text-charcoal-600 dark:text-charcoal-300 hover:bg-slate-50 dark:hover:bg-white/5 active:bg-slate-100'
-                          }
-                        `}
-                      >
-                        <div className="flex items-center gap-3">
-                           <span className={currentMode === tool.id ? 'text-brand-purple' : 'text-charcoal-400 dark:text-slate-500'}>
-                              {tool.icon}
-                           </span>
-                           <span>{tool.label}</span>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-4 p-4">
+                    {toolCategories.filter(c => c.tools.length > 0).map((category) => (
+                      <div key={category.category} className="space-y-2">
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-charcoal-500 dark:text-charcoal-500 px-2">{category.category}</h3>
+                        <div className="space-y-1">
+                          {category.tools.map((tool) => (
+                            <button
+                              key={tool.id}
+                              onClick={() => handleToolSelect(tool.path)}
+                              className={`
+                                w-full flex items-center gap-3 p-2 rounded-lg text-left transition-colors outline-none
+                                ${currentMode === tool.id 
+                                  ? 'bg-brand-purple/10 text-brand-purple' 
+                                  : 'text-charcoal-700 dark:text-charcoal-300 hover:bg-slate-100 dark:hover:bg-white/5'}
+                              `}
+                            >
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${tool.color}`}>
+                                {React.cloneElement(tool.icon, { size: 16 })}
+                              </div>
+                              <span className="text-sm font-medium">
+                                {tool.title}
+                              </span>
+                            </button>
+                          ))}
                         </div>
-                        {currentMode === tool.id && <Check className="w-4 h-4" />}
-                      </button>
+                      </div>
                     ))}
                   </div>
                 </motion.div>
@@ -157,7 +152,7 @@ export const Header: React.FC<HeaderProps> = ({ currentMode }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-charcoal-950/20 backdrop-blur-none z-10"
+            className="fixed inset-0 bg-charcoal-950/20 backdrop-blur-sm z-10"
             onClick={() => setIsDropdownOpen(false)}
           />
         )}

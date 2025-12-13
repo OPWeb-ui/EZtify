@@ -4,13 +4,12 @@ import { useLayoutContext } from '../components/Layout';
 import { UploadArea } from '../components/UploadArea';
 import { PageReadyTracker } from '../components/PageReadyTracker';
 import { PdfPage } from '../types';
-import { loadPdfPages } from '../services/pdfSplitter';
-import { reorderPdf } from '../services/pdfReorder';
+import { loadPdfPages, savePdfWithModifications } from '../services/pdfSplitter';
 import { SplitPageGrid } from '../components/SplitPageGrid';
 import { StickyBar } from '../components/StickyBar';
 import { FileRejection } from 'react-dropzone';
 
-export const ReorderPdfPage: React.FC = () => {
+export const DeletePdfPagesPage: React.FC = () => {
   const { addToast } = useLayoutContext();
   const [file, setFile] = useState<File | null>(null);
   const [pages, setPages] = useState<PdfPage[]>([]);
@@ -29,7 +28,9 @@ export const ReorderPdfPage: React.FC = () => {
       const loadedPages = await loadPdfPages(f, setProgress, setStatus);
       if (loadedPages.length > 0) {
         setFile(f);
-        setPages(loadedPages);
+        // Initially select all pages (so user deselects what to delete, or we just remove from array)
+        // Actually for "Delete pages" tool, usually user clicks to delete
+        setPages(loadedPages); 
       }
     } catch (e) {
       addToast("Error", "Failed to load PDF.", "error");
@@ -40,24 +41,26 @@ export const ReorderPdfPage: React.FC = () => {
     }
   }, [addToast]);
 
+  const handleRemovePage = (id: string) => {
+     setPages(prev => prev.filter(p => p.id !== id));
+  };
+
   const handleGenerate = async () => {
     if (!file) return;
     setIsGenerating(true);
     try {
-       // Map current page objects back to original indices
-       // The reorderPdf service expects an array of original indices in the new order
-       const indices = pages.map(p => p.pageIndex);
-       const blob = await reorderPdf(file, indices, setProgress, setStatus);
+       // savePdfWithModifications expects the pages we want to KEEP
+       const blob = await savePdfWithModifications(file, pages, undefined, setProgress, setStatus);
        
        const url = URL.createObjectURL(blob);
        const link = document.createElement('a');
        link.href = url;
-       link.download = `reordered_${file.name}`;
+       link.download = `modified_${file.name}`;
        document.body.appendChild(link);
        link.click();
        document.body.removeChild(link);
        URL.revokeObjectURL(url);
-       addToast("Success", "PDF reordered!", "success");
+       addToast("Success", "Pages deleted!", "success");
     } catch (e) {
        addToast("Error", "Failed to save PDF.", "error");
     } finally {
@@ -74,23 +77,23 @@ export const ReorderPdfPage: React.FC = () => {
       {!file ? (
         <div className="flex-1 p-6 flex flex-col items-center justify-center overflow-y-auto">
           <div className="max-w-2xl w-full">
-            <UploadArea onDrop={onDrop} mode="reorder-pdf" isProcessing={isProcessingFiles} />
+            <UploadArea onDrop={onDrop} mode="delete-pdf-pages" isProcessing={isProcessingFiles} />
           </div>
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pb-32">
            <div className="max-w-6xl mx-auto">
-              <h3 className="text-xl font-bold mb-4 text-charcoal-900 dark:text-white">Drag & Drop to Reorder</h3>
+              <h3 className="text-xl font-bold mb-4 text-charcoal-900 dark:text-white">Click Trash Icon to Delete Pages</h3>
               <SplitPageGrid 
                  pages={pages}
-                 onTogglePage={() => {}} // No selection in reorder mode
+                 onTogglePage={() => {}} 
                  onSelectAll={() => {}}
                  onDeselectAll={() => {}}
                  onInvertSelection={() => {}}
-                 onRemovePage={(id) => setPages(prev => prev.filter(p => p.id !== id))}
-                 onRemoveSelected={() => {}}
-                 onReorder={setPages}
-                 isReorderDisabled={false}
+                 onRemovePage={handleRemovePage}
+                 onRemoveSelected={() => {}} // Could implement selection for batch delete
+                 onReorder={() => {}}
+                 isReorderDisabled={true}
                  useVisualIndexing
               />
            </div>
@@ -99,7 +102,7 @@ export const ReorderPdfPage: React.FC = () => {
 
       {file && (
          <StickyBar 
-            mode="reorder-pdf"
+            mode="delete-pdf-pages"
             imageCount={pages.length}
             totalSize={0}
             onGenerate={handleGenerate}

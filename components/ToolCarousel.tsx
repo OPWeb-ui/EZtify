@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -121,7 +122,7 @@ export const ToolCarousel: React.FC<ToolCarouselProps> = ({ title, tools }) => {
             }}
           >
             {tools.map((tool) => (
-              <ToolCard key={tool.id} tool={tool} className="w-[280px] md:w-[260px] h-[320px] md:h-[230px]" />
+              <ToolCard key={tool.id} tool={tool} className="w-48 aspect-square flex-shrink-0" />
             ))}
           </motion.div>
         </div>

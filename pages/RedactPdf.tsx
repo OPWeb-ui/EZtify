@@ -5,12 +5,13 @@ import { UploadArea } from '../components/UploadArea';
 import { PageReadyTracker } from '../components/PageReadyTracker';
 import { PdfPage } from '../types';
 import { loadPdfPages } from '../services/pdfSplitter';
-import { reorderPdf } from '../services/pdfReorder';
+import { savePdfWithEditorChanges } from '../services/pdfEditor';
 import { SplitPageGrid } from '../components/SplitPageGrid';
 import { StickyBar } from '../components/StickyBar';
 import { FileRejection } from 'react-dropzone';
+import { PageEditorModal } from '../components/PageEditorModal';
 
-export const ReorderPdfPage: React.FC = () => {
+export const RedactPdfPage: React.FC = () => {
   const { addToast } = useLayoutContext();
   const [file, setFile] = useState<File | null>(null);
   const [pages, setPages] = useState<PdfPage[]>([]);
@@ -18,6 +19,8 @@ export const ReorderPdfPage: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('');
+  
+  const [activePageId, setActivePageId] = useState<string | null>(null);
 
   const onDrop = useCallback(async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
     if (acceptedFiles.length === 0) return;
@@ -40,24 +43,29 @@ export const ReorderPdfPage: React.FC = () => {
     }
   }, [addToast]);
 
+  const openEditor = (id: string) => {
+     setActivePageId(id);
+  };
+
+  const handlePageUpdate = (updatedPage: PdfPage) => {
+     setPages(prev => prev.map(p => p.id === updatedPage.id ? updatedPage : p));
+  };
+
   const handleGenerate = async () => {
     if (!file) return;
     setIsGenerating(true);
     try {
-       // Map current page objects back to original indices
-       // The reorderPdf service expects an array of original indices in the new order
-       const indices = pages.map(p => p.pageIndex);
-       const blob = await reorderPdf(file, indices, setProgress, setStatus);
+       const blob = await savePdfWithEditorChanges(file, pages, undefined, setProgress, setStatus);
        
        const url = URL.createObjectURL(blob);
        const link = document.createElement('a');
        link.href = url;
-       link.download = `reordered_${file.name}`;
+       link.download = `redacted_${file.name}`;
        document.body.appendChild(link);
        link.click();
        document.body.removeChild(link);
        URL.revokeObjectURL(url);
-       addToast("Success", "PDF reordered!", "success");
+       addToast("Success", "PDF redacted!", "success");
     } catch (e) {
        addToast("Error", "Failed to save PDF.", "error");
     } finally {
@@ -66,6 +74,9 @@ export const ReorderPdfPage: React.FC = () => {
        setStatus('');
     }
   };
+  
+  const activePage = activePageId ? pages.find(p => p.id === activePageId) || null : null;
+  const activePageIndex = activePage ? pages.indexOf(activePage) : -1;
 
   return (
     <div className="flex-1 flex flex-col h-[calc(100vh-64px)] overflow-hidden bg-slate-50 dark:bg-charcoal-900">
@@ -74,23 +85,23 @@ export const ReorderPdfPage: React.FC = () => {
       {!file ? (
         <div className="flex-1 p-6 flex flex-col items-center justify-center overflow-y-auto">
           <div className="max-w-2xl w-full">
-            <UploadArea onDrop={onDrop} mode="reorder-pdf" isProcessing={isProcessingFiles} />
+            <UploadArea onDrop={onDrop} mode="redact-pdf" isProcessing={isProcessingFiles} />
           </div>
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pb-32">
            <div className="max-w-6xl mx-auto">
-              <h3 className="text-xl font-bold mb-4 text-charcoal-900 dark:text-white">Drag & Drop to Reorder</h3>
+              <h3 className="text-xl font-bold mb-4 text-charcoal-900 dark:text-white">Click a Page to Redact</h3>
               <SplitPageGrid 
                  pages={pages}
-                 onTogglePage={() => {}} // No selection in reorder mode
+                 onTogglePage={openEditor} // Opens editor
                  onSelectAll={() => {}}
                  onDeselectAll={() => {}}
                  onInvertSelection={() => {}}
-                 onRemovePage={(id) => setPages(prev => prev.filter(p => p.id !== id))}
+                 onRemovePage={() => {}}
                  onRemoveSelected={() => {}}
-                 onReorder={setPages}
-                 isReorderDisabled={false}
+                 onReorder={() => {}}
+                 isReorderDisabled={true}
                  useVisualIndexing
               />
            </div>
@@ -99,7 +110,7 @@ export const ReorderPdfPage: React.FC = () => {
 
       {file && (
          <StickyBar 
-            mode="reorder-pdf"
+            mode="redact-pdf"
             imageCount={pages.length}
             totalSize={0}
             onGenerate={handleGenerate}
@@ -107,6 +118,20 @@ export const ReorderPdfPage: React.FC = () => {
             progress={progress}
             status={status}
          />
+      )}
+
+      {activePage && (
+        <PageEditorModal 
+           isOpen={!!activePageId}
+           page={activePage}
+           onClose={() => setActivePageId(null)}
+           onSave={handlePageUpdate}
+           mode="redact"
+           hasNext={activePageIndex < pages.length - 1}
+           hasPrev={activePageIndex > 0}
+           onNext={() => setActivePageId(pages[activePageIndex + 1].id)}
+           onPrev={() => setActivePageId(pages[activePageIndex - 1].id)}
+        />
       )}
     </div>
   );

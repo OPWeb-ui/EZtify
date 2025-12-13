@@ -1,6 +1,5 @@
 
-
-export type AppMode = 'home' | 'image-to-pdf' | 'pdf-to-image' | 'compress-pdf' | 'merge-pdf' | 'split-pdf' | 'zip-files' | 'word-to-pdf' | 'pdf-viewer' | 'reorder-pdf';
+export type AppMode = 'home' | 'image-to-pdf' | 'pdf-to-image' | 'compress-pdf' | 'merge-pdf' | 'split-pdf' | 'zip-files' | 'word-to-pdf' | 'reorder-pdf' | 'pdf-to-word' | 'pdf-to-pptx' | 'rotate-pdf' | 'delete-pdf-pages' | 'unlock-pdf' | 'add-page-numbers' | 'redact-pdf' | 'grayscale-pdf' | 'code-editor';
 
 export interface UploadedImage {
   id: string;
@@ -69,6 +68,7 @@ export interface CompressionResult {
 export interface PdfFile {
   id: string;
   file: File;
+  previewUrl?: string;
 }
 
 export type SplitMode = 'organize' | 'numbers';
@@ -99,6 +99,7 @@ export interface PdfPage {
 export interface ZipFile {
   id: string;
   file: File;
+  previewUrl?: string;
 }
 
 export type ZipCompressionLevel = 'STORE' | 'DEFLATE';

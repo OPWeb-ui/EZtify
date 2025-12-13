@@ -1,73 +1,58 @@
 
-EZtify ⚡ — The Fastest Way to Work With Your Files
+# EZtify ⚡
 
-Meet EZtify, the all-in-one platform that turns complicated PDF and file tasks into a one-click experience.
-No installs. No waiting. No confusing menus.
-Just instant tools that feel effortless.
+EZtify is a suite of high-performance, client-side file manipulation tools. It enables users to convert, compress, merge, and secure files directly in their browser without ever uploading data to a server.
 
-Try it now → https://eztify.pages.dev/#/
+**Live Demo:** [eztify.pages.dev](https://eztify.pages.dev/)
 
------
+## 🚀 Key Features
 
-🚀 Work Faster. Work Smarter.
+*   **100% Client-Side:** Powered by WebAssembly and modern browser APIs.
+*   **Privacy First:** No servers, no uploads, no data retention.
+*   **Comprehensive Toolset:**
+    *   **PDF Tools:** Merge, Split, Compress, Rotate, Reorder, Delete Pages.
+    *   **Converters:** Image → PDF, PDF → Image, Word → PDF, PDF → Word, PDF → PPTX.
+    *   **Developer Tools:** Code Editor with syntax highlighting.
+    *   **File Utilities:** Create Encrypted ZIPs, Redact content, Unlock PDFs.
+*   **Modern UI:** Built with React, Tailwind CSS, and Framer Motion for a smooth experience.
+*   **PWA Ready:** Installable on desktop and mobile.
 
-Most file tools are slow, bloated, or filled with ads.
-EZtify is built for pure speed and simplicity:
-⚡ Lightning-fast in-browser processing
-🎨 Modern, clean, smooth UI
-📱 Optimized for desktop, mobile & tablet
-🔍 SEO-friendly tool pages
+## 🛠️ Tech Stack
 
-Whether you're a student, office worker, freelancer, or business —
-EZtify makes file work easy.
+*   **Framework:** React 19 + TypeScript
+*   **Build Tool:** Vite
+*   **Styling:** Tailwind CSS + Framer Motion
+*   **Core Libraries:** `pdf-lib`, `pdfjs-dist`, `jszip`, `mammoth`, `@uiw/react-codemirror`.
 
------
+## 📦 Quick Start
 
-🧰 Everything You Need. All in One Place.
-🖼️ Images → PDF
-📄 PDF → Images
-📉 Compress PDF
-➕ Merge PDF
-✂️ Split PDF
-🗜️ Zip It! (Instant ZIP creation)
-👀 File Viewer (Preview DOCX, XLSX, PPTX)
+Ensure you have Node.js installed.
 
-All tools include:
-- Drag & drop
-- Add more files anytime
-- Real-time feedback
-- Zero hassle
+1.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
 
------
+2.  **Run development server:**
+    ```bash
+    npm run dev
+    ```
 
-⚙️ Built With Modern Tech
-- React + TypeScript
-- Framer Motion
-- Browser-based PDF processing
-- JSZip
-- Mammoth (DOCX)
-- SheetJS (XLSX)
-- DOMPurify
-- Vite
-- Cloudflare Pages
+3.  **Build for production:**
+    ```bash
+    npm run build
+    ```
 
-The result?
-A platform that feels instant, light, and incredibly smooth.
+The production build outputs to `dist/`, ready for deployment to Cloudflare Pages, Vercel, or Netlify.
 
------
+## 🔒 Privacy & Security
 
-📈 Built for Growth
-- SEO-optimized architecture
-- Fast Core Web Vitals
-- Lazy-loaded libraries
-- Modular, scalable system
-- New features roll out continuously - this is just the beginning.
+EZtify is designed with a "local-first" architecture. 
+*   All processing happens in the user's browser memory or web workers.
+*   We do not maintain any backend for file processing.
+*   Optional features (like analytics) are strictly opt-in or anonymized.
 
------
+## 📝 Content
 
-🤝 Contact & Partnerships
-      For collaborations and business inquiries:
-📧 eztifyapps@gmail.com
-
-      EZtify — Simple. Fast. Powerful.
-      Your new everyday file toolbox.
+The content for the **About** page is managed via Markdown.
+*   Edit `content/about.md` to update the text.

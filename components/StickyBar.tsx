@@ -64,18 +64,18 @@ export const StickyBar: React.FC<StickyBarProps> = ({
       animate={{ y: 0 }}
       exit={{ y: '100%' }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="fixed bottom-0 left-0 right-0 z-[100] bg-white dark:bg-charcoal-850 border-t border-slate-100 dark:border-white/5 shadow-layer-3 dark:shadow-layer-dark-3 pb-safe"
+      className="fixed bottom-0 left-0 right-0 z-[1000] bg-white dark:bg-charcoal-850 border-t border-slate-100 dark:border-white/5 shadow-layer-3 dark:shadow-layer-dark-3 pb-safe pointer-events-auto"
     >
       <div className="max-w-7xl mx-auto px-4 py-3 md:px-6 md:py-4 flex items-center justify-between gap-3">
         
         {/* Left Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 pointer-events-auto">
           {showFilmstripToggle && onToggleFilmstrip && (
             <motion.button
               onClick={onToggleFilmstrip}
               whileTap={buttonTap}
               className={`
-                p-3 rounded-xl border transition-all
+                p-3 rounded-xl border transition-all relative z-10
                 ${isFilmstripVisible
                   ? 'bg-brand-purple/10 text-brand-purple border-brand-purple/20'
                   : 'bg-slate-50 dark:bg-charcoal-800 text-charcoal-600 dark:text-charcoal-300 border-transparent'
@@ -121,7 +121,7 @@ export const StickyBar: React.FC<StickyBarProps> = ({
               relative overflow-hidden rounded-[18px] px-6 py-3.5 font-bold tracking-wide text-white text-sm md:text-base flex-1 md:flex-none md:min-w-[220px]
               shadow-lg shadow-brand-purple/30
               transition-all disabled:opacity-50 disabled:shadow-none
-              bg-gradient-to-r from-[#9E76FF] to-[#6E79FF] hover:brightness-110
+              bg-gradient-to-r from-[#9E76FF] to-[#6E79FF] hover:brightness-110 relative z-10
             `}
           >
             {/* Progress Bar Background */}

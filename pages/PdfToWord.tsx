@@ -3,12 +3,11 @@ import React, { useState, useCallback } from 'react';
 import { useLayoutContext } from '../components/Layout';
 import { UploadArea } from '../components/UploadArea';
 import { PageReadyTracker } from '../components/PageReadyTracker';
-import { convertWordToPdf } from '../services/wordConverter';
+import { convertPdfToWord } from '../services/pdfToWordConverter';
 import { FileRejection } from 'react-dropzone';
-import { StickyBar } from '../components/StickyBar';
 import { FileText, CheckCircle } from 'lucide-react';
 
-export const WordToPdfPage: React.FC = () => {
+export const PdfToWordPage: React.FC = () => {
   const { addToast } = useLayoutContext();
   const [file, setFile] = useState<File | null>(null);
   const [isProcessingFiles, setIsProcessingFiles] = useState(false);
@@ -33,9 +32,9 @@ export const WordToPdfPage: React.FC = () => {
     if (!file) return;
     setIsGenerating(true);
     try {
-      const blob = await convertWordToPdf(file, setProgress, setStatus);
+      const blob = await convertPdfToWord(file, setProgress, setStatus);
       setResult(blob);
-      addToast("Success", "Converted to PDF!", "success");
+      addToast("Success", "Converted to Word!", "success");
     } catch (e) {
       console.error(e);
       addToast("Error", "Conversion failed.", "error");
@@ -51,7 +50,7 @@ export const WordToPdfPage: React.FC = () => {
     const url = URL.createObjectURL(result);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${file.name.replace(/\.[^/.]+$/, "")}_EZtify.pdf`;
+    link.download = `${file.name.replace(/\.[^/.]+$/, "")}_EZtify.docx`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -65,7 +64,7 @@ export const WordToPdfPage: React.FC = () => {
       {!file ? (
         <div className="flex-1 p-6 flex flex-col items-center justify-center overflow-y-auto">
           <div className="max-w-2xl w-full">
-            <UploadArea onDrop={onDrop} mode="word-to-pdf" isProcessing={isProcessingFiles} />
+            <UploadArea onDrop={onDrop} mode="pdf-to-word" isProcessing={isProcessingFiles} />
           </div>
         </div>
       ) : (
@@ -76,7 +75,7 @@ export const WordToPdfPage: React.FC = () => {
               </div>
               <h3 className="text-xl font-bold text-charcoal-900 dark:text-white mb-2">{file.name}</h3>
               <p className="text-sm text-charcoal-500 dark:text-slate-400 mb-8">
-                 {result ? "Conversion complete! Ready to download." : "Ready to convert this document to PDF."}
+                 {result ? "Conversion complete! Ready to download." : "Convert this PDF to editable Word doc."}
               </p>
               
               {!result ? (
@@ -85,7 +84,7 @@ export const WordToPdfPage: React.FC = () => {
                    disabled={isGenerating}
                    className="w-full py-4 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition-all disabled:opacity-50"
                  >
-                    {isGenerating ? `Converting... ${progress}%` : "Convert to PDF"}
+                    {isGenerating ? `Converting... ${progress}%` : "Convert to Word"}
                  </button>
               ) : (
                  <div className="space-y-3">
@@ -93,7 +92,7 @@ export const WordToPdfPage: React.FC = () => {
                        onClick={downloadResult}
                        className="w-full py-4 bg-brand-purple hover:bg-brand-purpleDark text-white font-bold rounded-xl shadow-lg shadow-brand-purple/20 transition-all"
                     >
-                       Download PDF
+                       Download DOCX
                     </button>
                     <button onClick={() => { setFile(null); setResult(null); }} className="text-sm text-charcoal-500 hover:text-brand-purple">
                        Convert Another

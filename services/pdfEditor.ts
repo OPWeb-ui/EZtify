@@ -123,7 +123,8 @@ export const savePdfWithEditorChanges = async (
            }
            
            if (ann.type === 'redact') {
-             color = rgb(0, 0, 0);
+             // Use provided color (e.g. white for whiteout) or default to black
+             color = hexToRgb(ann.color || '#000000');
              opacity = 1;
            }
            

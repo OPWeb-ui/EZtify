@@ -1,363 +1,112 @@
 
-
 import React, { useState, useCallback } from 'react';
 import { useLayoutContext } from '../components/Layout';
 import { UploadArea } from '../components/UploadArea';
-import { HowItWorks } from '../components/HowItWorks';
-import { FAQ } from '../components/FAQ';
-import { AdSlot } from '../components/AdSlot';
-import { RotatingText } from '../components/RotatingText';
-import { HeroPill } from '../components/HeroPill';
 import { PageReadyTracker } from '../components/PageReadyTracker';
-import { ZipFile, ZipCompressionLevel } from '../types';
+import { ZipFile } from '../types';
 import { generateGenericZip } from '../services/genericZipService';
 import { nanoid } from 'nanoid';
-import { FolderArchive, Download, RefreshCcw, X, File as FileIcon, Archive, CheckCircle, Loader2, Plus } from 'lucide-react';
-import { useDropzone, FileRejection } from 'react-dropzone';
-import { motion, AnimatePresence } from 'framer-motion';
-import { buttonTap, staggerContainer, fadeInUp } from '../utils/animations';
-import { DragDropOverlay } from '../components/DragDropOverlay';
+import { FileRejection } from 'react-dropzone';
+import { StickyBar } from '../components/StickyBar';
+import { Archive, File as FileIcon, X } from 'lucide-react';
 
 export const ZipFilesPage: React.FC = () => {
   const { addToast } = useLayoutContext();
   const [files, setFiles] = useState<ZipFile[]>([]);
-  const [result, setResult] = useState<{ blob: Blob, size: number, count: number, fileName: string } | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [isProcessingFiles, setIsProcessingFiles] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('');
-  const [compressionLevel, setCompressionLevel] = useState<ZipCompressionLevel>('DEFLATE');
 
-  const MAX_FILE_SIZE_MB = 100;
-  const MAX_TOTAL_SIZE_MB = 300;
+  // We could add thumbnail generation for images if we wanted, 
+  // but for generic ZIP it might be overkill.
+  const generateThumbnails = async (newFiles: ZipFile[]) => {
+      // No-op for now
+  };
 
-  const onDrop = useCallback((acceptedFiles: File[], fileRejections: FileRejection[]) => {
-    const currentTotalSize = files.reduce((acc, f) => acc + f.file.size, 0);
-    let newTotalSize = currentTotalSize;
-    const validNewFiles: ZipFile[] = [];
-
-    acceptedFiles.forEach(file => {
-      if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-        addToast("File Too Large", `${file.name} exceeds ${MAX_FILE_SIZE_MB}MB limit.`, "error");
-        return;
-      }
-      
-      if (newTotalSize + file.size > MAX_TOTAL_SIZE_MB * 1024 * 1024) {
-         addToast("Total Limit Exceeded", `Adding ${file.name} would exceed ${MAX_TOTAL_SIZE_MB}MB total.`, "warning");
-         return;
-      }
-
-      newTotalSize += file.size;
-      validNewFiles.push({ id: nanoid(), file });
-    });
+  const onDrop = useCallback(async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
+    const validNewFiles: ZipFile[] = acceptedFiles.map(f => ({
+      id: nanoid(),
+      file: f
+    }));
 
     if (validNewFiles.length > 0) {
       setIsProcessingFiles(true);
       setTimeout(() => {
         setFiles(prev => [...prev, ...validNewFiles]);
-        addToast("Success", `Added ${validNewFiles.length} files to archive.`, "success");
         setIsProcessingFiles(false);
-      }, 600);
+        addToast("Success", `Added ${validNewFiles.length} files.`, "success");
+        generateThumbnails(validNewFiles);
+      }, 500);
     }
-  }, [files, addToast]);
-
-  const { getRootProps, getInputProps, open, isDragActive } = useDropzone({
-    onDrop,
-    noClick: true,
-    noKeyboard: true
-  });
-
-  const handleRemove = (id: string) => {
-    setFiles(prev => prev.filter(f => f.id !== id));
-  };
+  }, [addToast]);
 
   const handleZip = async () => {
     if (files.length === 0) return;
-
     setIsGenerating(true);
-    setProgress(0);
-    setStatus('Starting...');
-
     try {
-      setTimeout(async () => {
-         try {
-           const blob = await generateGenericZip(files, compressionLevel, setProgress, setStatus);
-           
-           // Naming Logic
-           let fileName = 'files_EZtify.zip';
-           if (files.length === 1) {
-              const firstFile = files[0].file;
-              const originalName = firstFile.name;
-              const nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
-              const safeName = nameWithoutExt.replace(/[^a-zA-Z0-9\-_]/g, '_');
-              fileName = `${safeName}_EZtify.zip`;
-           }
-
-           setResult({ blob, size: blob.size, count: files.length, fileName });
-         } catch (e) {
-           console.error(e);
-           addToast("Error", "Zip generation failed.", "error");
-         } finally {
-           setIsGenerating(false);
-           setProgress(0);
-           setStatus('');
-         }
-      }, 50);
-    } catch (e) {
+      const blob = await generateGenericZip(files, 'DEFLATE', setProgress, setStatus);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `archive_EZtify.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      addToast("Success", "Archive created!", "success");
+    } catch (error) {
+      console.error(error);
+      addToast("Error", "Failed to zip files.", "error");
+    } finally {
       setIsGenerating(false);
+      setProgress(0);
       setStatus('');
     }
   };
 
-  const downloadResult = () => {
-    if (!result) return;
-    const url = URL.createObjectURL(result.blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = result.fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  const handleReset = () => {
-    setFiles([]);
-    setResult(null);
-    setProgress(0);
-    setStatus('');
-  };
-
-  const handleClear = () => {
-     setFiles([]);
-  };
-
   return (
-    <>
+    <div className="flex-1 flex flex-col h-[calc(100vh-64px)] overflow-hidden bg-slate-50 dark:bg-charcoal-900">
       <PageReadyTracker />
-      <AnimatePresence mode="wait">
-        {files.length === 0 ? (
-          <motion.div
-            key="hero"
-            className="flex-1 flex flex-col overflow-y-auto custom-scrollbar"
-          >
-            <section className="flex-1 flex flex-col items-center justify-center p-4 pt-8 pb-10 relative">
-               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] blur-[120px] rounded-full pointer-events-none bg-amber-500/10" />
-               <motion.div 
-                 variants={staggerContainer}
-                 initial="hidden"
-                 animate="show"
-                 className="relative z-10 w-full max-w-2xl flex flex-col items-center text-center"
-               >
-                 <motion.div variants={fadeInUp} className="w-full max-w-xl my-4 relative z-20">
-                   <HeroPill>Create secure ZIP archives from your files locally in your browser.</HeroPill>
-                   <UploadArea onDrop={onDrop} mode="zip-files" disabled={isGenerating} isProcessing={isProcessingFiles} />
-                 </motion.div>
-                 
-                 <motion.div variants={fadeInUp}>
-                   <RotatingText />
-                 </motion.div>
-               </motion.div>
-            </section>
+      
+      {files.length === 0 ? (
+        <div className="flex-1 p-6 flex flex-col items-center justify-center overflow-y-auto">
+          <div className="max-w-2xl w-full">
+            <UploadArea onDrop={onDrop} mode="zip-files" isProcessing={isProcessingFiles} />
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pb-32">
+          <div className="max-w-3xl mx-auto grid gap-3">
+             {files.map(f => (
+               <div key={f.id} className="flex items-center gap-4 p-3 bg-white dark:bg-charcoal-800 rounded-xl border border-slate-200 dark:border-charcoal-700 shadow-sm">
+                 <div className="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-500 flex items-center justify-center">
+                    <FileIcon size={20} />
+                 </div>
+                 <div className="flex-1 min-w-0">
+                    <div className="font-bold text-charcoal-800 dark:text-white truncate">{f.file.name}</div>
+                    <div className="text-xs text-charcoal-500 dark:text-slate-400">{(f.file.size / 1024).toFixed(1)} KB</div>
+                 </div>
+                 <button onClick={() => setFiles(prev => prev.filter(x => x.id !== f.id))} className="p-2 text-slate-400 hover:text-rose-500">
+                    <X size={18} />
+                 </button>
+               </div>
+             ))}
+          </div>
+        </div>
+      )}
 
-            <AdSlot zone="hero" />
-
-            <div className="w-full bg-gradient-to-b from-transparent to-white/40 dark:to-charcoal-900/40 pb-20 pt-10 border-t border-brand-purple/5 dark:border-white/5">
-              <HowItWorks mode="zip-files" />
-              <AdSlot zone="footer" />
-              <FAQ />
-            </div>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="workspace"
-            className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-y-auto custom-scrollbar"
-            {...getRootProps({ onClick: (e) => e.stopPropagation() })}
-          >
-            <input {...getInputProps()} />
-            
-            <DragDropOverlay 
-              isDragActive={isDragActive} 
-              message="Drop more files" 
-              subMessage="Add to archive" 
-              variant="amber"
-            />
-            
-            {/* Standardized Close/Reset Button */}
-            <motion.button
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              whileHover={{ scale: 1.1, rotate: 90 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={(e) => { e.stopPropagation(); handleReset(); }}
-              className="absolute top-8 right-4 z-50 w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-charcoal-800 text-charcoal-500 dark:text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200 dark:hover:border-rose-800 shadow-md border border-slate-200 dark:border-charcoal-600 transition-all duration-200"
-              title="Close and Reset"
-            >
-              <X size={20} />
-            </motion.button>
-
-            <div className="w-full max-w-xl mb-20 mt-8">
-               <AnimatePresence mode="wait">
-                  {!result ? (
-                     <motion.div
-                       key="list"
-                       initial={{ opacity: 0, y: 20 }}
-                       animate={{ opacity: 1, y: 0 }}
-                       exit={{ opacity: 0, y: -20 }}
-                       className="bg-white dark:bg-charcoal-900 rounded-3xl shadow-xl border border-slate-100 dark:border-charcoal-800 overflow-hidden"
-                     >
-                        <div className="p-6 border-b border-slate-100 dark:border-charcoal-800 flex items-center justify-between bg-slate-50/50 dark:bg-charcoal-800/50">
-                           <div className="flex items-center gap-3">
-                              <div className="p-2 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-500 rounded-lg">
-                                 <Archive size={20} />
-                              </div>
-                              <div>
-                                 <h3 className="font-bold text-charcoal-800 dark:text-white">Files to Zip</h3>
-                                 <p className="text-xs text-charcoal-500 dark:text-slate-400">
-                                    {files.length} items • {(files.reduce((a,b) => a + b.file.size, 0) / (1024*1024)).toFixed(1)} MB
-                                 </p>
-                              </div>
-                           </div>
-                           <motion.button 
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={buttonTap}
-                              onClick={(e) => { e.stopPropagation(); handleClear(); }}
-                              className="text-xs font-bold text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 px-3 py-1.5 rounded-lg transition-colors"
-                           >
-                              Clear All
-                           </motion.button>
-                        </div>
-
-                        <div className="max-h-[40vh] overflow-y-auto custom-scrollbar p-2">
-                           <AnimatePresence mode="popLayout">
-                              {files.map((f) => (
-                                 <motion.div
-                                   key={f.id}
-                                   layout
-                                   initial={{ opacity: 0, x: -20 }}
-                                   animate={{ opacity: 1, x: 0 }}
-                                   exit={{ opacity: 0, x: 20, height: 0, marginBottom: 0 }}
-                                   className="flex items-center justify-between p-3 mb-2 bg-white dark:bg-charcoal-800 border border-slate-100 dark:border-charcoal-700 rounded-xl group hover:border-amber-200 dark:hover:border-amber-900/50 transition-colors"
-                                 >
-                                    <div className="flex items-center gap-3 overflow-hidden">
-                                       <div className="w-8 h-8 rounded bg-slate-100 dark:bg-charcoal-700 flex items-center justify-center text-charcoal-400 shrink-0">
-                                          <FileIcon size={14} />
-                                       </div>
-                                       <div className="truncate">
-                                          <p className="text-sm font-medium text-charcoal-700 dark:text-slate-200 truncate">{f.file.name}</p>
-                                          <p className="text-[10px] text-charcoal-400 font-mono">{(f.file.size / 1024).toFixed(0)} KB</p>
-                                       </div>
-                                    </div>
-                                    <motion.button
-                                       whileHover={{ scale: 1.1, rotate: 90 }}
-                                       whileTap={{ scale: 0.9 }}
-                                       onClick={(e) => { e.stopPropagation(); handleRemove(f.id); }}
-                                       className="p-2 text-charcoal-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-full transition-colors"
-                                       title="Remove File"
-                                    >
-                                       <X size={16} />
-                                    </motion.button>
-                                 </motion.div>
-                              ))}
-                           </AnimatePresence>
-                        </div>
-
-                        <div className="p-6 border-t border-slate-100 dark:border-charcoal-800 bg-slate-50/50 dark:bg-charcoal-800/50 space-y-4">
-                           <div className="flex bg-white dark:bg-charcoal-900 rounded-xl p-1 border border-slate-200 dark:border-charcoal-700">
-                              <motion.button
-                                 whileTap={buttonTap}
-                                 whileHover={{ scale: 1.02 }}
-                                 onClick={(e) => { e.stopPropagation(); setCompressionLevel('STORE'); }}
-                                 className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors ${compressionLevel === 'STORE' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-500' : 'text-charcoal-500 hover:bg-slate-50 dark:hover:bg-charcoal-800'}`}
-                              >
-                                 Fast (Store)
-                              </motion.button>
-                              <motion.button
-                                 whileTap={buttonTap}
-                                 whileHover={{ scale: 1.02 }}
-                                 onClick={(e) => { e.stopPropagation(); setCompressionLevel('DEFLATE'); }}
-                                 className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors ${compressionLevel === 'DEFLATE' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-500' : 'text-charcoal-500 hover:bg-slate-50 dark:hover:bg-charcoal-800'}`}
-                              >
-                                 Compact (Deflate)
-                              </motion.button>
-                           </div>
-
-                           <div className="flex flex-col md:flex-row gap-3">
-                             <motion.button
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={(e) => { e.stopPropagation(); open(); }}
-                                disabled={isGenerating}
-                                className="md:flex-1 w-full py-3.5 rounded-xl border-2 border-slate-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 text-charcoal-600 dark:text-slate-300 font-bold hover:border-amber-400 hover:text-amber-600 dark:hover:border-amber-500/50 dark:hover:text-amber-400 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                             >
-                                <Plus size={18} />
-                                <span>Add More Files</span>
-                             </motion.button>
-
-                             <motion.button
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={(e) => { e.stopPropagation(); handleZip(); }}
-                                disabled={isGenerating || files.length === 0}
-                                className="md:flex-[1.5] w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold shadow-lg shadow-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 relative overflow-hidden"
-                             >
-                                {isGenerating ? (
-                                  <>
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    <span className="text-sm">
-                                      {status || 'Zipping...'}{' '}
-                                      {progress > 0 && progress < 100 && `(${progress}%)`}
-                                    </span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Archive size={18} /> Zip It!
-                                  </>
-                                )}
-                             </motion.button>
-                           </div>
-                        </div>
-                     </motion.div>
-                  ) : (
-                     <motion.div
-                        key="result"
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="bg-white dark:bg-charcoal-900 rounded-3xl shadow-xl border border-slate-100 dark:border-charcoal-800 p-8 text-center"
-                     >
-                        <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-6 text-amber-500">
-                           <CheckCircle size={40} />
-                        </div>
-                        <h3 className="text-2xl font-bold text-charcoal-800 dark:text-white mb-2">Zip Ready!</h3>
-                        <p className="text-charcoal-500 dark:text-slate-400 text-sm mb-6">
-                           {result.count} files compressed into {(result.size / (1024*1024)).toFixed(2)} MB
-                        </p>
-
-                        <motion.button
-                           whileHover={{ scale: 1.02 }}
-                           whileTap={{ scale: 0.98 }}
-                           onClick={(e) => { e.stopPropagation(); downloadResult(); }}
-                           className="w-full py-4 rounded-xl bg-brand-purple text-white font-bold text-lg shadow-lg shadow-brand-purple/30 hover:shadow-brand-purple/50 transition-all flex items-center justify-center gap-2 mb-4"
-                         >
-                            <Download size={20} /> Download ZIP
-                         </motion.button>
-
-                         <motion.button
-                           whileHover={{ scale: 1.02 }}
-                           whileTap={{ scale: 0.98 }}
-                           onClick={(e) => { e.stopPropagation(); handleReset(); }}
-                           className="w-full py-3 text-charcoal-500 dark:text-slate-400 hover:text-brand-purple font-medium text-sm flex items-center justify-center gap-2"
-                         >
-                            <RefreshCcw size={14} /> Create another ZIP
-                         </motion.button>
-                     </motion.div>
-                  )}
-               </AnimatePresence>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+      {files.length > 0 && (
+         <StickyBar 
+            mode="zip-files"
+            imageCount={files.length}
+            totalSize={0}
+            onGenerate={handleZip}
+            isGenerating={isGenerating}
+            progress={progress}
+            status={status}
+         />
+      )}
+    </div>
   );
 };

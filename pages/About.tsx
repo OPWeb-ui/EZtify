@@ -1,212 +1,179 @@
+
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Zap, Globe, Mail, ArrowRight, CheckCircle, Cpu, Users } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { AdSlot } from '../components/AdSlot';
-import { staggerContainer, fadeInUp } from '../utils/animations';
 import { PageReadyTracker } from '../components/PageReadyTracker';
+import { staggerContainer, fadeInUp, buttonTap } from '../utils/animations';
+import { Zap, Wifi, Cpu, Layers, Globe, Mail, ArrowRight, Layout, MonitorSmartphone } from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+const FeatureCard: React.FC<{ icon: React.ReactNode; title: string; desc: string }> = ({ icon, title, desc }) => (
+  <motion.div 
+    variants={fadeInUp}
+    className="bg-white/70 dark:bg-charcoal-900/70 backdrop-blur-md border border-slate-200 dark:border-charcoal-700 p-6 rounded-2xl shadow-sm hover:shadow-md transition-all group"
+  >
+    <div className="w-12 h-12 rounded-xl bg-slate-50 dark:bg-charcoal-800 border border-slate-100 dark:border-charcoal-700 flex items-center justify-center mb-4 text-charcoal-700 dark:text-slate-200 group-hover:text-brand-purple group-hover:scale-110 transition-all duration-300">
+      {icon}
+    </div>
+    <h3 className="font-heading font-bold text-charcoal-900 dark:text-white mb-2">{title}</h3>
+    <p className="text-sm text-charcoal-500 dark:text-slate-400 leading-relaxed">{desc}</p>
+  </motion.div>
+);
 
 export const About: React.FC = () => {
   return (
-    <div className="flex-1 w-full overflow-y-auto custom-scrollbar bg-pastel-bg dark:bg-charcoal-950">
+    <div className="flex-1 w-full overflow-y-auto custom-scrollbar bg-pastel-bg dark:bg-charcoal-950 relative">
       <PageReadyTracker />
       
       {/* Background Ambience */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-         <div className="absolute top-[-10%] right-[20%] w-[40%] h-[40%] bg-brand-purple/5 dark:bg-brand-purple/5 rounded-full blur-[120px]" />
-         <div className="absolute bottom-[10%] left-[-10%] w-[50%] h-[50%] bg-brand-blue/5 dark:bg-brand-blue/5 rounded-full blur-[120px]" />
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+         <div className="absolute top-[-10%] left-[20%] w-[40%] h-[40%] bg-indigo-500/5 dark:bg-indigo-500/5 rounded-full blur-[100px]" />
+         <div className="absolute bottom-[20%] right-[-5%] w-[50%] h-[50%] bg-brand-purple/5 dark:bg-brand-purple/5 rounded-full blur-[120px]" />
       </div>
 
-      <div className="relative z-10 max-w-4xl mx-auto px-6 py-12 md:py-20">
+      <div className="relative z-10 max-w-5xl mx-auto px-6 py-16 md:py-24">
         
-        {/* 1. Hero */}
-        <motion.section 
+        {/* Header Section */}
+        <motion.div 
           variants={staggerContainer}
           initial="hidden"
           animate="show"
-          className="text-center mb-16 md:mb-24"
+          className="text-center mb-20"
         >
-          <motion.h1 
-            variants={fadeInUp}
-            className="text-4xl md:text-6xl font-heading font-extrabold text-charcoal-900 dark:text-white mb-6 tracking-tight"
-          >
-            About EZ<span className="text-brand-purple">tify</span>
-          </motion.h1>
-          <motion.p 
-            variants={fadeInUp}
-            className="text-lg md:text-xl text-charcoal-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed"
-          >
-            Fast, privacy-first PDF tools that run right in your browser.
-          </motion.p>
-        </motion.section>
-
-        {/* 2. Our Mission */}
-        <motion.section 
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-50px" }}
-          variants={staggerContainer}
-          className="mb-20 bg-white/60 dark:bg-charcoal-900/60 backdrop-blur-xl p-8 md:p-12 rounded-3xl border border-slate-200 dark:border-charcoal-700 shadow-sm"
-        >
-          <motion.div variants={fadeInUp} className="flex items-center gap-4 mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-brand-purple/10 flex items-center justify-center text-brand-purple">
-               <Globe className="w-6 h-6" />
-            </div>
-            <h2 className="text-2xl md:text-3xl font-heading font-bold text-charcoal-900 dark:text-white">Our Mission</h2>
+          <motion.div variants={fadeInUp} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider mb-6 border border-slate-200 dark:border-charcoal-700">
+            <Cpu size={14} className="text-brand-purple" />
+            <span>Next-Gen Architecture</span>
           </motion.div>
-          <motion.div variants={fadeInUp} className="space-y-4 text-charcoal-600 dark:text-slate-300 leading-loose">
-            <p>
-              We built EZtify with a single goal: to make everyday PDF tasks simple, fast, and trustworthy. 
-              Too many online tools are cluttered, slow, or invasive. We wanted to build something better.
-            </p>
-            <p>
-              Our mission is to remove friction from your workflow. Whether you're merging documents for work 
-              or converting images for school, we provide lightweight, accessible tools that just work—without 
-              complicating your life.
-            </p>
-          </motion.div>
-        </motion.section>
-
-        {/* 3. How EZtify Works */}
-        <motion.section 
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-50px" }}
-          variants={staggerContainer}
-          className="mb-20"
-        >
-          <motion.h2 variants={fadeInUp} className="text-2xl md:text-3xl font-heading font-bold text-charcoal-900 dark:text-white mb-8 text-center">
-            How EZtify Works
-          </motion.h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <motion.div variants={fadeInUp} className="bg-white dark:bg-charcoal-900 p-6 rounded-2xl border border-slate-200 dark:border-charcoal-700 shadow-sm hover:border-brand-purple/30 transition-colors">
-              <Shield className="w-8 h-8 text-brand-mint mb-4" />
-              <h3 className="font-bold text-lg text-charcoal-800 dark:text-white mb-2">Private by Design</h3>
-              <p className="text-sm text-charcoal-500 dark:text-slate-400 leading-relaxed">
-                Files are processed locally in your browser. Your files stay on your device and are never sent to our servers.
-              </p>
-            </motion.div>
-            
-            <motion.div variants={fadeInUp} className="bg-white dark:bg-charcoal-900 p-6 rounded-2xl border border-slate-200 dark:border-charcoal-700 shadow-sm hover:border-brand-purple/30 transition-colors">
-              <Cpu className="w-8 h-8 text-brand-blue mb-4" />
-              <h3 className="font-bold text-lg text-charcoal-800 dark:text-white mb-2">Local Processing</h3>
-              <p className="text-sm text-charcoal-500 dark:text-slate-400 leading-relaxed">
-                We use advanced web technologies to handle heavy lifting on your machine, ensuring nothing is stored on our servers.
-              </p>
-            </motion.div>
+          <motion.h1 variants={fadeInUp} className="text-4xl md:text-6xl font-heading font-extrabold text-charcoal-900 dark:text-white mb-6 tracking-tight">
+            Built for <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-purple to-indigo-500">Efficiency.</span>
+          </motion.h1>
+          
+          <motion.p variants={fadeInUp} className="text-lg md:text-xl text-charcoal-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
+            EZtify leverages modern browser capabilities to deliver a responsive, desktop-grade experience for all your file utilities.
+          </motion.p>
+        </motion.div>
 
-            <motion.div variants={fadeInUp} className="bg-white dark:bg-charcoal-900 p-6 rounded-2xl border border-slate-200 dark:border-charcoal-700 shadow-sm hover:border-brand-purple/30 transition-colors">
-              <Zap className="w-8 h-8 text-brand-purple mb-4" />
-              <h3 className="font-bold text-lg text-charcoal-800 dark:text-white mb-2">Instant Speed</h3>
-              <p className="text-sm text-charcoal-500 dark:text-slate-400 leading-relaxed">
-                Since there's no network transfer for processing, you get results instantly. Convert, compress, merge, and split in seconds.
-              </p>
-            </motion.div>
-
-            <motion.div variants={fadeInUp} className="bg-white dark:bg-charcoal-900 p-6 rounded-2xl border border-slate-200 dark:border-charcoal-700 shadow-sm hover:border-brand-purple/30 transition-colors">
-              <Users className="w-8 h-8 text-brand-orange mb-4" />
-              <h3 className="font-bold text-lg text-charcoal-800 dark:text-white mb-2">Accessible to All</h3>
-              <p className="text-sm text-charcoal-500 dark:text-slate-400 leading-relaxed">
-                Free to use and accessible from any modern browser. All your essential PDF tools in one place.
-              </p>
-            </motion.div>
-          </div>
-        </motion.section>
-
-        <AdSlot zone="hero" className="mb-20" />
-
-        {/* 4. Why People Use EZtify */}
-        <motion.section 
+        {/* Core Values Grid */}
+        <motion.div 
+          variants={staggerContainer}
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, margin: "-50px" }}
-          variants={fadeInUp}
-          className="mb-20"
+          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-24"
         >
-          <h2 className="text-2xl md:text-3xl font-heading font-bold text-charcoal-900 dark:text-white mb-8 text-center">
-            Why People Use EZtify
-          </h2>
-          <div className="bg-brand-purple/5 dark:bg-brand-purple/10 rounded-3xl p-8 md:p-12 border border-brand-purple/10">
-            <ul className="space-y-4">
-              {[
-                "Fast tools for everyday PDF tasks",
-                "Works straight in your browser",
-                "Built for speed, simplicity, and privacy",
-                "All your essential PDF tools in one place"
-              ].map((item, i) => (
-                <li key={i} className="flex items-center gap-4 text-charcoal-700 dark:text-slate-200 font-medium">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-purple text-white flex items-center justify-center">
-                    <CheckCircle size={14} />
+          <FeatureCard 
+            icon={<Zap />}
+            title="Instant Processing"
+            desc="Operations are performed immediately on your device. No waiting for uploads or server queues."
+          />
+          <FeatureCard 
+            icon={<MonitorSmartphone />}
+            title="Cross-Platform"
+            desc="Designed to work seamlessly on desktops, tablets, and mobile devices with a responsive interface."
+          />
+          <FeatureCard 
+            icon={<Wifi />}
+            title="Offline Capable"
+            desc="Install EZtify as a Progressive Web App (PWA) to use all features even without an internet connection."
+          />
+        </motion.div>
+
+        {/* Technical Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-24">
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            className="space-y-6"
+          >
+            <h2 className="text-3xl font-heading font-bold text-charcoal-900 dark:text-white">
+              Powered by WebAssembly
+            </h2>
+            <div className="space-y-4 text-charcoal-600 dark:text-slate-300 leading-relaxed">
+              <p>
+                The web has evolved. EZtify utilizes cutting-edge technologies like <strong>WebAssembly (WASM)</strong> and <strong>Service Workers</strong> to run complex logic efficiently right in your browser.
+              </p>
+              <p>
+                By leveraging your device's processing power, we ensure that converting files, editing code, and compressing data is as fast as your hardware allows. This eliminates network latency and keeps your data completely private.
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 pt-4">
+               <div className="p-4 rounded-xl bg-white dark:bg-charcoal-800 border border-slate-100 dark:border-charcoal-700">
+                  <div className="text-2xl font-bold text-brand-purple mb-1">Zero</div>
+                  <div className="text-xs font-bold text-charcoal-500 uppercase tracking-wide">Network Lag</div>
+               </div>
+               <div className="p-4 rounded-xl bg-white dark:bg-charcoal-800 border border-slate-100 dark:border-charcoal-700">
+                  <div className="text-2xl font-bold text-indigo-500 mb-1">100%</div>
+                  <div className="text-xs font-bold text-charcoal-500 uppercase tracking-wide">Browser Based</div>
+               </div>
+            </div>
+          </motion.div>
+
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            className="relative"
+          >
+            <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/10 to-brand-purple/10 rounded-3xl blur-2xl rotate-2" />
+            <div className="relative bg-white dark:bg-charcoal-900 border border-slate-200 dark:border-charcoal-700 rounded-3xl p-8 shadow-xl">
+              <h3 className="text-lg font-bold text-charcoal-900 dark:text-white mb-6 flex items-center gap-2">
+                <Layers className="text-brand-purple" size={20} />
+                Technology Stack
+              </h3>
+              <div className="space-y-3">
+                {[
+                  { name: "React 19", desc: "User Interface Library", icon: <Globe size={16} /> },
+                  { name: "PDF-Lib", desc: "PDF Manipulation Engine", icon: <Layout size={16} /> },
+                  { name: "Web Workers", desc: "Background Processing", icon: <Cpu size={16} /> },
+                  { name: "Framer Motion", desc: "Fluid Animations", icon: <Zap size={16} /> }
+                ].map((tech, i) => (
+                  <div key={i} className="flex items-center gap-4 p-3 rounded-xl bg-slate-50 dark:bg-charcoal-800 border border-slate-100 dark:border-charcoal-700 hover:border-slate-300 dark:hover:border-charcoal-600 transition-colors">
+                    <div className="w-8 h-8 rounded-lg bg-white dark:bg-charcoal-700 flex items-center justify-center text-charcoal-500 dark:text-slate-400 shadow-sm border border-slate-100 dark:border-charcoal-600">
+                      {tech.icon}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm text-charcoal-800 dark:text-slate-200">{tech.name}</h4>
+                      <p className="text-xs text-charcoal-500 dark:text-slate-400">{tech.desc}</p>
+                    </div>
                   </div>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </motion.section>
-
-        {/* 5. What's Next & Team */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-20">
-          <motion.section 
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true }}
-            variants={fadeInUp}
-            className="bg-white dark:bg-charcoal-900 p-8 rounded-3xl border border-slate-200 dark:border-charcoal-700"
-          >
-            <h3 className="text-xl font-bold text-charcoal-900 dark:text-white mb-4">What's Next?</h3>
-            <p className="text-charcoal-600 dark:text-slate-400 text-sm leading-relaxed mb-4">
-              We are always improving existing tools and working on adding new ones to help you be more productive.
-            </p>
-            <p className="text-charcoal-600 dark:text-slate-400 text-sm leading-relaxed">
-              Have a request? You can suggest features via the homepage or by emailing us directly.
-            </p>
-          </motion.section>
-
-          <motion.section 
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true }}
-            variants={fadeInUp}
-            className="bg-white dark:bg-charcoal-900 p-8 rounded-3xl border border-slate-200 dark:border-charcoal-700"
-          >
-            <h3 className="text-xl font-bold text-charcoal-900 dark:text-white mb-4">Who's Behind EZtify?</h3>
-            <p className="text-charcoal-600 dark:text-slate-400 text-sm leading-relaxed">
-              EZtify is built by a small indie team passionate about creating high-quality, privacy-respecting web tools. We believe the best utilities should be fast, free, and secure.
-            </p>
-          </motion.section>
+                ))}
+              </div>
+            </div>
+          </motion.div>
         </div>
 
-        {/* 6. Contact */}
-        <motion.section 
-          initial="hidden"
-          whileInView="show"
+        {/* Footer / Contact */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          variants={fadeInUp}
-          className="text-center bg-gradient-to-br from-brand-purple to-brand-blue rounded-3xl p-10 text-white shadow-xl shadow-brand-purple/20"
+          className="text-center py-12 border-t border-slate-200 dark:border-charcoal-800"
         >
-          <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6 text-white">
-            <Mail className="w-8 h-8" />
-          </div>
-          <h2 className="text-2xl md:text-3xl font-heading font-bold mb-4">Get in Touch</h2>
-          <p className="text-white/80 mb-8 max-w-md mx-auto">
-            Questions? Suggestions? We'd love to hear from you.
+          <h2 className="text-2xl font-bold text-charcoal-900 dark:text-white mb-4">Start Working Smarter</h2>
+          <p className="text-charcoal-600 dark:text-slate-400 mb-8 max-w-lg mx-auto">
+            Ready to enhance your workflow? Head back to the dashboard to use our suite of tools.
           </p>
-          
-          <a 
-            href="mailto:eztifyapps@gmail.com"
-            className="inline-flex items-center gap-2 bg-white text-brand-purple px-6 py-3 rounded-xl font-bold hover:bg-slate-50 transition-colors shadow-sm"
-          >
-            eztifyapps@gmail.com <ArrowRight size={16} />
-          </a>
-
-          <div className="mt-12 flex items-center justify-center gap-6 text-sm font-medium text-white/70">
-            <Link to="/" className="hover:text-white transition-colors">Home</Link>
-            <span className="w-1 h-1 bg-white/40 rounded-full" />
-            <Link to="/" className="hover:text-white transition-colors">Tools</Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link to="/">
+              <motion.button 
+                whileTap={buttonTap}
+                className="px-8 py-3 bg-charcoal-900 dark:bg-white text-white dark:text-charcoal-900 font-bold rounded-xl shadow-lg hover:bg-brand-purple dark:hover:bg-slate-200 transition-colors flex items-center gap-2"
+              >
+                Go to Dashboard <ArrowRight size={16} />
+              </motion.button>
+            </Link>
+            <a href="mailto:eztifyapps@gmail.com">
+              <motion.button 
+                whileTap={buttonTap}
+                className="px-8 py-3 bg-white dark:bg-charcoal-800 text-charcoal-700 dark:text-slate-200 border border-slate-200 dark:border-charcoal-700 font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-charcoal-700 transition-colors flex items-center gap-2"
+              >
+                <Mail size={16} /> Contact Support
+              </motion.button>
+            </a>
           </div>
-        </motion.section>
+        </motion.div>
 
       </div>
     </div>

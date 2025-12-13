@@ -1,274 +1,191 @@
 
-
 import React, { useState, useCallback } from 'react';
 import { useLayoutContext } from '../components/Layout';
 import { UploadArea } from '../components/UploadArea';
-import { HowItWorks } from '../components/HowItWorks';
-import { FAQ } from '../components/FAQ';
-import { AdSlot } from '../components/AdSlot';
-import { RotatingText } from '../components/RotatingText';
-import { HeroPill } from '../components/HeroPill';
 import { PageReadyTracker } from '../components/PageReadyTracker';
-import { CompressionLevel, CompressionResult, PdfFile } from '../types';
+import { PdfFile, CompressionResult, CompressionLevel } from '../types';
 import { compressPDF } from '../services/pdfCompressor';
 import { nanoid } from 'nanoid';
-import JSZip from 'jszip';
-import { Minimize2, CheckCircle, ArrowLeft, Download, RefreshCcw, X, Loader2, Plus, FileText, FolderArchive } from 'lucide-react';
+import { FileRejection } from 'react-dropzone';
+import { Download, FileText, Settings, RefreshCw, Loader2, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { buttonTap, staggerContainer, fadeInUp } from '../utils/animations';
-import { useDropzone, FileRejection } from 'react-dropzone';
-import { DragDropOverlay } from '../components/DragDropOverlay';
+import { buttonTap } from '../utils/animations';
+import { StickyBar } from '../components/StickyBar';
 
 export const CompressPdfPage: React.FC = () => {
-  const { addToast } = useLayoutContext();
+  const { addToast, isMobile } = useLayoutContext();
   const [files, setFiles] = useState<PdfFile[]>([]);
-  const [level, setLevel] = useState<CompressionLevel>('normal');
   const [results, setResults] = useState<Map<string, CompressionResult>>(new Map());
-  const [isGenerating, setIsGenerating] = useState(false);
   const [isProcessingFiles, setIsProcessingFiles] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState('');
+  const [level, setLevel] = useState<CompressionLevel>('normal');
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
-  const onDrop = useCallback((acceptedFiles: File[], fileRejections: FileRejection[]) => {
+  const onDrop = useCallback(async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
     if (fileRejections.length > 0) {
-      addToast("Invalid File", "Please upload PDF files only.", "error");
-      return;
-    }
-    const currentCount = files.length;
-    if (currentCount >= 10) {
-      addToast("Limit Reached", "You can compress up to 10 files at once.", "warning");
-      return;
-    }
-
-    const filesToAdd = acceptedFiles.slice(0, 10 - currentCount);
-    if (filesToAdd.length < acceptedFiles.length) {
-      addToast("Limit Reached", `Added ${filesToAdd.length} files to reach the 10 file limit.`, "warning");
+      addToast("Invalid File", "Only PDF files are allowed.", "error");
     }
     
-    const newPdfFiles: PdfFile[] = filesToAdd
-      .filter(f => f.type === 'application/pdf')
-      .map(file => ({ id: nanoid(), file }));
+    const newFiles: PdfFile[] = acceptedFiles.map(f => ({
+      id: nanoid(),
+      file: f
+    }));
 
-    if (newPdfFiles.length > 0) {
-        setIsProcessingFiles(true);
-        setTimeout(() => {
-          setFiles(prev => [...prev, ...newPdfFiles]);
-          setResults(new Map());
-          addToast("Success", `Added ${newPdfFiles.length} PDFs for compression.`, "success");
-          setIsProcessingFiles(false);
-        }, 600);
+    if (newFiles.length > 0) {
+      setIsProcessingFiles(true);
+      setTimeout(() => {
+        setFiles(prev => [...prev, ...newFiles]);
+        setIsProcessingFiles(false);
+        addToast("Success", `Added ${newFiles.length} files.`, "success");
+      }, 500);
     }
-  }, [addToast, files.length]);
-
-  const { getRootProps, getInputProps, open, isDragActive } = useDropzone({
-    onDrop,
-    accept: { 'application/pdf': ['.pdf'] },
-    multiple: true,
-    noClick: true,
-    noKeyboard: true
-  });
+  }, [addToast]);
 
   const handleCompress = async () => {
-    if (files.length === 0) return;
-    setIsGenerating(true);
-    setProgress(0);
-    const newResults = new Map<string, CompressionResult>();
-
-    for (let i = 0; i < files.length; i++) {
-        const pdfFile = files[i];
-        setStatus(`Compressing ${i + 1}/${files.length}...`);
-        try {
-            const result = await compressPDF(pdfFile, level);
-            newResults.set(pdfFile.id, {
-                ...result,
-                status: 'Success'
-            });
-        } catch (e) {
-            console.error(`Failed to compress ${pdfFile.file.name}`, e);
-            newResults.set(pdfFile.id, {
-                id: pdfFile.id,
-                originalFileName: pdfFile.file.name,
-                originalSize: pdfFile.file.size,
-                newSize: 0,
-                blob: new Blob(),
-                fileName: "Error",
-                status: 'Failed'
-            });
-        }
-        setProgress(Math.round(((i + 1) / files.length) * 100));
+    for (const pdf of files) {
+      if (results.has(pdf.id)) continue;
+      
+      setProcessingId(pdf.id);
+      try {
+        const result = await compressPDF(pdf, level, undefined, undefined);
+        setResults(prev => new Map(prev).set(pdf.id, result));
+      } catch (error) {
+        console.error(error);
+        addToast("Error", `Failed to compress ${pdf.file.name}`, "error");
+      }
     }
-    setResults(newResults);
-    setIsGenerating(false);
-    setStatus('');
+    setProcessingId(null);
   };
 
-  const handleReset = () => {
-    setFiles([]);
-    setResults(new Map());
-    setStatus('');
-    setProgress(0);
-  };
-  
-  const handleRemove = (id: string) => {
-    setFiles(prev => prev.filter(f => f.id !== id));
-  };
-  
-  const downloadResult = (blob: Blob, fileName: string) => {
-    const url = URL.createObjectURL(blob);
+  const handleDownload = (result: CompressionResult) => {
+    const url = URL.createObjectURL(result.blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = fileName;
+    link.download = result.fileName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
-  
-  const downloadAllAsZip = async () => {
-    const zip = new JSZip();
-    let fileCount = 0;
-    
-    // Determine zip filename
-    // If only 1 file processed, use that base name + .zip
-    // If multiple, use files_EZtify.zip
-    
-    let baseNameForZip = 'files';
-    const successfulResults: CompressionResult[] = [];
 
-    results.forEach(result => {
-      if(result.status === 'Success') {
-        zip.file(result.fileName, result.blob);
-        successfulResults.push(result);
-        fileCount++;
-      }
+  const removeFile = (id: string) => {
+    setFiles(prev => prev.filter(f => f.id !== id));
+    setResults(prev => {
+      const next = new Map(prev);
+      next.delete(id);
+      return next;
     });
-
-    if(fileCount === 0) {
-      addToast("No files to download", "No files were compressed successfully.", "error");
-      return;
-    }
-    
-    // Handle Zip naming convention
-    if (fileCount === 1) {
-        const firstFile = successfulResults[0];
-        const originalName = firstFile.originalFileName;
-        const nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
-        const safeName = nameWithoutExt.replace(/[^a-zA-Z0-9\-_]/g, '_');
-        baseNameForZip = safeName;
-    }
-
-    const zipBlob = await zip.generateAsync({ type: "blob" });
-    downloadResult(zipBlob, `${baseNameForZip}_EZtify.zip`);
-  }
+  };
 
   return (
-    <>
+    <div className="flex-1 flex flex-col h-[calc(100vh-64px)] overflow-hidden bg-slate-50 dark:bg-charcoal-900">
       <PageReadyTracker />
-      <AnimatePresence mode="wait">
-        {files.length === 0 ? (
-          <motion.div key="hero" className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
-            <section className="flex-1 flex flex-col items-center justify-center p-4 pt-8 pb-10 relative">
-               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] blur-[120px] rounded-full pointer-events-none bg-brand-violet/10" />
-               <motion.div variants={staggerContainer} initial="hidden" animate="show" className="relative z-10 w-full max-w-2xl flex flex-col items-center text-center">
-                 <motion.div variants={fadeInUp} className="w-full max-w-xl my-4 relative z-20">
-                   <HeroPill>Reduce the file size of your PDF documents while maintaining quality.</HeroPill>
-                   <UploadArea onDrop={onDrop} mode="compress-pdf" disabled={isGenerating} isProcessing={isProcessingFiles} />
-                 </motion.div>
-                 <motion.div variants={fadeInUp}><RotatingText /></motion.div>
-               </motion.div>
-            </section>
-            <AdSlot zone="hero" />
-            <div className="w-full bg-gradient-to-b from-transparent to-white/40 dark:to-charcoal-900/40 pb-20 pt-10 border-t border-brand-purple/5 dark:border-white/5">
-              <HowItWorks mode="compress-pdf" />
-              <AdSlot zone="footer" /><FAQ />
+      
+      {files.length === 0 ? (
+        <div className="flex-1 p-6 flex flex-col items-center justify-center overflow-y-auto">
+          <div className="max-w-2xl w-full">
+            <UploadArea onDrop={onDrop} mode="compress-pdf" isProcessing={isProcessingFiles} />
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pb-32">
+          <div className="max-w-3xl mx-auto space-y-6">
+            {/* Settings Card */}
+            <div className="bg-white dark:bg-charcoal-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-charcoal-700">
+               <h3 className="flex items-center gap-2 font-bold text-lg mb-4 text-charcoal-900 dark:text-white">
+                 <Settings size={20} /> Compression Settings
+               </h3>
+               <div className="grid grid-cols-2 gap-4">
+                  <button 
+                    onClick={() => setLevel('normal')}
+                    className={`p-4 rounded-xl border-2 text-left transition-all ${level === 'normal' ? 'border-brand-purple bg-brand-purple/5' : 'border-slate-200 dark:border-charcoal-600 hover:border-slate-300'}`}
+                  >
+                    <div className="font-bold text-charcoal-800 dark:text-white mb-1">Standard</div>
+                    <div className="text-xs text-charcoal-500 dark:text-slate-400">Good quality, reasonable size reduction.</div>
+                  </button>
+                  <button 
+                    onClick={() => setLevel('strong')}
+                    className={`p-4 rounded-xl border-2 text-left transition-all ${level === 'strong' ? 'border-brand-purple bg-brand-purple/5' : 'border-slate-200 dark:border-charcoal-600 hover:border-slate-300'}`}
+                  >
+                    <div className="font-bold text-charcoal-800 dark:text-white mb-1">Strong</div>
+                    <div className="text-xs text-charcoal-500 dark:text-slate-400">Maximum reduction, lower quality.</div>
+                  </button>
+               </div>
             </div>
-          </motion.div>
-        ) : (
-          <motion.div 
-            key="workspace" 
-            className="flex-1 flex flex-col items-center justify-center p-6 relative bg-white/50 dark:bg-charcoal-900/50 min-h-[calc(100vh-4rem)] outline-none"
-            {...getRootProps({ onClick: (e) => e.stopPropagation() })}
-          >
-             <input {...getInputProps()} />
-             
-             <DragDropOverlay 
-                isDragActive={isDragActive} 
-                message="Drop more PDFs" 
-                variant="violet"
-             />
 
-             <div className="w-full max-w-2xl relative z-10">
-                {/* Standardized Close/Reset Button */}
-                <motion.button 
-                  initial={{ opacity: 0, scale: 0.8 }} 
-                  animate={{ opacity: 1, scale: 1 }} 
-                  exit={{ opacity: 0, scale: 0.8 }} 
-                  whileHover={{ scale: 1.1, rotate: 90 }} 
-                  whileTap={{ scale: 0.9 }} 
-                  onClick={(e) => { e.stopPropagation(); handleReset(); }} 
-                  className="absolute -top-4 -right-4 md:-right-12 z-50 w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-charcoal-800 text-charcoal-500 dark:text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200 dark:hover:border-rose-800 shadow-md border border-slate-200 dark:border-charcoal-600 transition-all duration-200" 
-                  title="Close and Reset"
-                >
-                  <X size={20} />
-                </motion.button>
-
-                <AnimatePresence mode="wait">
-                  {results.size === 0 ? (
-                    <motion.div key="options" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20, scale: 0.95 }}>
-                      <div className="bg-white dark:bg-charcoal-800 rounded-2xl shadow-xl shadow-brand-purple/5 border border-slate-100 dark:border-charcoal-700 p-6 space-y-4">
-                        <div className="max-h-[30vh] overflow-y-auto custom-scrollbar -mr-2 pr-2 space-y-2">
-                          {files.map(f => (
-                            <motion.div key={f.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-3 p-2 bg-slate-50 dark:bg-charcoal-900/50 rounded-lg">
-                              <FileText className="w-5 h-5 text-rose-500 flex-shrink-0" />
-                              <span className="text-sm font-medium text-charcoal-700 dark:text-slate-300 truncate flex-1">{f.file.name}</span>
-                              <span className="text-xs font-mono text-charcoal-400 dark:text-slate-500">{(f.file.size / 1024 / 1024).toFixed(2)}MB</span>
-                              <button onClick={(e) => { e.stopPropagation(); handleRemove(f.id); }} className="p-1 rounded-full hover:bg-rose-100 dark:hover:bg-rose-900/30 text-charcoal-400 hover:text-rose-500"><X size={14} /></button>
-                            </motion.div>
-                          ))}
-                        </div>
-                        <motion.button whileTap={buttonTap} onClick={(e) => { e.stopPropagation(); open(); }} className="w-full text-center py-2 text-sm font-bold text-brand-purple border-2 border-dashed border-slate-200 dark:border-charcoal-700 rounded-lg hover:border-brand-purple/50 transition-colors flex items-center justify-center gap-1.5"><Plus size={14} /> Add More Files</motion.button>
-                        <div className="grid grid-cols-2 gap-4 pt-2">
-                           <motion.button whileHover={{ scale: 1.03, y: -2 }} whileTap={{ scale: 0.98 }} onClick={(e) => { e.stopPropagation(); setLevel('normal'); }} className={`p-4 rounded-xl border-2 transition-all text-left relative overflow-hidden ${level === 'normal' ? 'border-brand-purple bg-brand-purple/5 dark:bg-brand-purple/10' : 'border-slate-100 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 hover:border-brand-purple/30'}`}><div className="font-bold text-charcoal-800 dark:text-white mb-1">Normal</div><div className="text-xs text-charcoal-500 dark:text-slate-400">Good quality.</div>{level === 'normal' && <div className="absolute top-2 right-2 text-brand-purple"><CheckCircle size={16} /></div>}</motion.button>
-                           <motion.button whileHover={{ scale: 1.03, y: -2 }} whileTap={{ scale: 0.98 }} onClick={(e) => { e.stopPropagation(); setLevel('strong'); }} className={`p-4 rounded-xl border-2 transition-all text-left relative overflow-hidden ${level === 'strong' ? 'border-brand-purple bg-brand-purple/5 dark:bg-brand-purple/10' : 'border-slate-100 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 hover:border-brand-purple/30'}`}><div className="font-bold text-charcoal-800 dark:text-white mb-1">Strong</div><div className="text-xs text-charcoal-500 dark:text-slate-400">Max compression.</div>{level === 'strong' && <div className="absolute top-2 right-2 text-brand-purple"><CheckCircle size={16} /></div>}</motion.button>
+            {/* File List */}
+            <div className="space-y-3">
+              <AnimatePresence>
+                {files.map(file => {
+                  const result = results.get(file.id);
+                  const isProcessing = processingId === file.id;
+                  
+                  return (
+                    <motion.div 
+                      key={file.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="bg-white dark:bg-charcoal-800 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-charcoal-700 flex flex-col sm:flex-row sm:items-center gap-4"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-rose-50 dark:bg-rose-900/20 text-rose-500 flex items-center justify-center shrink-0">
+                        <FileText size={20} />
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-charcoal-800 dark:text-white truncate">{file.file.name}</h4>
+                        <div className="flex items-center gap-2 text-xs text-charcoal-500 dark:text-slate-400">
+                           <span>{(file.file.size / 1024 / 1024).toFixed(2)} MB</span>
+                           {result && (
+                             <>
+                               <span>→</span>
+                               <span className="font-bold text-green-600 dark:text-green-400">{(result.newSize / 1024 / 1024).toFixed(2)} MB</span>
+                               <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded">
+                                 -{Math.round((1 - result.newSize / result.originalSize) * 100)}%
+                               </span>
+                             </>
+                           )}
                         </div>
                       </div>
-                      <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.96 }} onClick={(e) => { e.stopPropagation(); handleCompress(); }} disabled={isGenerating} className="mt-6 w-full py-4 rounded-xl bg-brand-purple text-white font-bold text-lg shadow-lg shadow-brand-purple/30 hover:shadow-brand-purple/50 transition-all disabled:opacity-50 disabled:cursor-wait relative overflow-hidden">
-                         {isGenerating ? (<div className="flex items-center justify-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /><span className="text-sm font-medium">{status || 'Compressing...'}{' '}{progress > 0 && progress < 100 && `(${progress}%)`}</span></div>) : `Compress ${files.length} Files`}
-                      </motion.button>
-                    </motion.div>
-                  ) : (
-                    <motion.div key="result" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6">
-                      <div className="bg-white dark:bg-charcoal-800 rounded-2xl shadow-xl shadow-brand-purple/5 border border-slate-100 dark:border-charcoal-700 p-4 space-y-2 max-h-[50vh] overflow-y-auto custom-scrollbar">
-                        {Array.from(results.values()).map((res: CompressionResult) => (
-                          <div key={res.id} className="flex items-center gap-3 p-2 bg-slate-50 dark:bg-charcoal-900/50 rounded-lg">
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${res.status === 'Success' ? 'bg-brand-mint/10 text-brand-mint' : 'bg-rose-500/10 text-rose-500'}`}>
-                              {res.status === 'Success' ? <CheckCircle size={16} /> : <X size={16} />}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-charcoal-700 dark:text-slate-300 truncate">{res.originalFileName}</p>
-                              {res.status === 'Success' ? (
-                                <div className="flex items-center gap-2 text-xs">
-                                  <span className="text-charcoal-400 dark:text-slate-500 line-through">{(res.originalSize / 1024 / 1024).toFixed(2)}MB</span>
-                                  <ArrowLeft className="w-3 h-3 text-charcoal-300 dark:text-slate-600 rotate-180" />
-                                  <span className="font-bold text-brand-purple">{(res.newSize / 1024 / 1024).toFixed(2)}MB</span>
-                                  <span className="px-1.5 py-0.5 bg-brand-mint/20 text-brand-mint text-[10px] font-bold rounded-full">-{Math.round((1 - res.newSize / res.originalSize) * 100)}%</span>
-                                </div>
-                              ) : <p className="text-xs text-rose-500">Failed</p>}
-                            </div>
-                            {res.status === 'Success' && <motion.button whileTap={buttonTap} onClick={(e) => { e.stopPropagation(); downloadResult(res.blob, res.fileName); }} className="p-2 text-charcoal-400 hover:text-brand-purple"><Download size={16} /></motion.button>}
-                          </div>
-                        ))}
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {isProcessing ? (
+                          <Loader2 className="animate-spin text-brand-purple" />
+                        ) : result ? (
+                          <motion.button
+                            whileTap={buttonTap}
+                            onClick={() => handleDownload(result)}
+                            className="px-4 py-2 bg-brand-purple text-white rounded-lg text-sm font-bold flex items-center gap-2"
+                          >
+                            <Download size={16} /> Save
+                          </motion.button>
+                        ) : (
+                          <button 
+                             onClick={() => removeFile(file.id)}
+                             className="text-slate-400 hover:text-rose-500 transition-colors p-2"
+                          >
+                             Remove
+                          </button>
+                        )}
                       </div>
-                      <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.96 }} onClick={(e) => { e.stopPropagation(); downloadAllAsZip(); }} className="w-full py-4 rounded-xl bg-brand-purple text-white font-bold text-lg shadow-lg shadow-brand-purple/30 hover:shadow-brand-purple/50 transition-all flex items-center justify-center gap-2"><FolderArchive size={20} /> Download All (.zip)</motion.button>
-                      <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={(e) => { e.stopPropagation(); handleReset(); }} className="w-full py-3 text-charcoal-500 dark:text-slate-400 hover:text-brand-purple font-medium text-sm flex items-center justify-center gap-2"><RefreshCcw size={14} /> Compress More</motion.button>
-                      <AdSlot zone="sidebar" />
                     </motion.div>
-                  )}
-                </AnimatePresence>
-             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {files.length > 0 && (
+         <StickyBar 
+            mode="compress-pdf"
+            imageCount={files.length}
+            totalSize={0}
+            onGenerate={handleCompress}
+            isGenerating={!!processingId}
+            status={processingId ? "Compressing..." : "Compress All"}
+         />
+      )}
+    </div>
   );
 };

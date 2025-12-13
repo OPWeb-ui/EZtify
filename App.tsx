@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
@@ -15,8 +16,16 @@ const MergePdfPage = React.lazy(() => import('./pages/MergePdf').then(module => 
 const SplitPdfPage = React.lazy(() => import('./pages/SplitPdf').then(module => ({ default: module.SplitPdfPage })));
 const ZipFilesPage = React.lazy(() => import('./pages/ZipFiles').then(module => ({ default: module.ZipFilesPage })));
 const WordToPdfPage = React.lazy(() => import('./pages/WordToPdf').then(module => ({ default: module.WordToPdfPage })));
+const PdfToWordPage = React.lazy(() => import('./pages/PdfToWord').then(module => ({ default: module.PdfToWordPage })));
+const PdfToPptxPage = React.lazy(() => import('./pages/PdfToPptx').then(module => ({ default: module.PdfToPptxPage })));
 const ReorderPdfPage = React.lazy(() => import('./pages/ReorderPdf').then(module => ({ default: module.ReorderPdfPage })));
-const PdfViewerPage = React.lazy(() => import('./pages/PdfViewerPage').then(module => ({ default: module.PdfViewerPage })));
+const RotatePdfPage = React.lazy(() => import('./pages/RotatePdf').then(module => ({ default: module.RotatePdfPage })));
+const DeletePdfPagesPage = React.lazy(() => import('./pages/DeletePdfPages').then(module => ({ default: module.DeletePdfPagesPage })));
+const UnlockPdfPage = React.lazy(() => import('./pages/UnlockPdf').then(module => ({ default: module.UnlockPdfPage })));
+const AddPageNumbersPage = React.lazy(() => import('./pages/AddPageNumbers').then(module => ({ default: module.AddPageNumbersPage })));
+const RedactPdfPage = React.lazy(() => import('./pages/RedactPdf').then(module => ({ default: module.RedactPdfPage })));
+const GrayscalePdfPage = React.lazy(() => import('./pages/GrayscalePdf').then(module => ({ default: module.GrayscalePdfPage })));
+const CodeEditorPage = React.lazy(() => import('./pages/CodeEditor').then(module => ({ default: module.CodeEditorPage })));
 
 const App: React.FC = () => {
   return (
@@ -31,8 +40,8 @@ const App: React.FC = () => {
               element={
                 <>
                   <SEO 
-                    title="EZtify — Free Online PDF Tools (Private & Secure)"
-                    description="All-in-one PDF tools: Convert Images to PDF, PDF to Images, Compress, Merge, and Split PDFs. 100% free, private, and client-side."
+                    title="EZtify — Free Online File Utilities (Private & Secure)"
+                    description="A comprehensive suite of client-side tools: PDF converters, code editors, file compression, and more. Fast, secure, and 100% private."
                     canonical="https://eztify.pages.dev/"
                   />
                   <Home />
@@ -46,8 +55,8 @@ const App: React.FC = () => {
               element={
                 <>
                   <SEO 
-                    title="About EZtify — Privacy-First PDF Tools"
-                    description="Learn about EZtify's mission to provide fast, secure, and client-side PDF tools that respect your privacy."
+                    title="About EZtify — Privacy-First Web Tools"
+                    description="Learn about EZtify's mission to provide fast, secure, and client-side utilities that respect your privacy."
                     canonical="https://eztify.com/#/about"
                   />
                   <About />
@@ -100,6 +109,36 @@ const App: React.FC = () => {
               } 
             />
 
+            {/* Tool: PDF to Word */}
+            <Route 
+              path="pdf-to-word" 
+              element={
+                <>
+                  <SEO 
+                    title="PDF to Word Online — EZtify"
+                    description="Convert PDF to an editable Word (DOCX) document in your browser. Fast, private, and 100% client-side."
+                    canonical="https://eztify.com/#/pdf-to-word"
+                  />
+                  <PdfToWordPage />
+                </>
+              } 
+            />
+            
+            {/* Tool: PDF to PowerPoint */}
+            <Route 
+              path="pdf-to-pptx" 
+              element={
+                <>
+                  <SEO 
+                    title="PDF to PowerPoint Online — EZtify"
+                    description="Convert each PDF page into a slide in a PowerPoint (PPTX) presentation. Fast, private, and client-side."
+                    canonical="https://eztify.com/#/pdf-to-pptx"
+                  />
+                  <PdfToPptxPage />
+                </>
+              } 
+            />
+
             {/* Tool: Compress PDF */}
             <Route 
               path="compress-pdf" 
@@ -144,18 +183,123 @@ const App: React.FC = () => {
                 </>
               } 
             />
-
+            
             {/* Tool: Reorder PDF */}
             <Route 
               path="reorder-pdf" 
               element={
                 <>
                   <SEO 
-                    title="Reorder PDF — Organize Pages Online"
-                    description="Rearrange PDF pages securely in your browser."
+                    title="Reorder PDF Pages — Organize PDF Online"
+                    description="Drag and drop PDF pages to change their order. Delete unwanted pages and download the new file."
                     canonical="https://eztify.com/#/reorder-pdf"
                   />
                   <ReorderPdfPage />
+                </>
+              } 
+            />
+            
+            {/* Tool: Rotate PDF */}
+            <Route 
+              path="rotate-pdf" 
+              element={
+                <>
+                  <SEO 
+                    title="Rotate PDF Pages — Online PDF Rotator"
+                    description="Rotate PDF pages permanently online for free. Rotate all pages or specific pages."
+                    canonical="https://eztify.com/#/rotate-pdf"
+                  />
+                  <RotatePdfPage />
+                </>
+              } 
+            />
+
+            {/* Tool: Delete PDF Pages */}
+            <Route 
+              path="delete-pdf-pages" 
+              element={
+                <>
+                  <SEO 
+                    title="Delete PDF Pages — Remove Pages from PDF"
+                    description="Easily delete pages from your PDF file online. Select and remove unwanted pages securely in your browser."
+                    canonical="https://eztify.com/#/delete-pdf-pages"
+                  />
+                  <DeletePdfPagesPage />
+                </>
+              } 
+            />
+
+             {/* Tool: Unlock PDF */}
+            <Route 
+              path="unlock-pdf" 
+              element={
+                <>
+                  <SEO 
+                    title="Unlock PDF — Remove PDF Password Online"
+                    description="Remove passwords from encrypted PDF files. Securely unlock your PDF in the browser."
+                    canonical="https://eztify.com/#/unlock-pdf"
+                  />
+                  <UnlockPdfPage />
+                </>
+              } 
+            />
+
+            {/* Tool: Add Page Numbers */}
+            <Route 
+              path="add-page-numbers" 
+              element={
+                <>
+                  <SEO 
+                    title="Add Page Numbers to PDF — Online & Free"
+                    description="Insert page numbers into PDF documents. Customize position, style, and range."
+                    canonical="https://eztify.com/#/add-page-numbers"
+                  />
+                  <AddPageNumbersPage />
+                </>
+              } 
+            />
+
+            {/* Tool: Redact PDF */}
+            <Route 
+              path="redact-pdf" 
+              element={
+                <>
+                  <SEO 
+                    title="Redact PDF Online — Securely Hide Text & Images"
+                    description="Permanently black out sensitive information from your PDF files. 100% private, client-side redaction."
+                    canonical="https://eztify.com/#/redact-pdf"
+                  />
+                  <RedactPdfPage />
+                </>
+              } 
+            />
+
+            {/* Tool: Grayscale PDF */}
+            <Route 
+              path="grayscale-pdf" 
+              element={
+                <>
+                  <SEO 
+                    title="Grayscale PDF — Convert to Black & White Online"
+                    description="Convert your color PDF to grayscale (black and white) instantly. Free, private, and purely client-side."
+                    canonical="https://eztify.com/#/grayscale-pdf"
+                  />
+                  <GrayscalePdfPage />
+                </>
+              } 
+            />
+
+            {/* Tool: Code Editor */}
+            <Route 
+              path="code-editor" 
+              element={
+                <>
+                  <SEO 
+                    title="Online Code Editor — Text Editor with Syntax Highlighting"
+                    description="Free, private online code editor. Edit HTML, CSS, JS, JSON, and text files. No uploads required."
+                    canonical="https://eztify.com/#/code-editor"
+                  />
+                  <CodeEditorPage />
                 </>
               } 
             />
@@ -171,21 +315,6 @@ const App: React.FC = () => {
                     canonical="https://eztify.com/#/zip-it"
                   />
                   <ZipFilesPage />
-                </>
-              } 
-            />
-
-            {/* Tool: PDF Viewer */}
-            <Route 
-              path="pdf-viewer" 
-              element={
-                <>
-                  <SEO 
-                    title="PDF Viewer — Preview PDF Online"
-                    description="Preview PDF documents instantly in your browser."
-                    canonical="https://eztify.com/#/pdf-viewer"
-                  />
-                  <PdfViewerPage />
                 </>
               } 
             />

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, Suspense, createContext, useContext } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Header } from './Header';
@@ -49,7 +50,13 @@ export const Layout: React.FC = () => {
   else if (path.includes('zip-it')) currentMode = 'zip-files';
   else if (path.includes('word-to-pdf')) currentMode = 'word-to-pdf';
   else if (path.includes('reorder-pdf')) currentMode = 'reorder-pdf';
-  else if (path.includes('pdf-viewer')) currentMode = 'pdf-viewer';
+  else if (path.includes('rotate-pdf')) currentMode = 'rotate-pdf';
+  else if (path.includes('delete-pdf-pages')) currentMode = 'delete-pdf-pages';
+  else if (path.includes('pdf-to-word')) currentMode = 'pdf-to-word';
+  else if (path.includes('pdf-to-pptx')) currentMode = 'pdf-to-pptx';
+  else if (path.includes('unlock-pdf')) currentMode = 'unlock-pdf';
+  else if (path.includes('grayscale-pdf')) currentMode = 'grayscale-pdf';
+  else if (path.includes('code-editor')) currentMode = 'code-editor';
 
   // PWA & Cookie Logic on initial mount
   useEffect(() => {

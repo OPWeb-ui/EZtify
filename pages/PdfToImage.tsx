@@ -1,369 +1,163 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+
+import React, { useState, useCallback } from 'react';
 import { useLayoutContext } from '../components/Layout';
 import { UploadArea } from '../components/UploadArea';
-import { HowItWorks } from '../components/HowItWorks';
-import { FAQ } from '../components/FAQ';
-import { AdSlot } from '../components/AdSlot';
-import { RotatingText } from '../components/RotatingText';
-import { HeroPill } from '../components/HeroPill';
 import { PageReadyTracker } from '../components/PageReadyTracker';
-import { UploadedImage, PdfConfig, ExportConfig, PdfPage } from '../types';
 import { extractImagesFromPdf } from '../services/pdfExtractor';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Loader2, Download, Image as ImageIcon, Settings } from 'lucide-react';
-import { useDropzone, FileRejection } from 'react-dropzone';
-import { staggerContainer, fadeInUp, buttonTap } from '../utils/animations';
-import { EZDropdown } from '../components/EZDropdown';
-import { SplitPageGrid } from '../components/SplitPageGrid';
-import { DragDropOverlay } from '../components/DragDropOverlay';
+import { generateZip } from '../services/zipGenerator';
+import { UploadedImage } from '../types';
+import { Filmstrip } from '../components/Filmstrip';
+import { StickyBar } from '../components/StickyBar';
+import { Preview } from '../components/Preview';
+import { Sidebar } from '../components/Sidebar';
+import { FileRejection } from 'react-dropzone';
+import { motion } from 'framer-motion';
 
 export const PdfToImagePage: React.FC = () => {
   const { addToast, isMobile } = useLayoutContext();
   const [images, setImages] = useState<UploadedImage[]>([]);
-  const [selectedImageIds, setSelectedImageIds] = useState<Set<string>>(new Set());
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [hasStarted, setHasStarted] = useState(false);
-  const [isProcessingFiles, setIsProcessingFiles] = useState(false); // Loading state
+  const [activeImageId, setActiveImageId] = useState<string | null>(null);
+  const [isProcessingFiles, setIsProcessingFiles] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(!isMobile);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
 
-  // State for mobile options dropdown
-  const [isOptionsOpen, setIsOptionsOpen] = useState(false);
-  const optionsRef = useRef<HTMLDivElement>(null);
-
-  const [exportConfig, setExportConfig] = useState<ExportConfig>({
-    format: 'png',
-    quality: 1.0,
-    scale: 1
-  });
-  
-  // Effect to close dropdown on outside click
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (optionsRef.current && !optionsRef.current.contains(event.target as Node)) {
-        setIsOptionsOpen(false);
-      }
-    };
-    if (isOptionsOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOptionsOpen]);
-
-
-  const processPdf = async (file: File) => {
-    // We are already inside a processing block, so no need to double toggle
-    setIsGenerating(true);
-    setProgress(0);
-    setStatus('Reading PDF...');
-    try {
-      const extracted = await extractImagesFromPdf(file, setProgress, setStatus);
-      if (extracted.length === 0) {
-        addToast("Error", "No images found or PDF is empty.", "error");
-      } else {
-        setImages(prev => [...prev, ...extracted]);
-        addToast("Success", `Extracted ${extracted.length} pages.`, "success");
-      }
-    } catch (e) {
-      console.error(e);
-      addToast("Error", "Failed to process PDF.", "error");
-    } finally {
-      setIsGenerating(false);
-      setProgress(0);
-      setStatus('');
-    }
-  };
-
-  const onDrop = useCallback(async (acceptedFiles: File[], fileRejections: FileRejection[] = []) => {
-    if (fileRejections && fileRejections.length > 0) {
+  const onDrop = useCallback(async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
+    if (fileRejections.length > 0) {
       addToast("Invalid File", "Please upload a PDF file.", "error");
       return;
     }
+    
     if (acceptedFiles.length === 0) return;
 
-    setIsProcessingFiles(true); // Start loader
+    setIsProcessingFiles(true);
+    setStatus('Extracting images...');
     const startTime = Date.now();
+    
+    try {
+      const file = acceptedFiles[0];
+      const extracted = await extractImagesFromPdf(file, setProgress, setStatus);
+      
+      const elapsedTime = Date.now() - startTime;
+      if (elapsedTime < 1000) {
+          await new Promise(resolve => setTimeout(resolve, 1000 - elapsedTime));
+      }
+      setHasStarted(true);
 
-    // Process sequentially
-    for (const file of acceptedFiles) {
-        await processPdf(file);
+      if (extracted.length > 0) {
+        setImages(extracted);
+        setActiveImageId(extracted[0].id);
+        addToast("Success", `Extracted ${extracted.length} images.`, "success");
+      } else {
+        addToast("No Images", "No images found in this PDF.", "warning");
+      }
+    } catch (error) {
+      console.error(error);
+      addToast("Error", "Failed to process PDF.", "error");
+    } finally {
+      setIsProcessingFiles(false);
+      setProgress(0);
+      setStatus('');
     }
-
-    const elapsedTime = Date.now() - startTime;
-    if (elapsedTime < 800) {
-        await new Promise(resolve => setTimeout(resolve, 800 - elapsedTime));
-    }
-
-    setHasStarted(true);
-    setIsProcessingFiles(false); // End loader and transition
   }, [addToast]);
 
-  const { getRootProps, getInputProps, open: openAdd, isDragActive } = useDropzone({
-    onDrop,
-    accept: { 'application/pdf': ['.pdf'] },
-    multiple: true,
-    noClick: true,
-    noKeyboard: true
-  });
-
-  const handleRemove = (id: string) => {
-    setImages(prev => {
-      const filtered = prev.filter(img => img.id !== id);
-      if (filtered.length === 0) setHasStarted(false);
-      return filtered;
-    });
-    setSelectedImageIds(prev => { const n = new Set(prev); n.delete(id); return n; });
-  };
-
-  const handleDeleteSelected = () => {
-    setImages(prev => {
-      const filtered = prev.filter(img => !selectedImageIds.has(img.id));
-      if (filtered.length === 0) setHasStarted(false);
-      return filtered;
-    });
-    setSelectedImageIds(new Set());
-  };
-
-  const handleRotate = (id: string) => {
-    setImages(prev => prev.map(img => 
-      img.id === id ? { ...img, rotation: ((img.rotation || 0) + 90) % 360 } : img
-    ));
-  };
-
-  const handleGenerate = async () => {
+  const handleDownload = async () => {
     if (images.length === 0) return;
     setIsGenerating(true);
-    setProgress(0);
-    setStatus('Exporting...');
-    setTimeout(async () => {
-      try {
-        const imagesToProcess = selectedImageIds.size > 0 ? images.filter(i => selectedImageIds.has(i.id)) : images;
-        
-        for (let i = 0; i < imagesToProcess.length; i++) {
-          setStatus(`Saving page ${i + 1}/${imagesToProcess.length}...`);
-          setProgress(Math.round(((i + 1) / imagesToProcess.length) * 100));
-          
-          const imgData = imagesToProcess[i];
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          
-          if (ctx) {
-              const img = new Image();
-              img.src = imgData.previewUrl;
-              await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
-              
-              const isRotatedSideways = imgData.rotation === 90 || imgData.rotation === 270;
-              const srcWidth = img.width;
-              const srcHeight = img.height;
-
-              canvas.width = isRotatedSideways ? srcHeight : srcWidth;
-              canvas.height = isRotatedSideways ? srcWidth : srcHeight;
-              
-              if (exportConfig.format === 'jpeg') {
-                  ctx.fillStyle = '#FFFFFF';
-                  ctx.fillRect(0, 0, canvas.width, canvas.height);
-              }
-              
-              ctx.translate(canvas.width / 2, canvas.height / 2);
-              ctx.rotate((imgData.rotation * Math.PI) / 180);
-              ctx.drawImage(img, -srcWidth / 2, -srcHeight / 2);
-              
-              const mimeType = exportConfig.format === 'png' ? 'image/png' : 'image/jpeg';
-              const extension = exportConfig.format === 'png' ? 'png' : 'jpg';
-              
-              const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, mimeType, exportConfig.quality));
-              
-              if (blob) {
-                  const originalName = imgData.file.name;
-                  const baseName = originalName.substring(0, originalName.lastIndexOf('.')) || `page-${i+1}`;
-                  const filename = `${baseName}_EZtify.${extension}`;
-
-                  const url = URL.createObjectURL(blob);
-                  const link = document.createElement('a');
-                  link.href = url;
-                  link.download = filename;
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                  URL.revokeObjectURL(url);
-              }
-          }
-          await new Promise(resolve => setTimeout(resolve, 200));
-        }
-      } catch (e) {
-        addToast("Error", "Export failed.", "error");
-      } finally {
-        setIsGenerating(false);
-        setProgress(0);
-        setStatus('');
-      }
-    }, 50);
+    try {
+      await generateZip(images, { format: 'jpeg', quality: 1, scale: 1 }, setProgress);
+      addToast("Success", "Images downloaded successfully.", "success");
+    } catch (error) {
+      addToast("Error", "Failed to create ZIP.", "error");
+    } finally {
+      setIsGenerating(false);
+      setProgress(0);
+    }
   };
 
-  const handleReset = () => {
-    setImages([]);
-    setHasStarted(false);
-    setSelectedImageIds(new Set());
-  };
-
-  // Convert for Grid
-  const gridPages: PdfPage[] = images.map((img, idx) => ({
-    id: img.id,
-    pageIndex: idx,
-    previewUrl: img.previewUrl,
-    selected: selectedImageIds.has(img.id),
-    rotation: img.rotation
-  }));
-
-  const handleGridToggle = (id: string) => {
-    setSelectedImageIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const formatOptions = [
-    { label: 'PNG Image', value: 'png' },
-    { label: 'JPG Image', value: 'jpeg' },
-  ];
+  const activeImage = images.find(i => i.id === activeImageId) || null;
 
   return (
-    <>
+    <div className="flex h-[calc(100vh-64px)] overflow-hidden">
       <PageReadyTracker />
-      <AnimatePresence mode="wait">
-        {!hasStarted ? (
-          <motion.div key="hero" className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
-            <section className="flex-1 flex flex-col items-center justify-center p-4 pt-8 pb-10 relative">
-               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] blur-[120px] rounded-full pointer-events-none bg-brand-mint/10" />
-               <motion.div variants={staggerContainer} initial="hidden" animate="show" className="relative z-10 w-full max-w-2xl flex flex-col items-center text-center">
-                 <motion.div variants={fadeInUp} className="w-full max-w-xl my-4 relative z-20">
-                   <HeroPill>Extract pages from your PDF and save them as separate high-res images.</HeroPill>
-                   <UploadArea onDrop={onDrop} mode="pdf-to-image" disabled={isGenerating} isProcessing={isProcessingFiles} />
-                 </motion.div>
-                 <motion.div variants={fadeInUp}><RotatingText /></motion.div>
-               </motion.div>
-            </section>
-            <AdSlot zone="hero" />
-            <div className="w-full bg-gradient-to-b from-transparent to-white/40 dark:to-charcoal-900/40 pb-20 pt-10 border-t border-brand-purple/5 dark:border-white/5">
-              <HowItWorks mode="pdf-to-image" />
-              <AdSlot zone="footer" /><FAQ />
+      <Sidebar 
+        mode="pdf-to-image"
+        config={{ pageSize: 'auto', orientation: 'portrait', fitMode: 'contain', margin: 0, quality: 1 }}
+        exportConfig={{ format: 'jpeg', quality: 1, scale: 1 }}
+        onConfigChange={() => {}}
+        onExportConfigChange={() => {}}
+        isOpen={isSidebarOpen}
+        isMobile={isMobile}
+        onGenerate={handleDownload}
+        isGenerating={isGenerating}
+        progress={progress}
+        status={status}
+        imageCount={images.length}
+      />
+      
+      <div className="flex-1 flex flex-col h-full relative min-w-0 bg-slate-100 dark:bg-black/20">
+        {images.length === 0 ? (
+          <div className="flex-1 p-6 flex flex-col items-center justify-center overflow-y-auto">
+            <div className="max-w-2xl w-full">
+              <UploadArea onDrop={onDrop} mode="pdf-to-image" isProcessing={isProcessingFiles} />
             </div>
-          </motion.div>
+          </div>
         ) : (
-          <motion.div key="workspace" className="flex-1 flex flex-col items-center relative bg-white/50 dark:bg-charcoal-900/50 min-h-[calc(100vh-4rem)] outline-none" {...getRootProps({ onClick: (e) => e.stopPropagation() })}>
-            <input {...getInputProps()} />
+          <>
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar relative w-full">
+               <div className="min-h-full flex items-center justify-center p-4 md:p-8">
+                   <Preview 
+                      image={activeImage} 
+                      config={{ pageSize: 'auto', orientation: 'portrait', fitMode: 'contain', margin: 0, quality: 1 }}
+                      onReplace={() => {}} 
+                      onDropRejected={() => {}}
+                      scale={1}
+                   />
+               </div>
+            </div>
             
-            <DragDropOverlay 
-              isDragActive={isDragActive} 
-              message="Drop more PDFs" 
-              subMessage="They will be processed sequentially" 
-              variant="mint"
-            />
+            <motion.div 
+                initial={{ y: 50, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className="shrink-0 h-32 md:h-40 bg-white dark:bg-charcoal-900 border-t border-slate-200 dark:border-charcoal-800 z-20 relative shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.2)]"
+            >
+              <Filmstrip 
+                images={images}
+                activeImageId={activeImageId}
+                onSelect={(id) => setActiveImageId(id)}
+                onReorder={setImages}
+                onRemove={(id) => {
+                  setImages(prev => {
+                    const next = prev.filter(i => i.id !== id);
+                    if (activeImageId === id) setActiveImageId(next.length ? next[0].id : null);
+                    return next;
+                  });
+                }}
+                onRotate={() => {}}
+                isMobile={isMobile}
+              />
+            </motion.div>
 
-            {/* 1. UNIFIED CONTROL TOOLBAR */}
-            <div className="w-full bg-white dark:bg-charcoal-800 border-b border-slate-200 dark:border-charcoal-700 sticky top-0 z-40 p-3 animate-in slide-in-from-top-2">
-                <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
-                    {/* LEFT: Settings & Info */}
-                    <div className="flex items-center gap-2">
-                        {/* -- Desktop Settings -- */}
-                        <div className="hidden md:flex items-center gap-2">
-                           <EZDropdown label="Format" value={exportConfig.format} options={formatOptions} onChange={(v) => setExportConfig({ ...exportConfig, format: v })} />
-                        </div>
-                        {/* -- Mobile Settings -- */}
-                        <div className="md:hidden relative" ref={optionsRef}>
-                           <button onClick={() => setIsOptionsOpen(!isOptionsOpen)} className="flex items-center gap-1.5 px-3 h-10 rounded-lg bg-slate-100 dark:bg-charcoal-700 text-charcoal-700 dark:text-slate-200 font-bold text-xs">
-                             <Settings size={14} />
-                             <span>Options</span>
-                           </button>
-                           <AnimatePresence>
-                             {isOptionsOpen && (
-                               <motion.div
-                                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                 className="absolute top-full left-0 mt-2 z-50 bg-white dark:bg-charcoal-800 p-3 rounded-xl shadow-lg border border-slate-200 dark:border-charcoal-700 space-y-3 w-60"
-                               >
-                                 <EZDropdown label="Format" value={exportConfig.format} options={formatOptions} onChange={(v) => setExportConfig({ ...exportConfig, format: v })} fullWidth />
-                               </motion.div>
-                             )}
-                           </AnimatePresence>
-                        </div>
-                        <div className="hidden lg:block text-xs font-medium text-charcoal-400 dark:text-slate-500 pl-4 border-l border-slate-200 dark:border-charcoal-700 ml-2">
-                           {selectedImageIds.size > 0 ? `${selectedImageIds.size} Selected` : `${images.length} Images Extracted`}
-                        </div>
-                    </div>
-                    {/* RIGHT: Actions */}
-                    <div className="flex items-center gap-2">
-                       <button 
-                         onClick={openAdd} 
-                         className="flex items-center gap-2 px-3 h-10 rounded-lg bg-white dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-600 text-charcoal-700 dark:text-slate-200 font-bold text-xs hover:border-brand-purple/50 hover:text-brand-purple transition-all shadow-sm"
-                       >
-                         <Plus size={16} /> <span className="hidden md:inline">Add PDF</span>
-                       </button>
-                       <motion.button
-                         whileHover={{ scale: 1.02 }}
-                         whileTap={{ scale: 0.96 }}
-                         onClick={handleGenerate}
-                         disabled={isGenerating || images.length === 0}
-                         className="px-4 md:px-5 h-10 rounded-xl bg-brand-purple text-white font-bold shadow-lg shadow-brand-purple/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm relative overflow-hidden"
-                       >
-                          {isGenerating ? (
-                            <>
-                              <div className="absolute inset-0 bg-black/10" />
-                              <motion.div 
-                                className="absolute inset-y-0 left-0 bg-white/20" 
-                                initial={{ width: '0%' }} 
-                                animate={{ width: `${progress}%` }} 
-                                transition={{ duration: 0.2 }} 
-                              />
-                              <Loader2 className="w-4 h-4 animate-spin relative z-10" />
-                              <span className="relative z-10 text-xs">{status || 'Processing...'}</span>
-                            </>
-                          ) : (
-                            <>
-                              <Download size={16} />
-                              <span className="md:hidden">Download</span>
-                              <span className="hidden md:inline">
-                                {selectedImageIds.size > 0 ? 'Download Selected' : 'Download'}
-                              </span>
-                            </>
-                          )}
-                       </motion.button>
-                       <button onClick={handleReset} className="p-2.5 text-charcoal-400 hover:bg-rose-100 hover:text-rose-500 rounded-lg transition-colors" title="Close">
-                         <X size={20} />
-                       </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* 2. MAIN CANVAS */}
-            <div className="w-full max-w-7xl p-4 md:p-6 flex-1">
-               <SplitPageGrid
-                 pages={gridPages}
-                 onTogglePage={handleGridToggle}
-                 onSelectAll={() => setSelectedImageIds(new Set(images.map(i => i.id)))}
-                 onDeselectAll={() => setSelectedImageIds(new Set())}
-                 onInvertSelection={() => {
-                    const newSet = new Set(selectedImageIds);
-                    images.forEach(img => {
-                      if (newSet.has(img.id)) newSet.delete(img.id);
-                      else newSet.add(img.id);
-                    });
-                    setSelectedImageIds(newSet);
-                 }}
-                 onRemovePage={handleRemove}
-                 onRemoveSelected={handleDeleteSelected}
-                 onReorder={() => {}} // Reorder irrelevant usually but supported visually
-                 onRotate={handleRotate}
-                 useVisualIndexing={true}
-                 isMobile={isMobile}
-               />
-            </div>
-          </motion.div>
+            {isMobile && (
+                <div className="h-[88px] w-full shrink-0 bg-white dark:bg-charcoal-850" />
+            )}
+          </>
         )}
-      </AnimatePresence>
-    </>
+        
+        {isMobile && images.length > 0 && (
+           <StickyBar 
+             mode="pdf-to-image"
+             imageCount={images.length}
+             totalSize={0}
+             onGenerate={handleDownload}
+             isGenerating={isGenerating}
+             progress={progress}
+             status={status}
+           />
+        )}
+      </div>
+    </div>
   );
 };

@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Upload, Layers, Download, Settings, FileImage, MousePointerClick, Zap, Sliders, CheckCircle, GripVertical, Scissors, FileOutput, Archive, FilePlus, FileText } from 'lucide-react';
+import { Upload, Layers, Download, Settings, FileImage, MousePointerClick, Zap, Sliders, CheckCircle, GripVertical, Scissors, FileOutput, Archive, FilePlus, FileText, RotateCw, Trash2, FileKey, FileLock, Lock, ShieldCheck, Hash, Eraser, Palette, Code, PenTool } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AppMode } from '../types';
 import { staggerContainer, fadeInUp, cardHover } from '../utils/animations';
@@ -24,6 +25,62 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ mode }) => {
         { icon: <FileImage />, title: "Export", desc: "Save as images" }
       ];
     }
+    if (mode === 'word-to-pdf' || mode === 'pdf-to-word' || mode === 'pdf-to-pptx') {
+      return [
+        { icon: <Upload />, title: "Upload", desc: "Select your file" },
+        { icon: <Zap />, title: "Convert", desc: "Instant conversion" },
+        { icon: <Download />, title: "Download", desc: "Save the new file" }
+      ];
+    }
+    if (mode === 'rotate-pdf') {
+       return [
+        { icon: <Upload />, title: "Upload", desc: "Select your PDF" },
+        { icon: <RotateCw />, title: "Rotate", desc: "Click to rotate pages" },
+        { icon: <Download />, title: "Download", desc: "Save the new file" }
+      ];
+    }
+    if (mode === 'delete-pdf-pages') {
+       return [
+        { icon: <Upload />, title: "Upload", desc: "Select your PDF" },
+        { icon: <Trash2 />, title: "Select & Delete", desc: "Click pages to remove" },
+        { icon: <Download />, title: "Download", desc: "Save the new file" }
+      ];
+    }
+    if (mode === 'unlock-pdf') {
+       return [
+        { icon: <Upload />, title: "Upload", desc: "Select your PDF" },
+        { icon: <FileKey />, title: "Enter Password", desc: "Provide existing password" },
+        { icon: <Download />, title: "Download", desc: "Save unlocked file" }
+      ];
+    }
+    if (mode === 'add-page-numbers') {
+       return [
+        { icon: <Upload />, title: "Upload", desc: "Select your PDF" },
+        { icon: <Hash />, title: "Configure", desc: "Set style & position" },
+        { icon: <Download />, title: "Download", desc: "Save numbered PDF" }
+      ];
+    }
+    if (mode === 'redact-pdf') {
+        return [
+         { icon: <Upload />, title: "Upload", desc: "Select your PDF" },
+         { icon: <Eraser />, title: "Redact", desc: "Black out sensitive info" },
+         { icon: <Download />, title: "Download", desc: "Save redacted file" }
+       ];
+     }
+    if (mode === 'grayscale-pdf') {
+        return [
+         { icon: <Upload />, title: "Upload", desc: "Select your PDF" },
+         { icon: <Palette />, title: "Convert", desc: "Auto-convert to B&W" },
+         { icon: <Download />, title: "Download", desc: "Save grayscale PDF" }
+       ];
+     }
+    if (mode === 'code-editor') {
+        return [
+         { icon: <Upload />, title: "Open", desc: "Drag & drop text files" },
+         { icon: <PenTool />, title: "Edit", desc: "Modify with syntax highlighting" },
+         { icon: <Download />, title: "Save", desc: "Download modified files" }
+       ];
+     }
     // Default fallback
     return [
       { icon: <Upload />, title: "Upload", desc: "Select file" },
