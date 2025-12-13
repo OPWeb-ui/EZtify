@@ -187,7 +187,7 @@ export const About: React.FC = () => {
                       <span className="text-green-400 font-bold">ACTIVE</span>
                    </div>
                    <div className="mt-4 p-3 bg-charcoal-800 rounded border border-charcoal-700 text-charcoal-300 leading-relaxed">
-                      > All file processing logic is contained within the application bundle. No external API calls required.
+                      &gt; All file processing logic is contained within the application bundle. No external API calls required.
                    </div>
                 </div>
              </motion.div>
