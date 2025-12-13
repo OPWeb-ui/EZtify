@@ -7,18 +7,16 @@ const loadZipLib = async () => {
   if (zipLib) return zipLib;
 
   try {
-    // Try full ESM build first (includes workers)
+    // The deep import '@zip.js/zip.js/dist/zip-full.esm.min.js' is not a valid
+    // module specifier according to the package's "exports" map, causing build tools like Vite to fail.
+    // We now use the main entry point which is correctly resolved.
     // @ts-ignore
-    zipLib = await import('@zip.js/zip.js/dist/zip-full.esm.min.js');
+    zipLib = await import('@zip.js/zip.js');
   } catch (e) {
-    console.warn("Failed to load full zip build, falling back to standard import", e);
-    try {
-      // @ts-ignore
-      zipLib = await import('@zip.js/zip.js');
-    } catch (e2) {
-      throw new Error("Could not load encryption engine. Please check internet connection.");
-    }
+    console.error("Failed to load @zip.js/zip.js library", e);
+    throw new Error("Could not load encryption engine. Please check internet connection.");
   }
+  
   return zipLib;
 };
 
