@@ -1,13 +1,14 @@
 
 import React, { useState, useCallback } from 'react';
 import { useLayoutContext } from '../components/Layout';
-import { UploadArea } from '../components/UploadArea';
 import { PageReadyTracker } from '../components/PageReadyTracker';
 import { PdfPage } from '../types';
 import { loadPdfPages, savePdfWithModifications } from '../services/pdfSplitter';
 import { SplitPageGrid } from '../components/SplitPageGrid';
 import { StickyBar } from '../components/StickyBar';
 import { FileRejection } from 'react-dropzone';
+import { GitFork, Layers, Lock, Cpu, Settings } from 'lucide-react';
+import { ToolLandingLayout } from '../components/ToolLandingLayout';
 
 export const SplitPdfPage: React.FC = () => {
   const { addToast } = useLayoutContext();
@@ -86,15 +87,27 @@ export const SplitPdfPage: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-[calc(100vh-64px)] overflow-hidden bg-slate-50 dark:bg-charcoal-900">
+    <div className="flex-1 flex flex-col h-full pt-16 overflow-hidden bg-slate-50 dark:bg-charcoal-900">
       <PageReadyTracker />
       
       {!file ? (
-        <div className="flex-1 p-6 flex flex-col items-center justify-center overflow-y-auto">
-          <div className="max-w-2xl w-full">
-            <UploadArea onDrop={onDrop} mode="split-pdf" isProcessing={isProcessingFiles} />
-          </div>
-        </div>
+        <ToolLandingLayout
+            title="Split PDF"
+            description="Extract specific pages or split your document into multiple independent PDF files."
+            icon={<GitFork />}
+            onDrop={onDrop}
+            accept={{ 'application/pdf': ['.pdf'] }}
+            multiple={false}
+            isProcessing={isProcessingFiles}
+            accentColor="text-purple-500"
+            specs={[
+              { label: "Mode", value: "Extraction", icon: <Layers /> },
+              { label: "Preview", value: "Thumbnails", icon: <Settings /> },
+              { label: "Privacy", value: "Client-Side", icon: <Lock /> },
+              { label: "Engine", value: "PDF-Lib", icon: <Cpu /> },
+            ]}
+            tip="Select the pages you want to keep. All other pages will be removed from the new file."
+        />
       ) : (
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pb-32">
           <div className="max-w-6xl mx-auto">

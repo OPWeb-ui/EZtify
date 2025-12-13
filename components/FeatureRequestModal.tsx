@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Mail, MessageSquare } from 'lucide-react';
-import { buttonTap, modalVariants } from '../utils/animations';
+import { buttonTap, modalOverlayVariants, modalContentVariants } from '../utils/animations';
 import { useLayoutContext } from './Layout';
 
 interface FeatureRequestModalProps {
@@ -47,15 +48,16 @@ export const FeatureRequestModal: React.FC<FeatureRequestModalProps> = ({ isOpen
       {isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            variants={modalOverlayVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
             onClick={onClose}
             className="absolute inset-0 bg-charcoal-900/40 backdrop-blur-sm"
           />
           
           <motion.div
-            variants={modalVariants}
+            variants={modalContentVariants}
             initial="hidden"
             animate="visible"
             exit="exit"

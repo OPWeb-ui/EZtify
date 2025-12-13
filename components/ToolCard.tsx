@@ -2,7 +2,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, CornerDownRight } from 'lucide-react';
+import { cardHover } from '../utils/animations'; 
 
 export interface ToolData {
   id: string;
@@ -11,7 +12,6 @@ export interface ToolData {
   icon: React.ReactNode;
   path: string;
   color: string;
-  gradient: string;
 }
 
 interface ToolCardProps {
@@ -19,54 +19,61 @@ interface ToolCardProps {
   className?: string;
 }
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
+const localItemVariants = {
+  hidden: { opacity: 0, scale: 0.95 },
   visible: { 
     opacity: 1, 
-    y: 0,
-    transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] }
+    scale: 1,
+    transition: { type: "spring", stiffness: 200, damping: 20 }
   }
 };
 
 export const ToolCard: React.FC<ToolCardProps> = ({ tool, className }) => {
   return (
     <motion.div
-      variants={itemVariants}
+      variants={localItemVariants}
       className={`relative group ${className || "w-full"}`}
     >
-      <Link to={tool.path} className="block w-full h-full outline-none ui-element">
+      <Link to={tool.path} className="block w-full h-full outline-none">
         <motion.div
-          className="bg-white dark:bg-charcoal-900 rounded-3xl border border-slate-100 dark:border-white/5 relative overflow-hidden transition-all duration-300 shadow-layer-1 aspect-square"
-          whileHover={{ 
-            y: -4,
-            boxShadow: "0 16px 32px -8px rgba(0, 0, 0, 0.08)",
-            borderColor: "rgba(124, 58, 237, 0.2)" 
-          }}
+          className="
+            bg-white dark:bg-charcoal-900 rounded-xl border border-slate-200 dark:border-charcoal-700 
+            relative overflow-hidden aspect-square flex flex-col justify-between p-5
+            transition-colors duration-150 ease-linear
+          "
+          whileHover={cardHover}
           whileTap={{ scale: 0.98 }}
         >
-          {/* Arrow */}
-          <div className="absolute top-4 right-4 w-7 h-7 rounded-full bg-slate-50 dark:bg-charcoal-800 flex items-center justify-center text-slate-300 dark:text-charcoal-600 group-hover:bg-brand-purple group-hover:text-white transition-colors duration-300 z-20">
-            <ArrowRight size={14} />
-          </div>
+          {/* Tech Corner Markers (Decor) */}
+          <div className="absolute top-0 left-0 w-2 h-2 border-l-2 border-t-2 border-transparent group-hover:border-brand-purple transition-colors duration-200" />
+          <div className="absolute top-0 right-0 w-2 h-2 border-r-2 border-t-2 border-transparent group-hover:border-brand-purple transition-colors duration-200" />
+          <div className="absolute bottom-0 left-0 w-2 h-2 border-l-2 border-b-2 border-transparent group-hover:border-brand-purple transition-colors duration-200" />
+          <div className="absolute bottom-0 right-0 w-2 h-2 border-r-2 border-b-2 border-transparent group-hover:border-brand-purple transition-colors duration-200" />
 
-          {/* Content that moves up */}
-          <div className="absolute inset-0 p-5 flex flex-col justify-start items-start text-left transition-transform duration-300 ease-out group-hover:-translate-y-6">
-              <div className={`w-12 h-12 rounded-xl ${tool.color} flex items-center justify-center border border-black/5 dark:border-white/5 mb-3`}>
+          {/* Header */}
+          <div className="flex justify-between items-start">
+             <div className={`w-10 h-10 rounded-lg ${tool.color} flex items-center justify-center border border-black/5 dark:border-white/10`}>
                   {React.isValidElement(tool.icon) 
-                      ? React.cloneElement(tool.icon as React.ReactElement, { className: "w-6 h-6" }) 
+                      ? React.cloneElement(tool.icon as React.ReactElement, { size: 20 }) 
                       : tool.icon}
               </div>
-              <h3 className="text-base font-bold text-charcoal-900 dark:text-white leading-tight">
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 -mr-2 -mt-2">
+                 <ArrowRight className="text-brand-purple -rotate-45 group-hover:rotate-0 transition-transform duration-300" size={20} />
+              </div>
+          </div>
+
+          {/* Body */}
+          <div className="mt-4">
+              <h3 className="font-mono font-bold text-sm text-charcoal-900 dark:text-white mb-2 group-hover:text-brand-purple transition-colors">
                   {tool.title}
               </h3>
+              <p className="text-[10px] text-charcoal-500 dark:text-charcoal-400 leading-relaxed line-clamp-3 font-mono">
+                   {tool.desc}
+              </p>
           </div>
           
-          {/* Description that fades in */}
-          <div className="absolute bottom-0 left-0 right-0 h-2/3 p-5 pt-12 flex items-end bg-gradient-to-t from-white via-white/90 to-transparent dark:from-charcoal-900 dark:via-charcoal-900/90 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-out">
-               <p className="text-xs text-charcoal-500 dark:text-charcoal-400 leading-relaxed line-clamp-3">
-                   {tool.desc}
-               </p>
-          </div>
+          {/* Background Scanline (Subtle) */}
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-brand-purple/5 to-transparent -translate-y-full group-hover:translate-y-full transition-transform duration-700 ease-linear pointer-events-none" />
         </motion.div>
       </Link>
     </motion.div>

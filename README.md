@@ -3,7 +3,7 @@
 
 EZtify is a suite of high-performance, client-side file manipulation tools. It enables users to convert, compress, merge, and secure files directly in their browser without ever uploading data to a server.
 
-[eztify.pages.dev](https://eztify.pages.dev/)
+**Live Demo:** [eztify.pages.dev](https://eztify.pages.dev/)
 
 ## 🚀 Key Features
 
@@ -24,9 +24,35 @@ EZtify is a suite of high-performance, client-side file manipulation tools. It e
 *   **Styling:** Tailwind CSS + Framer Motion
 *   **Core Libraries:** `pdf-lib`, `pdfjs-dist`, `jszip`, `mammoth`, `@uiw/react-codemirror`.
 
+## 📦 Quick Start
+
+Ensure you have Node.js installed.
+
+1.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
+
+2.  **Run development server:**
+    ```bash
+    npm run dev
+    ```
+
+3.  **Build for production:**
+    ```bash
+    npm run build
+    ```
+
+The production build outputs to `dist/`, ready for deployment to Cloudflare Pages, Vercel, or Netlify.
+
 ## 🔒 Privacy & Security
 
 EZtify is designed with a "local-first" architecture. 
 *   All processing happens in the user's browser memory or web workers.
 *   We do not maintain any backend for file processing.
 *   Optional features (like analytics) are strictly opt-in or anonymized.
+
+## 📝 Content
+
+The content for the **About** page is managed via Markdown.
+*   Edit `content/about.md` to update the text.

@@ -94,6 +94,8 @@ export interface PdfPage {
   type?: 'original' | 'blank';
   rotation?: number;
   annotations?: Annotation[];
+  width?: number;
+  height?: number;
 }
 
 export interface ZipFile {

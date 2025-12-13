@@ -18,6 +18,7 @@ const ZipFilesPage = React.lazy(() => import('./pages/ZipFiles').then(module => 
 const WordToPdfPage = React.lazy(() => import('./pages/WordToPdf').then(module => ({ default: module.WordToPdfPage })));
 const PdfToWordPage = React.lazy(() => import('./pages/PdfToWord').then(module => ({ default: module.PdfToWordPage })));
 const PdfToPptxPage = React.lazy(() => import('./pages/PdfToPptx').then(module => ({ default: module.PdfToPptxPage })));
+const PptxToPdfPage = React.lazy(() => import('./pages/PptxToPdf').then(module => ({ default: module.PptxToPdfPage })));
 const ReorderPdfPage = React.lazy(() => import('./pages/ReorderPdf').then(module => ({ default: module.ReorderPdfPage })));
 const RotatePdfPage = React.lazy(() => import('./pages/RotatePdf').then(module => ({ default: module.RotatePdfPage })));
 const DeletePdfPagesPage = React.lazy(() => import('./pages/DeletePdfPages').then(module => ({ default: module.DeletePdfPagesPage })));
@@ -135,6 +136,21 @@ const App: React.FC = () => {
                     canonical="https://eztify.com/#/pdf-to-pptx"
                   />
                   <PdfToPptxPage />
+                </>
+              } 
+            />
+
+            {/* Tool: PowerPoint to PDF */}
+            <Route 
+              path="pptx-to-pdf" 
+              element={
+                <>
+                  <SEO 
+                    title="PowerPoint to PDF Online — EZtify"
+                    description="Convert PowerPoint (PPTX) slides to PDF documents. Fast, private, and client-side."
+                    canonical="https://eztify.com/#/pptx-to-pdf"
+                  />
+                  <PptxToPdfPage />
                 </>
               } 
             />

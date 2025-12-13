@@ -1,15 +1,18 @@
 
 import React, { useState, useCallback } from 'react';
 import { useLayoutContext } from '../components/Layout';
-import { UploadArea } from '../components/UploadArea';
 import { PageReadyTracker } from '../components/PageReadyTracker';
 import { PdfPage, PageNumberConfig } from '../types';
 import { loadPdfPages, savePdfWithModifications } from '../services/pdfSplitter';
 import { SplitPageGrid } from '../components/SplitPageGrid';
-import { StickyBar } from '../components/StickyBar';
-import { FileRejection } from 'react-dropzone';
-import { Settings } from 'lucide-react';
-import { EZDropdown } from '../components/EZDropdown';
+import { FileRejection, useDropzone } from 'react-dropzone';
+import { 
+  ArrowUp, ArrowDown, AlignLeft, AlignCenter, AlignRight, 
+  Type, Hash, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Settings, RefreshCw, Download, Loader2
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { buttonTap } from '../utils/animations';
+import { ToolLandingLayout } from '../components/ToolLandingLayout';
 
 export const AddPageNumbersPage: React.FC = () => {
   const { addToast } = useLayoutContext();
@@ -75,97 +78,201 @@ export const AddPageNumbersPage: React.FC = () => {
     }
   };
 
+  const handleReset = () => {
+    setFile(null);
+    setPages([]);
+    setConfig({
+        position: 'bottom',
+        alignment: 'center',
+        startFrom: 1,
+        fontSize: 12,
+        fontFamily: 'Helvetica',
+        offsetX: 0,
+        offsetY: 0
+    });
+  };
+
+  const nudge = (axis: 'x' | 'y', dir: 1 | -1) => {
+    setConfig(prev => {
+        if (axis === 'x') {
+            return { ...prev, offsetX: prev.offsetX + (dir * 2) };
+        } else {
+            return { ...prev, offsetY: prev.offsetY + (dir * 2) };
+        }
+    });
+  };
+
+  const ControlGroup = ({ label, children, className = "" }: { label: string, children?: React.ReactNode, className?: string }) => (
+    <div className={`space-y-2 ${className}`}>
+      <span className="text-[10px] uppercase font-bold text-charcoal-400 dark:text-slate-500 tracking-wider whitespace-nowrap font-mono">{label}</span>
+      <div className="flex items-center gap-2">
+        {children}
+      </div>
+    </div>
+  );
+
+  const ToggleButton = ({ active, onClick, icon: Icon, label, compact = false }: any) => (
+    <button
+      onClick={onClick}
+      className={`
+        flex items-center justify-center gap-1.5 rounded-lg text-xs font-bold font-mono transition-all border
+        ${compact ? 'p-2 w-9 h-9' : 'flex-1 px-2 py-2'}
+        ${active 
+          ? 'bg-brand-purple text-white border-brand-purple' 
+          : 'bg-white dark:bg-charcoal-800 text-charcoal-500 dark:text-slate-400 border-slate-200 dark:border-charcoal-600 hover:bg-slate-50 dark:hover:bg-charcoal-700'}
+      `}
+      title={label}
+    >
+      <Icon size={14} />
+      {!compact && <span className="truncate">{label}</span>}
+    </button>
+  );
+
   return (
-    <div className="flex-1 flex flex-col h-[calc(100vh-64px)] overflow-hidden bg-slate-50 dark:bg-charcoal-900">
+    <div className="flex-1 flex flex-col h-full pt-16 overflow-hidden bg-slate-50 dark:bg-charcoal-950">
       <PageReadyTracker />
       
-      {!file ? (
-        <div className="flex-1 p-6 flex flex-col items-center justify-center overflow-y-auto">
-          <div className="max-w-2xl w-full">
-            <UploadArea onDrop={onDrop} mode="add-page-numbers" isProcessing={isProcessingFiles} />
-          </div>
-        </div>
-      ) : (
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-           {/* Sidebar Config */}
-           <div className="w-full md:w-80 bg-white dark:bg-charcoal-800 border-r border-slate-200 dark:border-charcoal-700 p-6 overflow-y-auto z-10">
-              <h3 className="font-bold text-lg mb-6 flex items-center gap-2"><Settings size={18} /> Numbering</h3>
-              
-              <div className="space-y-4">
-                 <div>
-                    <label className="text-xs font-bold text-charcoal-500 uppercase tracking-wide">Position</label>
-                    <div className="grid grid-cols-2 gap-2 mt-1">
-                       <button onClick={() => setConfig({...config, position: 'top'})} className={`p-2 rounded-lg text-sm border ${config.position === 'top' ? 'bg-brand-purple/10 border-brand-purple text-brand-purple' : 'border-slate-200 dark:border-charcoal-600'}`}>Top</button>
-                       <button onClick={() => setConfig({...config, position: 'bottom'})} className={`p-2 rounded-lg text-sm border ${config.position === 'bottom' ? 'bg-brand-purple/10 border-brand-purple text-brand-purple' : 'border-slate-200 dark:border-charcoal-600'}`}>Bottom</button>
+      <AnimatePresence mode="wait">
+        {!file ? (
+          <ToolLandingLayout
+            title="Add Page Numbers"
+            description="Insert customizable page numbers into your PDF document instantly."
+            icon={<Hash />}
+            onDrop={onDrop}
+            accept={{ 'application/pdf': ['.pdf'] }}
+            multiple={false}
+            isProcessing={isProcessingFiles}
+            accentColor="text-indigo-500"
+            specs={[
+              { label: "Position", value: "Custom", icon: <ArrowUp /> },
+              { label: "Font", value: "Standard", icon: <Type /> },
+              { label: "Privacy", value: "Client-Side", icon: <Settings /> },
+              { label: "Engine", value: "PDF-Lib", icon: <Hash /> },
+            ]}
+            tip="Adjust position, alignment, and starting number. Use the arrow controls for fine-tuning."
+          />
+        ) : (
+          <motion.div
+            key="studio"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex-1 flex flex-col h-full overflow-hidden"
+          >
+            {/* MOBILE: Horizontal Top Toolbar */}
+            <div className="md:hidden bg-white dark:bg-charcoal-850 border-b border-slate-200 dark:border-charcoal-700 flex items-center gap-4 px-4 py-3 overflow-x-auto no-scrollbar shrink-0 shadow-sm z-30 h-16">
+                <div className="flex gap-1 shrink-0">
+                    <ToggleButton compact active={config.position === 'top'} onClick={() => setConfig({...config, position: 'top'})} icon={ArrowUp} />
+                    <ToggleButton compact active={config.position === 'bottom'} onClick={() => setConfig({...config, position: 'bottom'})} icon={ArrowDown} />
+                </div>
+                <div className="w-px h-6 bg-slate-200 dark:bg-charcoal-700 shrink-0" />
+                <div className="flex gap-1 shrink-0">
+                    <ToggleButton compact active={config.alignment === 'left'} onClick={() => setConfig({...config, alignment: 'left'})} icon={AlignLeft} />
+                    <ToggleButton compact active={config.alignment === 'center'} onClick={() => setConfig({...config, alignment: 'center'})} icon={AlignCenter} />
+                    <ToggleButton compact active={config.alignment === 'right'} onClick={() => setConfig({...config, alignment: 'right'})} icon={AlignRight} />
+                </div>
+            </div>
+
+            {/* Main Content Layout */}
+            <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden relative">
+                
+                {/* Preview Grid */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-100 dark:bg-black/20 p-4 md:p-6 pb-24 md:pb-6 relative">
+                    <div className="max-w-3xl mx-auto min-h-full">
+                        <SplitPageGrid 
+                            pages={pages}
+                            onTogglePage={() => {}}
+                            onSelectAll={() => {}}
+                            onDeselectAll={() => {}}
+                            onInvertSelection={() => {}}
+                            onRemovePage={() => {}}
+                            onRemoveSelected={() => {}}
+                            onReorder={() => {}}
+                            isReorderDisabled={true}
+                            numberingConfig={config} 
+                            showBadges={true}
+                        />
                     </div>
-                 </div>
+                </div>
 
-                 <div>
-                    <label className="text-xs font-bold text-charcoal-500 uppercase tracking-wide">Alignment</label>
-                    <div className="grid grid-cols-3 gap-2 mt-1">
-                       <button onClick={() => setConfig({...config, alignment: 'left'})} className={`p-2 rounded-lg text-sm border ${config.alignment === 'left' ? 'bg-brand-purple/10 border-brand-purple text-brand-purple' : 'border-slate-200 dark:border-charcoal-600'}`}>Left</button>
-                       <button onClick={() => setConfig({...config, alignment: 'center'})} className={`p-2 rounded-lg text-sm border ${config.alignment === 'center' ? 'bg-brand-purple/10 border-brand-purple text-brand-purple' : 'border-slate-200 dark:border-charcoal-600'}`}>Center</button>
-                       <button onClick={() => setConfig({...config, alignment: 'right'})} className={`p-2 rounded-lg text-sm border ${config.alignment === 'right' ? 'bg-brand-purple/10 border-brand-purple text-brand-purple' : 'border-slate-200 dark:border-charcoal-600'}`}>Right</button>
+                {/* DESKTOP: Sidebar (Hidden on mobile) */}
+                <div className="hidden md:flex w-80 p-6 flex-col gap-6 shrink-0 z-20 overflow-y-auto custom-scrollbar h-full bg-white dark:bg-charcoal-900 border-l border-slate-200 dark:border-charcoal-800">
+                    
+                    <div className="flex items-center gap-2 mb-2">
+                        <Settings size={16} className="text-charcoal-400" />
+                        <h4 className="text-xs font-bold text-charcoal-500 dark:text-slate-400 uppercase tracking-wider font-mono">Number Settings</h4>
                     </div>
-                 </div>
 
-                 <div>
-                    <label className="text-xs font-bold text-charcoal-500 uppercase tracking-wide mb-1 block">Start Number</label>
-                    <input 
-                      type="number" 
-                      value={config.startFrom} 
-                      onChange={(e) => setConfig({...config, startFrom: parseInt(e.target.value) || 1})}
-                      className="w-full p-2 rounded-lg border border-slate-200 dark:border-charcoal-600 bg-transparent"
-                    />
-                 </div>
-                 
-                 <div>
-                    <label className="text-xs font-bold text-charcoal-500 uppercase tracking-wide mb-1 block">Font Size</label>
-                    <input 
-                      type="range" 
-                      min="8" max="24"
-                      value={config.fontSize} 
-                      onChange={(e) => setConfig({...config, fontSize: parseInt(e.target.value)})}
-                      className="w-full"
-                    />
-                    <div className="text-right text-xs">{config.fontSize}px</div>
-                 </div>
-              </div>
-           </div>
+                    <ControlGroup label="Position">
+                        <div className="flex w-full gap-2">
+                            <ToggleButton active={config.position === 'top'} onClick={() => setConfig({...config, position: 'top'})} icon={ArrowUp} label="Top" />
+                            <ToggleButton active={config.position === 'bottom'} onClick={() => setConfig({...config, position: 'bottom'})} icon={ArrowDown} label="Bottom" />
+                        </div>
+                    </ControlGroup>
 
-           {/* Preview */}
-           <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-slate-50 dark:bg-charcoal-900">
-              <div className="max-w-4xl mx-auto">
-                 <h3 className="text-lg font-bold mb-4 text-center">Preview</h3>
-                 <SplitPageGrid 
-                    pages={pages}
-                    onTogglePage={() => {}}
-                    onSelectAll={() => {}}
-                    onDeselectAll={() => {}}
-                    onInvertSelection={() => {}}
-                    onRemovePage={() => {}}
-                    onRemoveSelected={() => {}}
-                    onReorder={() => {}}
-                    isReorderDisabled={true}
-                    numberingConfig={config} // Pass config for live preview
-                    showBadges={false}
-                 />
-              </div>
-           </div>
-        </div>
-      )}
+                    <ControlGroup label="Alignment">
+                        <div className="flex w-full gap-2">
+                            <ToggleButton active={config.alignment === 'left'} onClick={() => setConfig({...config, alignment: 'left'})} icon={AlignLeft} label="Left" />
+                            <ToggleButton active={config.alignment === 'center'} onClick={() => setConfig({...config, alignment: 'center'})} icon={AlignCenter} label="Center" />
+                            <ToggleButton active={config.alignment === 'right'} onClick={() => setConfig({...config, alignment: 'right'})} icon={AlignRight} label="Right" />
+                        </div>
+                    </ControlGroup>
 
-      {file && (
-         <StickyBar 
-            mode="add-page-numbers"
-            imageCount={pages.length}
-            totalSize={0}
-            onGenerate={handleGenerate}
-            isGenerating={isGenerating}
-            progress={progress}
-            status={status}
-         />
-      )}
+                    <div className="grid grid-cols-2 gap-4">
+                        <ControlGroup label="Start #">
+                            <div className="bg-white dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 rounded-lg px-3 py-2 flex items-center gap-2 h-10">
+                                <Hash size={16} className="text-charcoal-400 shrink-0" />
+                                <input 
+                                    type="number" min="1"
+                                    value={config.startFrom} onChange={(e) => setConfig({...config, startFrom: parseInt(e.target.value) || 1})}
+                                    className="w-full bg-transparent text-sm font-bold text-charcoal-800 dark:text-white outline-none min-w-0 font-mono"
+                                />
+                            </div>
+                        </ControlGroup>
+                        <ControlGroup label="Size">
+                            <div className="bg-white dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 rounded-lg px-3 py-2 flex items-center gap-2 h-10">
+                                <Type size={16} className="text-charcoal-400 shrink-0" />
+                                <input 
+                                    type="number" min="8" max="48"
+                                    value={config.fontSize} onChange={(e) => setConfig({...config, fontSize: parseInt(e.target.value) || 12})}
+                                    className="w-full bg-transparent text-sm font-bold text-charcoal-800 dark:text-white outline-none min-w-0 font-mono"
+                                />
+                            </div>
+                        </ControlGroup>
+                    </div>
+
+                    <ControlGroup label="Fine Tune Position">
+                        <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-charcoal-800 p-2 rounded-lg border border-slate-200 dark:border-charcoal-700">
+                            <div className="col-start-2"><button onClick={() => nudge('y', 1)} className="w-full h-8 flex items-center justify-center bg-white dark:bg-charcoal-700 rounded shadow-sm hover:text-brand-purple border border-slate-200 dark:border-charcoal-600"><ChevronUp size={16} /></button></div>
+                            <div className="col-start-1 row-start-2"><button onClick={() => nudge('x', -1)} className="w-full h-8 flex items-center justify-center bg-white dark:bg-charcoal-700 rounded shadow-sm hover:text-brand-purple border border-slate-200 dark:border-charcoal-600"><ChevronLeft size={16} /></button></div>
+                            <div className="col-start-2 row-start-2 flex items-center justify-center"><button onClick={() => setConfig(p => ({...p, offsetX: 0, offsetY: 0}))} className="text-[10px] font-bold text-charcoal-400 hover:text-brand-purple font-mono" title="Reset Nudge">RESET</button></div>
+                            <div className="col-start-3 row-start-2"><button onClick={() => nudge('x', 1)} className="w-full h-8 flex items-center justify-center bg-white dark:bg-charcoal-700 rounded shadow-sm hover:text-brand-purple border border-slate-200 dark:border-charcoal-600"><ChevronRight size={16} /></button></div>
+                            <div className="col-start-2 row-start-3"><button onClick={() => nudge('y', -1)} className="w-full h-8 flex items-center justify-center bg-white dark:bg-charcoal-700 rounded shadow-sm hover:text-brand-purple border border-slate-200 dark:border-charcoal-600"><ChevronDown size={16} /></button></div>
+                        </div>
+                    </ControlGroup>
+
+                    <div className="space-y-3 mt-auto pt-4 border-t border-slate-200 dark:border-charcoal-800">
+                        <motion.button onClick={handleGenerate} disabled={isGenerating} whileTap={buttonTap} className="relative overflow-hidden w-full h-12 rounded-lg font-bold font-mono text-xs text-white bg-charcoal-900 dark:bg-white dark:text-charcoal-900 shadow-lg transition-all disabled:opacity-50 disabled:shadow-none flex items-center justify-center gap-2 group hover:bg-brand-purple dark:hover:bg-slate-200">
+                            {isGenerating && <motion.div className="absolute inset-y-0 left-0 bg-white/20 dark:bg-black/10" initial={{ width: 0 }} animate={{ width: `${progress}%` }} transition={{ duration: 0.3 }} />}
+                            <div className="relative flex items-center justify-center gap-2 z-10">{isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}<span className="uppercase tracking-wide">{isGenerating ? 'PROCESSING...' : 'DOWNLOAD_PDF'}</span></div>
+                        </motion.button>
+                        <motion.button onClick={handleReset} whileTap={buttonTap} className="w-full flex items-center justify-center gap-2 h-10 rounded-lg font-bold font-mono text-xs uppercase tracking-wide text-charcoal-500 dark:text-charcoal-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"><RefreshCw size={14} /> RESET_MODULE</motion.button>
+                    </div>
+                </div>
+            </div>
+
+            {/* MOBILE: Bottom Action Bar */}
+            <div className="md:hidden absolute bottom-0 left-0 right-0 p-4 bg-white dark:bg-charcoal-850 border-t border-slate-200 dark:border-charcoal-700 flex gap-3 z-40 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                <motion.button onClick={handleReset} whileTap={buttonTap} className="px-4 py-3 bg-slate-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-slate-300 rounded-lg font-bold hover:bg-slate-200 dark:hover:bg-charcoal-700"><RefreshCw size={20} /></motion.button>
+                <motion.button onClick={handleGenerate} disabled={isGenerating} whileTap={buttonTap} className="flex-1 relative overflow-hidden h-12 rounded-lg font-bold font-mono text-xs text-white bg-charcoal-900 dark:bg-white dark:text-charcoal-900 shadow-lg disabled:opacity-50 disabled:shadow-none flex items-center justify-center gap-2 uppercase tracking-wide">
+                    {isGenerating && <motion.div className="absolute inset-y-0 left-0 bg-white/20 dark:bg-black/10" initial={{ width: 0 }} animate={{ width: `${progress}%` }} transition={{ duration: 0.3 }} />}
+                    <div className="relative flex items-center justify-center gap-2 z-10">{isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}<span>Download</span></div>
+                </motion.button>
+            </div>
+
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

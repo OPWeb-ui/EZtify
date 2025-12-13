@@ -3,177 +3,236 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { PageReadyTracker } from '../components/PageReadyTracker';
 import { staggerContainer, fadeInUp, buttonTap } from '../utils/animations';
-import { Zap, Wifi, Cpu, Layers, Globe, Mail, ArrowRight, Layout, MonitorSmartphone } from 'lucide-react';
+import { 
+  Zap, Wifi, Cpu, Layers, Globe, Mail, ArrowRight, 
+  Terminal, Shield, Database, Activity, GitBranch, 
+  Server, Lock, Code, Hash 
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const FeatureCard: React.FC<{ icon: React.ReactNode; title: string; desc: string }> = ({ icon, title, desc }) => (
-  <motion.div 
-    variants={fadeInUp}
-    className="bg-white/70 dark:bg-charcoal-900/70 backdrop-blur-md border border-slate-200 dark:border-charcoal-700 p-6 rounded-2xl shadow-sm hover:shadow-md transition-all group"
-  >
-    <div className="w-12 h-12 rounded-xl bg-slate-50 dark:bg-charcoal-800 border border-slate-100 dark:border-charcoal-700 flex items-center justify-center mb-4 text-charcoal-700 dark:text-slate-200 group-hover:text-brand-purple group-hover:scale-110 transition-all duration-300">
-      {icon}
+const SysStat = ({ label, value, color = "text-charcoal-900 dark:text-white" }: { label: string, value: string, color?: string }) => (
+  <div className="flex flex-col">
+    <span className="text-[10px] font-mono uppercase text-charcoal-400 dark:text-charcoal-500 tracking-wider mb-1">{label}</span>
+    <span className={`font-mono font-bold text-sm ${color}`}>{value}</span>
+  </div>
+);
+
+const TechModule = ({ name, version, type }: { name: string, version: string, type: string }) => (
+  <div className="flex items-center justify-between p-3 border-b border-slate-100 dark:border-charcoal-800 last:border-0 hover:bg-slate-50 dark:hover:bg-charcoal-800 transition-colors font-mono text-xs">
+    <div className="flex items-center gap-3">
+      <div className="w-1.5 h-1.5 rounded-full bg-brand-purple/50"></div>
+      <span className="text-charcoal-700 dark:text-slate-300 font-bold">{name}</span>
     </div>
-    <h3 className="font-heading font-bold text-charcoal-900 dark:text-white mb-2">{title}</h3>
-    <p className="text-sm text-charcoal-500 dark:text-slate-400 leading-relaxed">{desc}</p>
-  </motion.div>
+    <div className="flex items-center gap-4">
+      <span className="text-charcoal-400">{type}</span>
+      <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-charcoal-700 text-charcoal-600 dark:text-slate-400">{version}</span>
+    </div>
+  </div>
 );
 
 export const About: React.FC = () => {
   return (
-    <div className="flex-1 w-full overflow-y-auto custom-scrollbar bg-pastel-bg dark:bg-charcoal-950 relative">
+    <div className="flex-1 w-full overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-charcoal-950 relative">
       <PageReadyTracker />
       
-      {/* Background Ambience */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-         <div className="absolute top-[-10%] left-[20%] w-[40%] h-[40%] bg-indigo-500/5 dark:bg-indigo-500/5 rounded-full blur-[100px]" />
-         <div className="absolute bottom-[20%] right-[-5%] w-[50%] h-[50%] bg-brand-purple/5 dark:bg-brand-purple/5 rounded-full blur-[120px]" />
-      </div>
+      {/* Technical Grid Background */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05]" 
+           style={{ backgroundImage: 'linear-gradient(#64748b 1px, transparent 1px), linear-gradient(to right, #64748b 1px, transparent 1px)', backgroundSize: '40px 40px' }} 
+      />
 
-      <div className="relative z-10 max-w-5xl mx-auto px-6 py-16 md:py-24">
+      <div className="relative z-10 max-w-6xl mx-auto px-6 py-12 md:py-20">
         
-        {/* Header Section */}
+        {/* --- HEADER: SYSTEM MANIFEST --- */}
         <motion.div 
           variants={staggerContainer}
           initial="hidden"
           animate="show"
-          className="text-center mb-20"
+          className="mb-16"
         >
-          <motion.div variants={fadeInUp} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider mb-6 border border-slate-200 dark:border-charcoal-700">
-            <Cpu size={14} className="text-brand-purple" />
-            <span>Next-Gen Architecture</span>
-          </motion.div>
-          
-          <motion.h1 variants={fadeInUp} className="text-4xl md:text-6xl font-heading font-extrabold text-charcoal-900 dark:text-white mb-6 tracking-tight">
-            Built for <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-purple to-indigo-500">Efficiency.</span>
-          </motion.h1>
-          
-          <motion.p variants={fadeInUp} className="text-lg md:text-xl text-charcoal-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
-            EZtify leverages modern browser capabilities to deliver a responsive, desktop-grade experience for all your file utilities.
-          </motion.p>
-        </motion.div>
-
-        {/* Core Values Grid */}
-        <motion.div 
-          variants={staggerContainer}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-50px" }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-24"
-        >
-          <FeatureCard 
-            icon={<Zap />}
-            title="Instant Processing"
-            desc="Operations are performed immediately on your device. No waiting for uploads or server queues."
-          />
-          <FeatureCard 
-            icon={<MonitorSmartphone />}
-            title="Cross-Platform"
-            desc="Designed to work seamlessly on desktops, tablets, and mobile devices with a responsive interface."
-          />
-          <FeatureCard 
-            icon={<Wifi />}
-            title="Offline Capable"
-            desc="Install EZtify as a Progressive Web App (PWA) to use all features even without an internet connection."
-          />
-        </motion.div>
-
-        {/* Technical Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-24">
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            className="space-y-6"
-          >
-            <h2 className="text-3xl font-heading font-bold text-charcoal-900 dark:text-white">
-              Powered by WebAssembly
-            </h2>
-            <div className="space-y-4 text-charcoal-600 dark:text-slate-300 leading-relaxed">
-              <p>
-                The web has evolved. EZtify utilizes cutting-edge technologies like <strong>WebAssembly (WASM)</strong> and <strong>Service Workers</strong> to run complex logic efficiently right in your browser.
-              </p>
-              <p>
-                By leveraging your device's processing power, we ensure that converting files, editing code, and compressing data is as fast as your hardware allows. This eliminates network latency and keeps your data completely private.
-              </p>
+          <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 border-b border-slate-200 dark:border-charcoal-800 pb-8">
+            <div>
+              <motion.div variants={fadeInUp} className="flex items-center gap-2 text-brand-purple mb-4">
+                <Terminal size={16} />
+                <span className="font-mono text-xs font-bold uppercase tracking-widest">System_Manifest_v1.0</span>
+              </motion.div>
+              <motion.h1 variants={fadeInUp} className="text-4xl md:text-5xl font-heading font-extrabold text-charcoal-900 dark:text-white tracking-tight leading-tight">
+                Architecture <br className="hidden md:block" />
+                <span className="text-charcoal-400 dark:text-charcoal-600">Overview</span>
+              </motion.h1>
             </div>
             
-            <div className="grid grid-cols-2 gap-4 pt-4">
-               <div className="p-4 rounded-xl bg-white dark:bg-charcoal-800 border border-slate-100 dark:border-charcoal-700">
-                  <div className="text-2xl font-bold text-brand-purple mb-1">Zero</div>
-                  <div className="text-xs font-bold text-charcoal-500 uppercase tracking-wide">Network Lag</div>
-               </div>
-               <div className="p-4 rounded-xl bg-white dark:bg-charcoal-800 border border-slate-100 dark:border-charcoal-700">
-                  <div className="text-2xl font-bold text-indigo-500 mb-1">100%</div>
-                  <div className="text-xs font-bold text-charcoal-500 uppercase tracking-wide">Browser Based</div>
-               </div>
-            </div>
-          </motion.div>
-
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            className="relative"
-          >
-            <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/10 to-brand-purple/10 rounded-3xl blur-2xl rotate-2" />
-            <div className="relative bg-white dark:bg-charcoal-900 border border-slate-200 dark:border-charcoal-700 rounded-3xl p-8 shadow-xl">
-              <h3 className="text-lg font-bold text-charcoal-900 dark:text-white mb-6 flex items-center gap-2">
-                <Layers className="text-brand-purple" size={20} />
-                Technology Stack
-              </h3>
-              <div className="space-y-3">
-                {[
-                  { name: "React 19", desc: "User Interface Library", icon: <Globe size={16} /> },
-                  { name: "PDF-Lib", desc: "PDF Manipulation Engine", icon: <Layout size={16} /> },
-                  { name: "Web Workers", desc: "Background Processing", icon: <Cpu size={16} /> },
-                  { name: "Framer Motion", desc: "Fluid Animations", icon: <Zap size={16} /> }
-                ].map((tech, i) => (
-                  <div key={i} className="flex items-center gap-4 p-3 rounded-xl bg-slate-50 dark:bg-charcoal-800 border border-slate-100 dark:border-charcoal-700 hover:border-slate-300 dark:hover:border-charcoal-600 transition-colors">
-                    <div className="w-8 h-8 rounded-lg bg-white dark:bg-charcoal-700 flex items-center justify-center text-charcoal-500 dark:text-slate-400 shadow-sm border border-slate-100 dark:border-charcoal-600">
-                      {tech.icon}
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-sm text-charcoal-800 dark:text-slate-200">{tech.name}</h4>
-                      <p className="text-xs text-charcoal-500 dark:text-slate-400">{tech.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Footer / Contact */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center py-12 border-t border-slate-200 dark:border-charcoal-800"
-        >
-          <h2 className="text-2xl font-bold text-charcoal-900 dark:text-white mb-4">Start Working Smarter</h2>
-          <p className="text-charcoal-600 dark:text-slate-400 mb-8 max-w-lg mx-auto">
-            Ready to enhance your workflow? Head back to the dashboard to use our suite of tools.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link to="/">
-              <motion.button 
-                whileTap={buttonTap}
-                className="px-8 py-3 bg-charcoal-900 dark:bg-white text-white dark:text-charcoal-900 font-bold rounded-xl shadow-lg hover:bg-brand-purple dark:hover:bg-slate-200 transition-colors flex items-center gap-2"
-              >
-                Go to Dashboard <ArrowRight size={16} />
-              </motion.button>
-            </Link>
-            <a href="mailto:eztifyapps@gmail.com">
-              <motion.button 
-                whileTap={buttonTap}
-                className="px-8 py-3 bg-white dark:bg-charcoal-800 text-charcoal-700 dark:text-slate-200 border border-slate-200 dark:border-charcoal-700 font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-charcoal-700 transition-colors flex items-center gap-2"
-              >
-                <Mail size={16} /> Contact Support
-              </motion.button>
-            </a>
+            <motion.div variants={fadeInUp} className="flex gap-8 md:gap-12 bg-white dark:bg-charcoal-900 p-4 rounded-xl border border-slate-200 dark:border-charcoal-800 shadow-sm">
+               <SysStat label="Latency" value="0ms (Local)" color="text-green-500" />
+               <SysStat label="Environment" value="Browser / PWA" />
+               <SysStat label="Security" value="Isolated" color="text-brand-purple" />
+            </motion.div>
           </div>
         </motion.div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-12">
+          
+          {/* --- COL 1: MISSION LOG (8 cols) --- */}
+          <div className="lg:col-span-8 flex flex-col gap-6">
+             
+             {/* Main Mission Card */}
+             <motion.div 
+               initial={{ opacity: 0, y: 20 }}
+               whileInView={{ opacity: 1, y: 0 }}
+               viewport={{ once: true }}
+               className="bg-white dark:bg-charcoal-900 rounded-xl border border-slate-200 dark:border-charcoal-800 overflow-hidden shadow-sm"
+             >
+                <div className="bg-slate-50 dark:bg-charcoal-850 px-4 py-2 border-b border-slate-200 dark:border-charcoal-800 flex items-center justify-between">
+                   <div className="flex items-center gap-2">
+                      <Activity size={14} className="text-brand-blue" />
+                      <span className="font-mono text-xs font-bold text-charcoal-600 dark:text-slate-400 uppercase">Protocol: Privacy_First</span>
+                   </div>
+                   <div className="flex gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-slate-300 dark:bg-charcoal-600"></div>
+                      <div className="w-2 h-2 rounded-full bg-slate-300 dark:bg-charcoal-600"></div>
+                   </div>
+                </div>
+                <div className="p-6 md:p-8">
+                   <p className="text-base md:text-lg text-charcoal-700 dark:text-slate-300 leading-relaxed font-mono">
+                      <span className="text-brand-purple">➜</span> EZtify executes all operations within the client's local memory stack.<br/><br/>
+                      <span className="text-brand-purple">➜</span> Traditional web utilities offload processing to remote servers, introducing latency and privacy vectors. We utilize <span className="font-bold text-charcoal-900 dark:text-white">WebAssembly</span> binaries to port desktop-grade performance directly to the browser runtime.<br/><br/>
+                      <span className="text-brand-purple">➜</span> Result: Zero data egress. Instantaneous feedback loops. Offline persistence.
+                   </p>
+                </div>
+             </motion.div>
+
+             {/* Stack Grid */}
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Tech Stack */}
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  className="bg-white dark:bg-charcoal-900 rounded-xl border border-slate-200 dark:border-charcoal-800 overflow-hidden shadow-sm"
+                >
+                   <div className="bg-slate-50 dark:bg-charcoal-850 px-4 py-2 border-b border-slate-200 dark:border-charcoal-800 flex items-center gap-2">
+                      <GitBranch size={14} className="text-charcoal-400" />
+                      <span className="font-mono text-xs font-bold text-charcoal-600 dark:text-slate-400 uppercase">Dependencies</span>
+                   </div>
+                   <div className="p-0">
+                      <TechModule name="React" version="19.0.0" type="Core" />
+                      <TechModule name="Vite" version="6.0.7" type="Build" />
+                      <TechModule name="PDF-Lib" version="1.17.1" type="Engine" />
+                      <TechModule name="Framer Motion" version="12.0.0" type="UX" />
+                      <TechModule name="WASM" version="Native" type="Kernel" />
+                   </div>
+                </motion.div>
+
+                {/* Features / Capabilities */}
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  className="bg-white dark:bg-charcoal-900 rounded-xl border border-slate-200 dark:border-charcoal-800 overflow-hidden shadow-sm"
+                >
+                   <div className="bg-slate-50 dark:bg-charcoal-850 px-4 py-2 border-b border-slate-200 dark:border-charcoal-800 flex items-center gap-2">
+                      <Cpu size={14} className="text-charcoal-400" />
+                      <span className="font-mono text-xs font-bold text-charcoal-600 dark:text-slate-400 uppercase">Capabilities</span>
+                   </div>
+                   <div className="p-4 grid grid-cols-2 gap-4">
+                      <div className="p-3 bg-slate-50 dark:bg-charcoal-850 rounded-lg border border-slate-100 dark:border-charcoal-700">
+                         <div className="text-brand-purple mb-2"><Zap size={20} /></div>
+                         <div className="font-bold text-sm text-charcoal-900 dark:text-white">Zero Latency</div>
+                         <div className="text-[10px] text-charcoal-500 mt-1">No network RTT overhead</div>
+                      </div>
+                      <div className="p-3 bg-slate-50 dark:bg-charcoal-850 rounded-lg border border-slate-100 dark:border-charcoal-700">
+                         <div className="text-brand-blue mb-2"><Lock size={20} /></div>
+                         <div className="font-bold text-sm text-charcoal-900 dark:text-white">Encrypted</div>
+                         <div className="text-[10px] text-charcoal-500 mt-1">AES-256 Support</div>
+                      </div>
+                      <div className="p-3 bg-slate-50 dark:bg-charcoal-850 rounded-lg border border-slate-100 dark:border-charcoal-700">
+                         <div className="text-brand-green mb-2"><Database size={20} /></div>
+                         <div className="font-bold text-sm text-charcoal-900 dark:text-white">Local I/O</div>
+                         <div className="text-[10px] text-charcoal-500 mt-1">Direct memory access</div>
+                      </div>
+                      <div className="p-3 bg-slate-50 dark:bg-charcoal-850 rounded-lg border border-slate-100 dark:border-charcoal-700">
+                         <div className="text-brand-orange mb-2"><Wifi size={20} /></div>
+                         <div className="font-bold text-sm text-charcoal-900 dark:text-white">Offline</div>
+                         <div className="text-[10px] text-charcoal-500 mt-1">PWA Service Workers</div>
+                      </div>
+                   </div>
+                </motion.div>
+             </div>
+          </div>
+
+          {/* --- COL 2: STATUS SIDEBAR (4 cols) --- */}
+          <div className="lg:col-span-4 space-y-6">
+             
+             {/* Server Status Widget */}
+             <motion.div 
+               initial={{ opacity: 0, x: 20 }}
+               whileInView={{ opacity: 1, x: 0 }}
+               viewport={{ once: true }}
+               className="bg-charcoal-900 text-white rounded-xl border border-charcoal-800 overflow-hidden shadow-lg p-5 font-mono text-xs relative"
+             >
+                <div className="absolute top-0 right-0 p-2 opacity-20"><Server size={64} /></div>
+                
+                <h3 className="text-charcoal-400 font-bold uppercase tracking-wider mb-4">Network_Topography</h3>
+                
+                <div className="space-y-4 relative z-10">
+                   <div className="flex justify-between items-center pb-2 border-b border-charcoal-700">
+                      <span>Server Uploads</span>
+                      <span className="text-red-400 font-bold">DISABLED</span>
+                   </div>
+                   <div className="flex justify-between items-center pb-2 border-b border-charcoal-700">
+                      <span>Tracking Pixels</span>
+                      <span className="text-red-400 font-bold">BLOCKED</span>
+                   </div>
+                   <div className="flex justify-between items-center pb-2 border-b border-charcoal-700">
+                      <span>Client Execution</span>
+                      <span className="text-green-400 font-bold">ACTIVE</span>
+                   </div>
+                   <div className="mt-4 p-3 bg-charcoal-800 rounded border border-charcoal-700 text-charcoal-300 leading-relaxed">
+                      > All file processing logic is contained within the application bundle. No external API calls required.
+                   </div>
+                </div>
+             </motion.div>
+
+             {/* Contact Terminal */}
+             <motion.div 
+               initial={{ opacity: 0, x: 20 }}
+               whileInView={{ opacity: 1, x: 0 }}
+               viewport={{ once: true }}
+               transition={{ delay: 0.1 }}
+               className="bg-white dark:bg-charcoal-900 rounded-xl border border-slate-200 dark:border-charcoal-800 p-5 font-mono text-sm shadow-sm"
+             >
+                <div className="flex items-center gap-2 mb-4 text-charcoal-400 dark:text-slate-500 uppercase font-bold text-xs tracking-wider">
+                   <Mail size={14} /> Communication_Link
+                </div>
+                <p className="text-charcoal-600 dark:text-slate-300 mb-6 text-xs">
+                   Found a bug in the matrix? Need a feature upgrade? Initiate transmission.
+                </p>
+                <div className="flex flex-col gap-3">
+                   <Link to="/" className="w-full">
+                      <motion.button 
+                        whileTap={buttonTap}
+                        className="w-full py-3 bg-slate-100 dark:bg-charcoal-800 hover:bg-slate-200 dark:hover:bg-charcoal-700 text-charcoal-800 dark:text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2 text-xs uppercase tracking-wide border border-slate-200 dark:border-charcoal-700"
+                      >
+                         <ArrowRight size={14} /> Return_Dashboard
+                      </motion.button>
+                   </Link>
+                   <a href="mailto:eztifyapps@gmail.com" className="w-full">
+                      <motion.button 
+                        whileTap={buttonTap}
+                        className="w-full py-3 bg-brand-purple text-white hover:bg-brand-purpleDark font-bold rounded-lg transition-colors flex items-center justify-center gap-2 text-xs uppercase tracking-wide shadow-lg shadow-brand-purple/20"
+                      >
+                         <Hash size={14} /> Open_Channel
+                      </motion.button>
+                   </a>
+                </div>
+             </motion.div>
+
+          </div>
+        </div>
+
+        {/* Footer Hash */}
+        <div className="text-center pt-12 border-t border-slate-200 dark:border-charcoal-800 font-mono text-[10px] text-charcoal-400 dark:text-charcoal-600 uppercase tracking-widest">
+           ID: {Math.random().toString(36).substr(2, 9).toUpperCase()} // END_OF_FILE
+        </div>
 
       </div>
     </div>

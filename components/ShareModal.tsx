@@ -1,6 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Copy, Check, Mail } from 'lucide-react';
+import { modalOverlayVariants, modalContentVariants } from '../utils/animations';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -61,9 +63,10 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, url }) 
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 h-[100dvh] w-screen pointer-events-none">
           {/* Backdrop */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            variants={modalOverlayVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
             onClick={onClose}
             className="absolute inset-0 bg-charcoal-900/40 backdrop-blur-sm pointer-events-auto"
             aria-hidden="true"
@@ -73,10 +76,10 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, url }) 
           <motion.div
             role="dialog"
             aria-modal="true"
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            transition={{ type: "spring", duration: 0.4, bounce: 0.3 }}
+            variants={modalContentVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
             className="relative w-full max-w-[400px] bg-white dark:bg-charcoal-900 rounded-2xl shadow-2xl overflow-hidden pointer-events-auto flex flex-col max-h-[85vh]"
           >
             {/* Ambient Decorative Blobs - Purple Theme */}

@@ -10,7 +10,8 @@
     <!-- LCP Optimization -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet" />
+    <!-- Developer Dream UI Typography: Inter (Sans) + JetBrains Mono (Tech/Code) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
@@ -32,7 +33,7 @@
                 border: 'rgba(0,0,0,0.06)',
               },
               charcoal: {
-                950: '#0B0C0F',
+                950: '#09090b', /* Darker, deeper black for OLED/Dev vibes */
                 900: '#141416', 
                 850: '#1A1C1F', 
                 800: '#27272a',
@@ -58,7 +59,9 @@
             },
             fontFamily: {
               sans: ['Inter', 'sans-serif'],
-              heading: ['Poppins', 'sans-serif'],
+              // Replace Poppins with JetBrains Mono for that "Technical Dashboard" look on headings
+              heading: ['JetBrains Mono', 'monospace'],
+              mono: ['JetBrains Mono', 'monospace'],
             },
             boxShadow: {
               'layer-1': '0 1px 2px rgba(0,0,0,0.05)',
@@ -92,13 +95,62 @@
 
     <!-- Global Styles -->
     <style>
+      :root {
+        --font-mono: 'JetBrains Mono', monospace;
+        --font-sans: 'Inter', sans-serif;
+      }
+
       html {
         -webkit-tap-highlight-color: transparent;
         height: 100%;
       }
+      
       body {
         background-color: #F6F6F9;
         transition: background-color 0.3s cubic-bezier(0.16, 1, 0.3, 1), color 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        /* Tighter tracking for a more precision feel */
+        letter-spacing: -0.015em;
+      }
+
+      /* --- Developer Dream UI Typography Overrides --- */
+      
+      /* Force headings to use the technical font */
+      h1, h2, h3, h4, h5, h6, .font-heading {
+        font-family: var(--font-mono) !important;
+        letter-spacing: -0.03em;
+      }
+
+      /* Make all interactive elements and data technical */
+      button, input, select, textarea, label {
+        font-family: var(--font-mono) !important;
+      }
+
+      /* Force small text to be mono for that "specs/data" look */
+      .text-xs, .text-\[10px\], .text-\[11px\] {
+        font-family: var(--font-mono) !important;
+        letter-spacing: 0.02em; /* Slight spacing for readability in small mono */
+      }
+
+      /* Custom Scrollbar for a cleaner look */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(156, 163, 175, 0.3);
+        border-radius: 3px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(156, 163, 175, 0.5);
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.15);
+      }
+      .dark ::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.25);
       }
     </style>
 
@@ -137,7 +189,9 @@
     "@codemirror/lang-python": "https://esm.sh/@codemirror/lang-python@^6.2.1",
     "@uiw/codemirror-theme-github": "https://esm.sh/@uiw/codemirror-theme-github@^4.25.4",
     "@codemirror/view": "https://esm.sh/@codemirror/view@^6.39.4",
-    "file-saver": "https://esm.sh/file-saver@^2.0.5"
+    "file-saver": "https://esm.sh/file-saver@^2.0.5",
+    "vite": "https://esm.sh/vite@^7.2.7",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
   }
 }
 </script>

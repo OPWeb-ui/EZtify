@@ -1,14 +1,16 @@
 
 import React, { useState, useCallback } from 'react';
 import { useLayoutContext } from '../components/Layout';
-import { UploadArea } from '../components/UploadArea';
 import { PageReadyTracker } from '../components/PageReadyTracker';
 import { PdfPage } from '../types';
 import { loadPdfPages } from '../services/pdfSplitter';
 import { reorderPdf } from '../services/pdfReorder';
 import { SplitPageGrid } from '../components/SplitPageGrid';
 import { StickyBar } from '../components/StickyBar';
-import { FileRejection } from 'react-dropzone';
+import { FileRejection, useDropzone } from 'react-dropzone';
+import { ListOrdered, Lock, Cpu, Info, Zap, Move } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ToolLandingLayout } from '../components/ToolLandingLayout';
 
 export const ReorderPdfPage: React.FC = () => {
   const { addToast } = useLayoutContext();
@@ -45,7 +47,6 @@ export const ReorderPdfPage: React.FC = () => {
     setIsGenerating(true);
     try {
        // Map current page objects back to original indices
-       // The reorderPdf service expects an array of original indices in the new order
        const indices = pages.map(p => p.pageIndex);
        const blob = await reorderPdf(file, indices, setProgress, setStatus);
        
@@ -68,15 +69,27 @@ export const ReorderPdfPage: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-[calc(100vh-64px)] overflow-hidden bg-slate-50 dark:bg-charcoal-900">
+    <div className="flex-1 flex flex-col h-full pt-16 overflow-hidden bg-slate-50 dark:bg-charcoal-900">
       <PageReadyTracker />
       
       {!file ? (
-        <div className="flex-1 p-6 flex flex-col items-center justify-center overflow-y-auto">
-          <div className="max-w-2xl w-full">
-            <UploadArea onDrop={onDrop} mode="reorder-pdf" isProcessing={isProcessingFiles} />
-          </div>
-        </div>
+        <ToolLandingLayout
+            title="Reorder PDF"
+            description="Drag and drop to rearrange pages in your PDF document."
+            icon={<ListOrdered />}
+            onDrop={onDrop}
+            accept={{ 'application/pdf': ['.pdf'] }}
+            multiple={false}
+            isProcessing={isProcessingFiles}
+            accentColor="text-purple-500"
+            specs={[
+              { label: "Interaction", value: "Drag & Drop", icon: <Move /> },
+              { label: "Privacy", value: "Client-Side", icon: <Lock /> },
+              { label: "Engine", value: "PDF-Lib", icon: <Cpu /> },
+              { label: "Speed", value: "Fast", icon: <Zap /> },
+            ]}
+            tip="Simply drag the thumbnails to change their sequence. You can also delete pages."
+        />
       ) : (
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pb-32">
            <div className="max-w-6xl mx-auto">

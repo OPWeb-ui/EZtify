@@ -1,7 +1,9 @@
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Share2 } from 'lucide-react';
 import { ShareModal } from './ShareModal';
+import { buttonTap } from '../utils/animations';
 
 export const ShareButton: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -30,18 +32,20 @@ export const ShareButton: React.FC = () => {
       <motion.button
         onClick={handleShare}
         aria-label="Share EZtify"
-        whileTap={{ scale: 0.95 }}
+        whileTap={buttonTap}
+        whileHover={{ scale: 1.05 }}
         className="
-          group relative flex items-center gap-2 h-9 px-3 md:pl-3 md:pr-4 rounded-full
-          bg-white dark:bg-white/5 border border-slate-200/60 dark:border-white/10
-          hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50 dark:hover:bg-white/10
-          text-charcoal-600 dark:text-slate-300
-          text-sm font-medium transition-all duration-200
-          outline-none focus-visible:ring-2 focus-visible:ring-brand-purple/50
+          group relative flex items-center gap-2 h-9 px-3 rounded-md
+          bg-white dark:bg-charcoal-800 
+          text-charcoal-700 dark:text-slate-300
+          border border-slate-200 dark:border-charcoal-700
+          hover:border-brand-purple/50 hover:text-brand-purple
+          text-xs font-mono font-bold transition-all duration-200
+          shadow-sm
         "
       >
-        <Share2 className="w-4 h-4 text-charcoal-400 dark:text-slate-400 group-hover:text-brand-purple transition-colors" />
-        <span className="hidden md:inline">Share</span>
+        <Share2 className="w-3.5 h-3.5" />
+        <span className="hidden md:inline">[ SHARE ]</span>
       </motion.button>
 
       <ShareModal 

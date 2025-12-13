@@ -1,5 +1,4 @@
 
-
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import JSZip from 'jszip';
 import { PdfPage, PageNumberConfig } from '../types';
@@ -13,6 +12,7 @@ export const loadPdfPages = async (
   file: File,
   onProgress?: (percent: number) => void,
   onStatusUpdate?: (status: string) => void,
+  options?: { scale?: number }
 ): Promise<PdfPage[]> => {
   onStatusUpdate?.('Preparing PDF...');
   const arrayBuffer = await file.arrayBuffer();
@@ -36,7 +36,7 @@ export const loadPdfPages = async (
   }
 
   const numPages = pdf.numPages;
-  
+  const scale = options?.scale ?? 0.5;
   const pages: PdfPage[] = [];
 
   for (let i = 1; i <= numPages; i++) {
@@ -51,7 +51,7 @@ export const loadPdfPages = async (
     try {
       const page = await pdf.getPage(i);
       // Render at low scale for thumbnail performance
-      const viewport = page.getViewport({ scale: 0.5 });
+      const viewport = page.getViewport({ scale });
       
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d');
@@ -72,7 +72,9 @@ export const loadPdfPages = async (
             id: nanoid(),
             pageIndex: i - 1, // Store 0-based index for pdf-lib
             previewUrl: URL.createObjectURL(blob),
-            selected: false // Default to unselected
+            selected: false, // Default to unselected
+            width: canvas.width,
+            height: canvas.height,
           });
         }
       }

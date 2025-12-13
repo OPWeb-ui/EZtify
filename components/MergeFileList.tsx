@@ -43,7 +43,6 @@ const SortableItem: React.FC<{ file: PdfFile; onRemove: () => void }> = ({ file,
     transform: CSS.Transform.toString(transform),
     transition,
     zIndex: isDragging ? 50 : 'auto',
-    // We allow scrolling (touchAction auto) until the long-press activates the drag
   };
 
   return (
@@ -64,23 +63,17 @@ const SortableItem: React.FC<{ file: PdfFile; onRemove: () => void }> = ({ file,
         zIndex: isDragging ? 50 : 0
       }}
       exit={{ opacity: 0, scale: 0.9, height: 0, marginBottom: 0, overflow: 'hidden' }}
-      transition={{ 
-         type: "spring", 
-         stiffness: 400, 
-         damping: 25,
-         layout: { duration: 0.3 }
-      }}
       className={`
-        relative flex items-center gap-4 p-3 bg-white dark:bg-charcoal-800 rounded-xl border border-slate-200 dark:border-charcoal-700
-        ${isDragging ? 'border-brand-purple ring-2 ring-brand-purple/20' : 'hover:border-brand-purple/30'}
-        mb-3 origin-center cursor-grab active:cursor-grabbing select-none group
+        relative flex items-center gap-4 p-3 bg-white dark:bg-charcoal-800 rounded-lg border border-slate-200 dark:border-charcoal-700
+        ${isDragging ? 'border-brand-purple ring-2 ring-brand-purple/20' : 'hover:border-slate-300 dark:hover:border-charcoal-600'}
+        mb-3 origin-center select-none group
       `}
     >
-      <div className="text-charcoal-400 dark:text-slate-500">
+      <div className="text-charcoal-400 dark:text-slate-500 cursor-grab active:cursor-grabbing hover:text-brand-purple transition-colors">
         <GripVertical size={20} />
       </div>
 
-      <div className="w-12 h-16 bg-slate-100 dark:bg-charcoal-700 rounded-lg overflow-hidden flex-shrink-0 relative shadow-inner border border-slate-200 dark:border-charcoal-600 flex items-center justify-center">
+      <div className="w-10 h-10 bg-slate-100 dark:bg-charcoal-700 rounded overflow-hidden flex-shrink-0 relative border border-slate-200 dark:border-charcoal-600 flex items-center justify-center text-slate-400">
          <AnimatePresence mode="wait">
             {file.previewUrl ? (
                <motion.img 
@@ -97,30 +90,29 @@ const SortableItem: React.FC<{ file: PdfFile; onRemove: () => void }> = ({ file,
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="text-slate-400"
                >
-                  <Loader2 size={16} className="animate-spin" />
+                  <FileText size={16} />
                </motion.div>
             )}
          </AnimatePresence>
       </div>
 
       <div className="flex-1 min-w-0">
-        <h4 className="text-sm font-bold text-charcoal-800 dark:text-slate-200 truncate">{file.file.name}</h4>
-        <p className="text-xs text-charcoal-500 dark:text-slate-500 font-mono">{(file.file.size / (1024 * 1024)).toFixed(2)} MB</p>
+        <h4 className="text-xs font-bold font-mono text-charcoal-800 dark:text-slate-200 truncate">{file.file.name}</h4>
+        <p className="text-[10px] text-charcoal-500 dark:text-slate-500 font-mono">{(file.file.size / (1024 * 1024)).toFixed(2)} MB</p>
       </div>
 
       <motion.button
+        type="button"
+        whileTap={buttonTap}
+        onPointerDown={(e) => e.stopPropagation()} // Vital for dnd-kit to not grab this
         onClick={(e) => {
           e.stopPropagation();
           onRemove();
         }}
-        whileHover={{ scale: 1.1, rotate: 90 }}
-        whileTap={{ scale: 0.9 }}
-        onPointerDown={(e) => e.stopPropagation()}
-        className="p-2 text-charcoal-400 dark:text-slate-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-full transition-colors cursor-pointer"
+        className="p-2 text-charcoal-400 dark:text-slate-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-md transition-colors cursor-pointer z-10"
       >
-        <X size={18} />
+        <X size={16} />
       </motion.button>
     </motion.div>
   );
@@ -153,10 +145,10 @@ export const MergeFileList: React.FC<MergeFileListProps> = ({ files, onReorder, 
 
   return (
     <div className="w-full max-w-xl mx-auto py-6">
-      <div className="flex justify-between items-center mb-4 px-2">
-        <h3 className="text-sm font-bold text-charcoal-500 dark:text-slate-500 uppercase tracking-wider">Merge Order</h3>
-        <span className="text-xs font-bold bg-brand-purple/10 text-brand-purple px-2 py-1 rounded-full">
-          {files.length} Files
+      <div className="flex justify-between items-center mb-4 px-2 border-b border-slate-200 dark:border-charcoal-800 pb-2">
+        <h3 className="text-xs font-bold text-charcoal-500 dark:text-slate-500 uppercase tracking-widest font-mono">Merge Sequence</h3>
+        <span className="text-[10px] font-mono font-bold bg-slate-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-slate-400 px-2 py-1 rounded">
+          {files.length} ITEMS
         </span>
       </div>
 

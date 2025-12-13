@@ -8,6 +8,8 @@ import { nanoid } from 'nanoid';
 import { AnimatePresence, motion } from 'framer-motion';
 import { PwaInstallPrompt } from './PwaInstallPrompt';
 import { CookieConsentBanner } from './CookieConsentBanner';
+import { pageVariants } from '../utils/animations';
+import { FileProcessingLoader } from './FileProcessingLoader';
 
 // --- CONTEXT DEFINITION ---
 interface LayoutContextType {
@@ -54,7 +56,10 @@ export const Layout: React.FC = () => {
   else if (path.includes('delete-pdf-pages')) currentMode = 'delete-pdf-pages';
   else if (path.includes('pdf-to-word')) currentMode = 'pdf-to-word';
   else if (path.includes('pdf-to-pptx')) currentMode = 'pdf-to-pptx';
+  else if (path.includes('pptx-to-pdf')) currentMode = 'pptx-to-pdf' as any;
   else if (path.includes('unlock-pdf')) currentMode = 'unlock-pdf';
+  else if (path.includes('add-page-numbers')) currentMode = 'add-page-numbers';
+  else if (path.includes('redact-pdf')) currentMode = 'redact-pdf';
   else if (path.includes('grayscale-pdf')) currentMode = 'grayscale-pdf';
   else if (path.includes('code-editor')) currentMode = 'code-editor';
 
@@ -76,7 +81,6 @@ export const Layout: React.FC = () => {
     // Cookie Consent
     const consent = localStorage.getItem('eztify-cookie-consent');
     if (!consent) {
-      // Delay slightly to not interfere with page load animation
       setTimeout(() => setShowCookieBanner(true), 2000);
     }
     
@@ -127,7 +131,6 @@ export const Layout: React.FC = () => {
       toast.action = durationOrAction;
       toast.duration = 6000;
     } else {
-      // Default duration set to 2 seconds as requested
       toast.duration = 2000;
     }
 
@@ -147,21 +150,27 @@ export const Layout: React.FC = () => {
         <ToastContainer toasts={toasts} onDismiss={removeToast} isMobile={isMobile} />
         <Header currentMode={currentMode} />
 
-        <main className="flex-1 flex flex-col relative w-full pt-safe pt-16 min-h-0 overflow-hidden">
-          <Suspense fallback={<div className="flex-1" />}>
-            <AnimatePresence mode="wait">
-              <motion.div 
-                key={location.pathname} 
-                initial={{ opacity: 0, scale: 0.98, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.98, y: -10 }}
-                transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                className="flex-1 flex flex-col w-full min-h-0"
-              >
+        <main className="flex-1 relative w-full pt-safe pt-16 min-h-0 overflow-hidden">
+          {/* 
+            AnimatePresence without mode="wait" allows simultaneous animations (overlap).
+            Absolute positioning ensures they don't visually collide (stack vertically).
+          */}
+          <AnimatePresence initial={false}>
+            <motion.div 
+              key={location.pathname} 
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              variants={pageVariants}
+              className="absolute inset-0 w-full h-full flex flex-col bg-white dark:bg-charcoal-950 overflow-hidden"
+            >
+              {/* Suspense is INSIDE the motion.div. If the page code is lazy loading, the container 
+                  animates in immediately with the fallback, preventing a full white screen flash. */}
+              <Suspense fallback={<FileProcessingLoader />}>
                 <Outlet />
-              </motion.div>
-            </AnimatePresence>
-          </Suspense>
+              </Suspense>
+            </motion.div>
+          </AnimatePresence>
         </main>
         
         <AnimatePresence>

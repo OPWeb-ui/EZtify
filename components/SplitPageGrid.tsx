@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import {
   DndContext,
@@ -22,8 +23,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PdfPage, PageNumberConfig } from '../types';
-import { Check, Trash2, ArrowLeftRight, SquareCheck, SquareX, RotateCw } from 'lucide-react';
-import { buttonTap } from '../utils/animations';
+import { Trash2, RotateCw, Check } from 'lucide-react';
 
 interface SplitPageGridProps {
   pages: PdfPage[];
@@ -79,17 +79,15 @@ const PageCard: React.FC<PageCardProps> = ({
   showBadges = true,
   isMobile
 }) => {
-  // Numbering Preview Logic
+  // Numbering Preview
   const getNumberPreviewStyle = () => {
     if (!numberingConfig) return null;
     let styles: React.CSSProperties = { position: 'absolute', transform: '' };
     const { position, alignment, fontSize, fontFamily, offsetX, offsetY } = numberingConfig;
 
-    // Base vertical position
     if (position === 'top') styles.top = `calc(8% + ${offsetY}px)`;
-    else styles.bottom = `calc(8% - ${offsetY}px)`;
+    else styles.bottom = `calc(8% + ${offsetY}px)`;
 
-    // Base horizontal position and transform
     let xTransform = '';
     if (alignment === 'left') styles.left = `calc(8% + ${offsetX}px)`;
     else if (alignment === 'right') styles.right = `calc(8% - ${offsetX}px)`;
@@ -99,16 +97,8 @@ const PageCard: React.FC<PageCardProps> = ({
     }
 
     styles.transform = xTransform.trim();
-    styles.fontSize = `${fontSize * 0.75}px`; // Scale down slightly for thumbnail preview
-
-    // Map font family for preview
-    const genericFontMap: { [key: string]: string } = {
-      'Helvetica': 'sans-serif', 'Times-Roman': 'serif', 'Courier': 'monospace',
-    };
-    const baseFont = fontFamily.split('-')[0];
-    styles.fontFamily = genericFontMap[baseFont] || 'sans-serif';
-    if (fontFamily.includes('Bold')) styles.fontWeight = 'bold';
-    if (fontFamily.includes('Oblique') || fontFamily.includes('Italic')) styles.fontStyle = 'italic';
+    styles.fontSize = `${fontSize * 0.75}px`; 
+    styles.fontFamily = fontFamily.split('-')[0];
     
     return styles;
   };
@@ -116,69 +106,49 @@ const PageCard: React.FC<PageCardProps> = ({
   return (
     <div 
       className={`
-        relative aspect-[3/4] rounded-xl overflow-hidden bg-white dark:bg-charcoal-800 transition-all duration-200 group
-        ${isOverlay ? 'shadow-2xl ring-4 ring-brand-purple scale-105 z-50 cursor-grabbing' : 'shadow-sm hover:shadow-md'}
-        ${isDragging ? 'opacity-30 grayscale ring-2 ring-dashed ring-slate-300 dark:ring-charcoal-600' : ''}
-        ${!isDragging && !isOverlay && page.selected ? 'ring-4 ring-brand-purple shadow-lg shadow-brand-purple/20' : ''}
-        ${!isDragging && !isOverlay && !page.selected ? 'ring-1 ring-slate-200 dark:ring-charcoal-700 hover:ring-brand-purple/30' : ''}
+        relative aspect-[3/4] rounded-lg overflow-hidden bg-white dark:bg-charcoal-800 transition-all duration-200 group
+        border 
+        ${isOverlay ? 'shadow-2xl border-brand-purple z-50 cursor-grabbing' : ''}
+        ${isDragging ? 'opacity-30 grayscale border-dashed border-slate-400' : ''}
+        ${!isDragging && !isOverlay && page.selected 
+            ? 'border-brand-purple border-2 ring-1 ring-brand-purple/20' 
+            : 'border-slate-200 dark:border-charcoal-700 hover:border-slate-300 dark:hover:border-charcoal-600 hover:shadow-md'}
       `}
       onClick={onToggle ? (e) => onToggle(page.id) : undefined}
     >
+      {/* Selection Marker */}
+      {page.selected && !isOverlay && !numberingConfig && (
+         <div className="absolute top-0 right-0 w-0 h-0 border-t-[32px] border-l-[32px] border-t-brand-purple border-l-transparent z-20">
+            <Check size={12} className="absolute -top-7 -left-3.5 text-white" strokeWidth={3} />
+         </div>
+      )}
+
       {/* Controls Overlay */}
       {!isOverlay && !numberingConfig && !isDragging && (
-        <>
-            {/* Desktop: Grouped */}
-            {!isMobile && (
-                <div className="absolute top-2 right-2 z-30 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {onRotate && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onRotate(page.id); }}
-                            className="p-1.5 rounded-full bg-white/90 shadow-sm text-blue-500 hover:text-blue-600 hover:bg-white"
-                            title="Rotate Page"
-                        >
-                            <RotateCw size={14} />
-                        </button>
-                    )}
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); onRemove?.(page.id); }}
-                        className="p-1.5 rounded-full bg-white/90 shadow-sm text-rose-500 hover:text-rose-600 hover:bg-white"
-                        title="Delete Page"
-                    >
-                        <Trash2 size={14} />
-                    </button>
-                </div>
+        <div className={`absolute inset-0 bg-charcoal-900/10 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-start justify-between p-2`}>
+            {onRotate && (
+                <button
+                    onClick={(e) => { e.stopPropagation(); onRotate(page.id); }}
+                    className="p-1.5 rounded-md bg-white dark:bg-charcoal-800 shadow-sm text-charcoal-600 dark:text-slate-300 hover:text-brand-purple border border-slate-200 dark:border-charcoal-600"
+                    title="Rotate"
+                >
+                    <RotateCw size={12} />
+                </button>
             )}
-
-            {/* Mobile: Split */}
-            {isMobile && (
-                <>
-                    {onRotate && (
-                        <div className="absolute top-2 left-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onRotate(page.id); }}
-                                className="p-1.5 rounded-full bg-white/90 shadow-sm text-blue-500 hover:text-blue-600 hover:bg-white"
-                                title="Rotate Page"
-                            >
-                                <RotateCw size={14} />
-                            </button>
-                        </div>
-                    )}
-                    <div className="absolute top-2 right-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); onRemove?.(page.id); }}
-                            className="p-1.5 rounded-full bg-white/90 shadow-sm text-rose-500 hover:text-rose-600 hover:bg-white"
-                            title="Delete Page"
-                        >
-                            <Trash2 size={14} />
-                        </button>
-                    </div>
-                </>
+            {onRemove && (
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onRemove(page.id); }}
+                    className="p-1.5 rounded-md bg-white dark:bg-charcoal-800 shadow-sm text-charcoal-600 dark:text-slate-300 hover:text-rose-500 border border-slate-200 dark:border-charcoal-600"
+                    title="Delete"
+                >
+                    <Trash2 size={12} />
+                </button>
             )}
-        </>
+        </div>
       )}
 
       {/* Image Container */}
-      <div className="relative w-full h-full bg-slate-50 dark:bg-charcoal-900 flex items-center justify-center p-2">
+      <div className="relative w-full h-full bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#27272a_1px,transparent_1px)] [background-size:8px_8px] flex items-center justify-center p-4">
         <img 
           src={page.previewUrl} 
           alt={`Page ${index + 1}`}
@@ -194,28 +164,17 @@ const PageCard: React.FC<PageCardProps> = ({
         {numberingConfig && showBadges && (
           <div 
             style={getNumberPreviewStyle() || {}} 
-            className="z-20 font-heading font-bold bg-white/90 text-black shadow-sm border border-black/10 px-1.5 py-0.5 rounded-[2px] pointer-events-none min-w-[16px] text-center"
+            className="z-20 font-bold bg-white/90 text-black shadow-sm border border-black/10 px-1.5 py-0.5 rounded-[2px] pointer-events-none min-w-[16px] text-center"
           >
             {numberingConfig.startFrom + index}
           </div>
         )}
       </div>
 
-      {/* Index Badge */}
+      {/* Tech Index Badge */}
       {!numberingConfig && showBadges && (
-        <div className="absolute bottom-2 left-2 z-10 pointer-events-none">
-           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm ${isOverlay ? 'bg-brand-purple text-white' : 'bg-charcoal-900/80 text-white'}`}>
-             {useVisualIndexing ? index + 1 : (page.pageIndex + 1)}
-           </span>
-        </div>
-      )}
-
-      {/* Selection Overlay */}
-      {!isOverlay && !isDragging && !numberingConfig && page.selected && (
-        <div className="absolute inset-0 bg-brand-purple/10 flex items-center justify-center pointer-events-none">
-            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-8 h-8 rounded-full bg-brand-purple text-white flex items-center justify-center shadow-md">
-              <Check size={16} strokeWidth={3} />
-            </motion.div>
+        <div className="absolute bottom-0 left-0 bg-slate-100 dark:bg-charcoal-700 px-2 py-0.5 text-[9px] font-mono font-bold text-charcoal-500 dark:text-slate-400 border-t border-r border-slate-200 dark:border-charcoal-600 rounded-tr-md z-10 pointer-events-none">
+           PAGE_{String(useVisualIndexing ? index + 1 : (page.pageIndex + 1)).padStart(2, '0')}
         </div>
       )}
     </div>
@@ -240,10 +199,9 @@ const SortablePage: React.FC<SortablePageProps> = (props) => {
       {...attributes}
       {...listeners}
       layout
-      initial={{ opacity: 0, scale: 0.8 }}
+      initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
-      transition={{ type: "spring", stiffness: 300, damping: 25 }}
       className="outline-none touch-manipulation relative"
     >
       <PageCard {...props} isDragging={isDragging} />
@@ -278,28 +236,25 @@ export const SplitPageGrid: React.FC<SplitPageGridProps> = (props) => {
 
   return (
     <div className="w-full">
-      {/* Controls Bar - Selection Actions */}
+      {/* Controls Bar - Selection Actions (Optional, kept minimal) */}
       {!props.numberingConfig && (
         <div className="flex flex-col gap-4 mb-6">
           <div className="flex items-center justify-between">
-            <div className="text-sm font-bold text-charcoal-600 dark:text-slate-300">
-              <span className="bg-brand-purple/10 text-brand-purple px-2.5 py-1 rounded-lg mr-2">{pages.length} Pages</span>
-              {pages.filter(p => p.selected).length > 0 && <span className="text-xs opacity-70">{pages.filter(p => p.selected).length} selected</span>}
+            <div className="text-xs font-bold font-mono text-charcoal-500 dark:text-slate-400 uppercase tracking-wider">
+              {pages.length} PAGES LOADED
+              {pages.filter(p => p.selected).length > 0 && <span className="text-brand-purple ml-2">// {pages.filter(p => p.selected).length} SELECTED</span>}
             </div>
             
-            {/* Action Buttons for Selection */}
             {pages.some(p => p.selected) && (
-               <div className="flex gap-2">
-                 <motion.button onClick={props.onRemoveSelected} whileTap={buttonTap} className="flex items-center gap-1.5 text-rose-500 bg-rose-50 dark:bg-rose-900/20 px-3 py-1.5 rounded-lg text-xs font-bold border border-rose-100 hover:bg-rose-100 dark:hover:bg-rose-900/30">
-                   <Trash2 size={14} /> Delete
-                 </motion.button>
-               </div>
+               <motion.button onClick={props.onRemoveSelected} className="flex items-center gap-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 px-3 py-1.5 rounded-md text-xs font-mono border border-transparent hover:border-rose-200 transition-all">
+                 <Trash2 size={12} /> DELETE_SELECTED
+               </motion.button>
             )}
           </div>
-          <div className="flex flex-wrap gap-2 text-xs font-medium">
-            <button onClick={props.onSelectAll} className="flex-1 md:flex-none justify-center flex items-center gap-1.5 bg-white dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 px-3 py-2 rounded-lg hover:border-slate-300 dark:hover:border-charcoal-600 transition-colors"><SquareCheck size={14} /> All</button>
-            <button onClick={props.onDeselectAll} className="flex-1 md:flex-none justify-center flex items-center gap-1.5 bg-white dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 px-3 py-2 rounded-lg hover:border-slate-300 dark:hover:border-charcoal-600 transition-colors"><SquareX size={14} /> None</button>
-            <button onClick={props.onInvertSelection} className="flex-1 md:flex-none justify-center flex items-center gap-1.5 bg-white dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 px-3 py-2 rounded-lg hover:border-slate-300 dark:hover:border-charcoal-600 transition-colors"><ArrowLeftRight size={14} /> Invert</button>
+          <div className="flex flex-wrap gap-2 text-[10px] font-mono font-bold uppercase">
+            <button onClick={props.onSelectAll} className="px-3 py-1.5 bg-slate-100 dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 rounded hover:border-brand-purple/50 transition-colors">Select_All</button>
+            <button onClick={props.onDeselectAll} className="px-3 py-1.5 bg-slate-100 dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 rounded hover:border-brand-purple/50 transition-colors">Select_None</button>
+            <button onClick={props.onInvertSelection} className="px-3 py-1.5 bg-slate-100 dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 rounded hover:border-brand-purple/50 transition-colors">Invert</button>
           </div>
         </div>
       )}

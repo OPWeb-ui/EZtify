@@ -1,12 +1,12 @@
 
 import React from 'react';
-import { Upload, Layers, Download, Settings, FileImage, MousePointerClick, Zap, Sliders, CheckCircle, GripVertical, Scissors, FileOutput, Archive, FilePlus, FileText, RotateCw, Trash2, FileKey, FileLock, Lock, ShieldCheck, Hash, Eraser, Palette, Code, PenTool } from 'lucide-react';
+import { Upload, Layers, Download, Settings, FileImage, MousePointerClick, Zap, Sliders, CheckCircle, GripVertical, Scissors, FileOutput, Archive, FilePlus, FileText, RotateCw, Trash2, FileKey, FileLock, Lock, ShieldCheck, Hash, Eraser, Palette, Code, PenTool, Presentation } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AppMode } from '../types';
 import { staggerContainer, fadeInUp, cardHover } from '../utils/animations';
 
 interface HowItWorksProps {
-  mode: AppMode;
+  mode: AppMode | 'pptx-to-pdf';
 }
 
 export const HowItWorks: React.FC<HowItWorksProps> = ({ mode }) => {
@@ -30,6 +30,13 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ mode }) => {
         { icon: <Upload />, title: "Upload", desc: "Select your file" },
         { icon: <Zap />, title: "Convert", desc: "Instant conversion" },
         { icon: <Download />, title: "Download", desc: "Save the new file" }
+      ];
+    }
+    if (mode === 'pptx-to-pdf') {
+      return [
+        { icon: <Upload />, title: "Upload", desc: "Select PPTX file" },
+        { icon: <Presentation />, title: "Process", desc: "Extracts slides" },
+        { icon: <Download />, title: "Download", desc: "Save as PDF" }
       ];
     }
     if (mode === 'rotate-pdf') {

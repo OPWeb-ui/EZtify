@@ -1,13 +1,14 @@
 
 import React, { useState, useCallback } from 'react';
 import { useLayoutContext } from '../components/Layout';
-import { UploadArea } from '../components/UploadArea';
 import { PageReadyTracker } from '../components/PageReadyTracker';
 import { PdfPage } from '../types';
 import { loadPdfPages, savePdfWithModifications } from '../services/pdfSplitter';
 import { SplitPageGrid } from '../components/SplitPageGrid';
 import { StickyBar } from '../components/StickyBar';
-import { FileRejection } from 'react-dropzone';
+import { FileRejection, useDropzone } from 'react-dropzone';
+import { FileMinus, Trash2, Lock, Cpu, MousePointerClick, Zap } from 'lucide-react';
+import { ToolLandingLayout } from '../components/ToolLandingLayout';
 
 export const DeletePdfPagesPage: React.FC = () => {
   const { addToast } = useLayoutContext();
@@ -28,8 +29,6 @@ export const DeletePdfPagesPage: React.FC = () => {
       const loadedPages = await loadPdfPages(f, setProgress, setStatus);
       if (loadedPages.length > 0) {
         setFile(f);
-        // Initially select all pages (so user deselects what to delete, or we just remove from array)
-        // Actually for "Delete pages" tool, usually user clicks to delete
         setPages(loadedPages); 
       }
     } catch (e) {
@@ -71,15 +70,27 @@ export const DeletePdfPagesPage: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-[calc(100vh-64px)] overflow-hidden bg-slate-50 dark:bg-charcoal-900">
+    <div className="flex-1 flex flex-col h-full pt-16 overflow-hidden bg-slate-50 dark:bg-charcoal-900">
       <PageReadyTracker />
       
       {!file ? (
-        <div className="flex-1 p-6 flex flex-col items-center justify-center overflow-y-auto">
-          <div className="max-w-2xl w-full">
-            <UploadArea onDrop={onDrop} mode="delete-pdf-pages" isProcessing={isProcessingFiles} />
-          </div>
-        </div>
+        <ToolLandingLayout
+            title="Delete Pages"
+            description="Remove unwanted pages from your PDF file. Selectively delete pages via a visual grid."
+            icon={<FileMinus />}
+            onDrop={onDrop}
+            accept={{ 'application/pdf': ['.pdf'] }}
+            multiple={false}
+            isProcessing={isProcessingFiles}
+            accentColor="text-rose-500"
+            specs={[
+              { label: "Selection", value: "Click to Delete", icon: <MousePointerClick /> },
+              { label: "Privacy", value: "Client-Side", icon: <Lock /> },
+              { label: "Engine", value: "PDF-Lib", icon: <Cpu /> },
+              { label: "Speed", value: "Instant", icon: <Zap /> },
+            ]}
+            tip="Click the trash icon on any page to remove it from the document."
+        />
       ) : (
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pb-32">
            <div className="max-w-6xl mx-auto">
@@ -91,7 +102,7 @@ export const DeletePdfPagesPage: React.FC = () => {
                  onDeselectAll={() => {}}
                  onInvertSelection={() => {}}
                  onRemovePage={handleRemovePage}
-                 onRemoveSelected={() => {}} // Could implement selection for batch delete
+                 onRemoveSelected={() => {}}
                  onReorder={() => {}}
                  isReorderDisabled={true}
                  useVisualIndexing

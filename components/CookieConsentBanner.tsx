@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Cookie } from 'lucide-react';
@@ -15,8 +16,8 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({ onAcce
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      // Increased z-index to 150 to ensure it sits above the StickyBar (z-100) on mobile
-      className="fixed bottom-0 left-0 right-0 z-[150] p-4 pointer-events-none"
+      // Increased z-index to ensure it is on top of all other elements like the StickyBar.
+      className="fixed bottom-0 left-0 right-0 z-[1100] p-4 pointer-events-none"
     >
       <div className="max-w-4xl mx-auto p-4 rounded-2xl bg-white/95 dark:bg-charcoal-900/95 backdrop-blur-xl border border-slate-200 dark:border-charcoal-700 shadow-2xl shadow-brand-purple/10 flex flex-col md:flex-row items-center gap-4 pointer-events-auto">
         
