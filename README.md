@@ -40,8 +40,3 @@ EZtify is designed with a "local-first" architecture.
 *   All processing happens in the user's browser memory or web workers.
 *   We do not maintain any backend for file processing.
 *   Optional features (like analytics) are strictly opt-in or anonymized.
-
-## 📝 Content
-
-The content for the **About** page is managed via Markdown.
-*   Edit `content/about.md` to update the text.
