@@ -19,7 +19,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { PdfFile } from '../types';
-import { FileText, GripVertical, X, Loader2 } from 'lucide-react';
+import { FileText, GripVertical, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { buttonTap } from '../utils/animations';
 
@@ -64,16 +64,16 @@ const SortableItem: React.FC<{ file: PdfFile; onRemove: () => void }> = ({ file,
       }}
       exit={{ opacity: 0, scale: 0.9, height: 0, marginBottom: 0, overflow: 'hidden' }}
       className={`
-        relative flex items-center gap-4 p-3 bg-white dark:bg-charcoal-800 rounded-lg border border-slate-200 dark:border-charcoal-700
+        relative flex items-center gap-4 p-3 bg-white dark:bg-charcoal-800 rounded-xl border border-slate-200 dark:border-charcoal-700
         ${isDragging ? 'border-brand-purple ring-2 ring-brand-purple/20' : 'hover:border-slate-300 dark:hover:border-charcoal-600'}
-        mb-3 origin-center select-none group
+        mb-3 origin-center select-none group transition-colors
       `}
     >
       <div className="text-charcoal-400 dark:text-slate-500 cursor-grab active:cursor-grabbing hover:text-brand-purple transition-colors">
         <GripVertical size={20} />
       </div>
 
-      <div className="w-10 h-10 bg-slate-100 dark:bg-charcoal-700 rounded overflow-hidden flex-shrink-0 relative border border-slate-200 dark:border-charcoal-600 flex items-center justify-center text-slate-400">
+      <div className="w-10 h-10 bg-slate-100 dark:bg-charcoal-700 rounded-lg overflow-hidden flex-shrink-0 relative border border-slate-200 dark:border-charcoal-600 flex items-center justify-center text-slate-400">
          <AnimatePresence mode="wait">
             {file.previewUrl ? (
                <motion.img 
@@ -102,17 +102,24 @@ const SortableItem: React.FC<{ file: PdfFile; onRemove: () => void }> = ({ file,
         <p className="text-[10px] text-charcoal-500 dark:text-slate-500 font-mono">{(file.file.size / (1024 * 1024)).toFixed(2)} MB</p>
       </div>
 
+      {/* Delete Button: Consistent with Filmstrip style logic (Right-aligned here for list view) */}
       <motion.button
         type="button"
         whileTap={buttonTap}
-        onPointerDown={(e) => e.stopPropagation()} // Vital for dnd-kit to not grab this
+        onPointerDown={(e) => e.stopPropagation()} 
         onClick={(e) => {
           e.stopPropagation();
           onRemove();
         }}
-        className="p-2 text-charcoal-400 dark:text-slate-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-md transition-colors cursor-pointer z-10"
+        className="
+          flex items-center justify-center w-8 h-8 rounded-full 
+          text-charcoal-400 dark:text-slate-500 
+          hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:border-rose-200 dark:hover:border-rose-900/30
+          border border-transparent transition-all cursor-pointer z-10
+        "
+        aria-label="Remove File"
       >
-        <X size={16} />
+        <X size={16} strokeWidth={2.5} />
       </motion.button>
     </motion.div>
   );
@@ -120,17 +127,8 @@ const SortableItem: React.FC<{ file: PdfFile; onRemove: () => void }> = ({ file,
 
 export const MergeFileList: React.FC<MergeFileListProps> = ({ files, onReorder, onRemove }) => {
   const sensors = useSensors(
-    useSensor(MouseSensor, { 
-      activationConstraint: { 
-        distance: 8 
-      } 
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 250, // Long press (250ms) to start drag on touch
-        tolerance: 5,
-      },
-    }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 

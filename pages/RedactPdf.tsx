@@ -1,152 +1,129 @@
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useLayoutContext } from '../components/Layout';
 import { PageReadyTracker } from '../components/PageReadyTracker';
 import { PdfPage, Annotation, UploadedImage } from '../types';
 import { loadPdfPages } from '../services/pdfSplitter';
-import { savePdfWithEditorChanges } from '../services/pdfEditor';
+import { searchPdfText, SearchResult } from '../services/pdfTextSearch';
+import { loadPdfJs } from '../services/pdfProvider';
+import { PDFDocument } from 'pdf-lib';
 import { Filmstrip } from '../components/Filmstrip';
-import { FileRejection, useDropzone } from 'react-dropzone';
+import { FilmstripModal } from '../components/FilmstripModal';
 import { nanoid } from 'nanoid';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Undo2, Download, RefreshCw, ZoomIn, ZoomOut, Loader2, FileText, Palette, MousePointer2, LayoutGrid, EyeOff, Lock, Settings, Cpu, Type, CheckSquare, Minus, Plus, Square, PanelBottom } from 'lucide-react';
-import { buttonTap, techEase } from '../utils/animations';
-import { FilmstripModal } from '../components/FilmstripModal';
+import { 
+  EyeOff, Lock, Settings, Cpu, Layers, Download, Undo2, 
+  ZoomIn, ZoomOut, Maximize, MousePointer2, RefreshCw, 
+  Search, Eye, ShieldAlert, CheckSquare, Trash2, ShieldCheck, X, Loader2,
+  Palette, FileText, ChevronUp, ChevronDown
+} from 'lucide-react';
+import { buttonTap, techEase, modalContentVariants } from '../utils/animations';
 import { ToolLandingLayout } from '../components/ToolLandingLayout';
+import { FileRejection } from 'react-dropzone';
+import { Sidebar } from '../components/Sidebar';
 
-const PRESET_COLORS = [
-  '#000000', '#FFFFFF', '#EF4444', '#F97316', '#FACC15', '#22C55E', '#3B82F6', '#8B5CF6'
-];
-
-const ColorPickerDropdown = ({ color, onChange }: { color: string, onChange: (c: string) => void }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  
-  return (
-    <div className="relative">
-      <motion.button 
-        whileTap={buttonTap}
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 bg-slate-100 dark:bg-charcoal-800 p-2 rounded-lg border border-slate-200 dark:border-charcoal-700 hover:bg-slate-200 dark:hover:bg-charcoal-700 transition-colors"
-        title="Change Color"
-      >
-        <div className="w-4 h-4 rounded-full border border-slate-300 dark:border-charcoal-500 shadow-sm" style={{ backgroundColor: color }} />
-      </motion.button>
-
-      <AnimatePresence>
-        {isOpen && (
-          <>
-            <div className="fixed inset-0 z-[150]" onClick={() => setIsOpen(false)} />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 10 }}
-              className="absolute top-full left-0 z-[160] mt-2 p-2 bg-white dark:bg-charcoal-900 rounded-xl shadow-xl border border-slate-200 dark:border-charcoal-700 grid grid-cols-4 gap-2 w-[140px]"
-            >
-              {PRESET_COLORS.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => { onChange(c); setIsOpen(false); }}
-                  className="w-6 h-6 rounded-full border border-slate-200 dark:border-charcoal-700 relative flex items-center justify-center hover:scale-110 transition-transform shadow-sm"
-                  style={{ backgroundColor: c }}
-                  title={c}
-                >
-                  {color.toLowerCase() === c.toLowerCase() && (
-                    <div className={`w-2 h-2 rounded-full ${['#FFFFFF', '#FACC15'].includes(c) ? 'bg-black' : 'bg-white'}`} />
-                  )}
-                </button>
-              ))}
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
+// --- Constants ---
+const DEFAULT_COLOR = '#000000';
 
 export const RedactPdfPage: React.FC = () => {
   const { addToast, isMobile } = useLayoutContext();
+  
+  // --- Data State ---
   const [file, setFile] = useState<File | null>(null);
   const [pages, setPages] = useState<PdfPage[]>([]);
-  const [isProcessingFiles, setIsProcessingFiles] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState('');
   const [activePageId, setActivePageId] = useState<string | null>(null);
+  const [selectedPageIds, setSelectedPageIds] = useState<Set<string>>(new Set());
   
-  // Tools state
-  const [activeTool, setActiveTool] = useState<'redact' | 'text' | 'checkbox'>('redact');
-  const [color, setColor] = useState('#000000');
-  const [fontSize, setFontSize] = useState(14);
+  // --- UI State ---
   const [zoom, setZoom] = useState(1);
-  const [showFilmstrip, setShowFilmstrip] = useState(true);
-  const [isFilmstripModalOpen, setIsFilmstripModalOpen] = useState(false);
+  const [fitMode, setFitMode] = useState<'fit' | 'width'>('fit');
+  const [verificationMode, setVerificationMode] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+
+  // --- Mobile State ---
+  const [isFilmstripOpen, setIsFilmstripOpen] = useState(false);
+  const [isToolsOpen, setIsToolsOpen] = useState(false);
+
+  // --- Redaction State ---
+  const [redactionMode, setRedactionMode] = useState<'draw' | 'search'>('draw');
+  const [redactColor, setRedactColor] = useState<'black' | 'white'>('black');
+  const [showLabel, setShowLabel] = useState(false);
   
-  // Drawing state
+  // --- Search State ---
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // --- Interaction State ---
   const [isDrawing, setIsDrawing] = useState(false);
   const [dragStart, setDragStart] = useState<{x: number, y: number} | null>(null);
   const [currentDragRect, setCurrentDragRect] = useState<{left: number, top: number, width: number, height: number} | null>(null);
+  
+  // --- Processing ---
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [status, setStatus] = useState('');
 
-  const imageRef = useRef<HTMLImageElement>(null);
-  const canvasContainerRef = useRef<HTMLDivElement>(null);
-  const [containerSize, setContainerSize] = useState({ w: 0, h: 0 });
-
+  // --- Helpers ---
   const activePage = pages.find(p => p.id === activePageId) || null;
+  const activeIndex = pages.findIndex(p => p.id === activePageId);
 
-  useEffect(() => {
-    if (!canvasContainerRef.current) return;
-    const observer = new ResizeObserver(entries => {
-        const { width, height } = entries[0].contentRect;
-        setContainerSize({ w: width, h: height });
-    });
-    observer.observe(canvasContainerRef.current);
-    return () => observer.disconnect();
-  }, [file]); 
-
-  const calculateBaseScale = () => {
-    if (!activePage?.width || !activePage?.height || containerSize.w === 0 || containerSize.h === 0) return 1;
-    const padding = 32; 
-    const availableW = Math.max(0, containerSize.w - padding);
-    const availableH = Math.max(0, containerSize.h - padding);
-    const scaleX = availableW / activePage.width;
-    const scaleY = availableH / activePage.height;
-    return Math.min(scaleX, scaleY);
-  };
-
-  const baseScale = calculateBaseScale();
-  const renderScale = baseScale * zoom;
+  // --- Handlers ---
 
   const onDrop = useCallback(async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
     if (acceptedFiles.length === 0) return;
     const f = acceptedFiles[0];
-    setIsProcessingFiles(true);
-    setStatus('Loading pages...');
+    
+    setIsProcessing(true);
+    setStatus('Loading PDF...');
     try {
       const loadedPages = await loadPdfPages(f, setProgress, setStatus, { scale: 1.5 });
       if (loadedPages.length > 0) {
         setFile(f);
         setPages(loadedPages);
         setActivePageId(loadedPages[0].id);
-        setZoom(1);
+        setSelectedPageIds(new Set([loadedPages[0].id]));
       }
     } catch (e) {
       addToast("Error", "Failed to load PDF.", "error");
     } finally {
-      setIsProcessingFiles(false);
+      setIsProcessing(false);
       setProgress(0);
       setStatus('');
     }
   }, [addToast]);
 
-  const updatePageAnnotations = (pageId: string, newAnnotations: Annotation[]) => {
-    setPages(prev => prev.map(p => p.id === pageId ? { ...p, annotations: newAnnotations } : p));
-  };
-  
-  const handleUndo = () => {
-    if (!activePage) return;
-    updatePageAnnotations(activePage.id, (activePage.annotations || []).slice(0, -1));
+  const handleReset = () => {
+    setFile(null);
+    setPages([]);
+    setActivePageId(null);
+    setSearchResults([]);
+    setSearchQuery('');
+    setVerificationMode(false);
   };
 
-  const getRelativeCoords = (e: React.PointerEvent | React.MouseEvent) => {
+  // --- Zoom Logic ---
+  useEffect(() => {
+    if (!containerRef.current || !activePage) return;
+    const updateZoom = () => {
+      const { width: contW, height: contH } = containerRef.current!.getBoundingClientRect();
+      // Adjust padding for mobile vs desktop
+      const padding = isMobile ? 32 : 64; 
+      const availW = Math.max(0, contW - padding);
+      const availH = Math.max(0, contH - padding);
+      const scale = Math.min(availW / (activePage.width || 600), availH / (activePage.height || 800));
+      setZoom(scale);
+    };
+    const observer = new ResizeObserver(updateZoom);
+    observer.observe(containerRef.current);
+    updateZoom();
+    return () => observer.disconnect();
+  }, [activePage, fitMode, isMobile]);
+
+  // --- Drawing Logic ---
+  const getRelativeCoords = (e: React.PointerEvent) => {
     if (!imageRef.current) return null;
     const rect = imageRef.current.getBoundingClientRect();
     const xPct = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
@@ -155,19 +132,18 @@ export const RedactPdfPage: React.FC = () => {
   };
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    if (activeTool === 'redact') {
-      e.preventDefault(); 
-      const coords = getRelativeCoords(e);
-      if (!coords) return;
-      (e.target as Element).setPointerCapture(e.pointerId);
-      setIsDrawing(true);
-      setDragStart(coords);
-      setCurrentDragRect({ left: coords.x, top: coords.y, width: 0, height: 0 });
-    }
+    if (redactionMode !== 'draw') return;
+    e.preventDefault();
+    const coords = getRelativeCoords(e);
+    if (!coords) return;
+    (e.target as Element).setPointerCapture(e.pointerId);
+    setIsDrawing(true);
+    setDragStart(coords);
+    setCurrentDragRect({ left: coords.x, top: coords.y, width: 0, height: 0 });
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDrawing || !dragStart || activeTool !== 'redact') return;
+    if (!isDrawing || !dragStart) return;
     e.preventDefault();
     const coords = getRelativeCoords(e);
     if (!coords) return;
@@ -179,391 +155,729 @@ export const RedactPdfPage: React.FC = () => {
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
-    // Only capture click for non-drawing tools, or end drawing
+    if (!isDrawing) return;
+    (e.target as Element).releasePointerCapture(e.pointerId);
+    setIsDrawing(false);
     
-    if (activeTool === 'redact') {
-        if (!isDrawing) return;
-        (e.target as Element).releasePointerCapture(e.pointerId);
-        setIsDrawing(false);
-        if (dragStart && currentDragRect && activePage) {
-            if (currentDragRect.width > 0.5 && currentDragRect.height > 0.5) {
-               const newAnnotation: Annotation = {
-                 id: nanoid(), type: 'redact', x: currentDragRect.left, y: currentDragRect.top, 
-                 width: currentDragRect.width, height: currentDragRect.height, color
-               };
-               updatePageAnnotations(activePage.id, [...(activePage.annotations || []), newAnnotation]);
-            }
-        }
-        setDragStart(null);
-        setCurrentDragRect(null);
-    } else if (activePage) {
-        // Click to place Text or Checkbox
-        const coords = getRelativeCoords(e);
-        if (!coords) return;
-
-        if (activeTool === 'text') {
-            const text = prompt("Enter annotation text:", "");
-            if (text) {
-                const newAnnotation: Annotation = {
-                    id: nanoid(), type: 'text',
-                    x: coords.x, y: coords.y,
-                    text, fontSize, color
-                };
-                updatePageAnnotations(activePage.id, [...(activePage.annotations || []), newAnnotation]);
-            }
-        } else if (activeTool === 'checkbox') {
-            const newAnnotation: Annotation = {
-                id: nanoid(), type: 'checkbox',
-                x: coords.x, y: coords.y,
-                text: 'X', fontSize: fontSize + 4, color
-            };
-            updatePageAnnotations(activePage.id, [...(activePage.annotations || []), newAnnotation]);
-        }
+    if (dragStart && currentDragRect && activePage && currentDragRect.width > 0.5 && currentDragRect.height > 0.5) {
+        const newAnnotation: Annotation = {
+            id: nanoid(),
+            type: 'redact',
+            x: currentDragRect.left,
+            y: currentDragRect.top,
+            width: currentDragRect.width,
+            height: currentDragRect.height,
+            color: redactColor === 'black' ? '#000000' : '#FFFFFF',
+            text: showLabel ? 'REDACTED' : undefined
+        };
+        
+        setPages(prev => prev.map(p => p.id === activePage.id ? { ...p, annotations: [...(p.annotations || []), newAnnotation] } : p));
     }
-  };
-  
-  const removeAnnotation = (id: string) => {
-    if (!activePage) return;
-    updatePageAnnotations(activePage.id, (activePage.annotations || []).filter(a => a.id !== id));
+    setDragStart(null);
+    setCurrentDragRect(null);
   };
 
-  const handleGenerate = async () => {
-    if (!file) return;
-    setIsGenerating(true);
-    try {
-       const blob = await savePdfWithEditorChanges(file, pages, undefined, setProgress, setStatus);
-       const url = URL.createObjectURL(blob);
-       const link = document.createElement('a');
-       link.href = url;
-       link.download = `edited_${file.name}`;
-       document.body.appendChild(link);
-       link.click();
-       document.body.removeChild(link);
-       URL.revokeObjectURL(url);
-       addToast("Success", "PDF processed!", "success");
-    } catch (e) {
-       addToast("Error", "Failed to save PDF.", "error");
-    } finally {
-       setIsGenerating(false);
-       setProgress(0);
-       setStatus('');
-    }
-  };
-  
-  const handleReset = () => {
-    setFile(null);
-    setPages([]);
-    setActivePageId(null);
-    setZoom(1);
-    setActiveTool('redact');
+  const removeAnnotation = (pageId: string, annotationId: string) => {
+      setPages(prev => prev.map(p => p.id === pageId ? { ...p, annotations: (p.annotations || []).filter(a => a.id !== annotationId) } : p));
   };
 
-  const handleSelectFromModal = (id: string) => {
-    setActivePageId(id);
-    setIsFilmstripModalOpen(false);
+  const undoLastRedaction = () => {
+      if (!activePage?.annotations?.length) return;
+      const lastId = activePage.annotations[activePage.annotations.length - 1].id;
+      removeAnnotation(activePage.id, lastId);
   };
 
-  const filmstripImages: UploadedImage[] = pages.map(p => ({
-    id: p.id,
-    file: file!,
-    previewUrl: p.previewUrl,
-    width: p.width || 0, height: p.height || 0,
-    rotation: p.rotation || 0
-  }));
+  // --- Pattern Search Logic ---
+  const handleSearch = async () => {
+      if (!file || !searchQuery) return;
+      setIsSearching(true);
+      try {
+          const results = await searchPdfText(file, searchQuery, setProgress);
+          setSearchResults(results);
+          if (results.length === 0) addToast("No matches", "Try a different term.", "warning");
+      } catch (e) {
+          addToast("Error", "Search failed.", "error");
+      } finally {
+          setIsSearching(false);
+          setProgress(0);
+      }
+  };
 
-  const ToolButton = ({ tool, icon, label }: { tool: 'redact' | 'text' | 'checkbox', icon: React.ReactNode, label: string }) => (
-    <button
-      onClick={() => setActiveTool(tool)}
-      className={`
-        flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all border
-        ${activeTool === tool
-          ? 'bg-brand-purple text-white border-brand-purple shadow-md' 
-          : 'bg-white dark:bg-charcoal-700 text-charcoal-600 dark:text-slate-300 border-slate-200 dark:border-charcoal-600 hover:bg-slate-50 dark:hover:bg-charcoal-600'
-        }
-      `}
-    >
-      {icon} <span className="hidden sm:inline">{label}</span>
-    </button>
-  );
-
-  return (
-    <div className="flex flex-col h-full pt-16 bg-slate-100 dark:bg-charcoal-900 overflow-hidden">
-      <PageReadyTracker />
+  const applySearchResult = (result: SearchResult) => {
+      const targetPage = pages[result.pageIndex];
+      if (!targetPage) return;
       
-      {!file ? (
-        <ToolLandingLayout
-            title="Redact PDF"
-            description="Permanently hide sensitive information or add annotations like text and checkboxes."
-            icon={<EyeOff />}
-            onDrop={onDrop}
-            accept={{ 'application/pdf': ['.pdf'] }}
-            multiple={false}
-            isProcessing={isProcessingFiles}
-            accentColor="text-slate-600"
-            specs={[
-              { label: "Tools", value: "Redact/Text", icon: <MousePointer2 /> },
-              { label: "Color", value: "Custom", icon: <Palette /> },
-              { label: "Privacy", value: "Client-Side", icon: <Lock /> },
-              { label: "Export", value: "Flattened", icon: <Settings /> },
-            ]}
-            tip="Redaction blocks are permanent. Text annotations are added as flattened vector graphics."
-        />
-      ) : (
-        <>
-          {/* ZONE 1: Tech Toolbar */}
-          <div className="h-16 shrink-0 bg-white dark:bg-charcoal-850 border-b border-slate-200 dark:border-charcoal-700 flex items-center justify-between px-4 z-30 shadow-sm relative overflow-x-auto no-scrollbar gap-4">
-             <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-                <motion.button whileTap={buttonTap} onClick={handleReset} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-charcoal-700 text-charcoal-500 transition-colors" title="Close File">
-                   <X size={20} />
-                </motion.button>
-                <div className="h-6 w-px bg-slate-200 dark:bg-charcoal-700 hidden sm:block" />
-                
-                {/* Tool Selector */}
-                <div className="flex gap-2">
-                   <ToolButton tool="redact" icon={<Square size={14} />} label="Redact" />
-                   <ToolButton tool="text" icon={<Type size={14} />} label="Text" />
-                   <ToolButton tool="checkbox" icon={<CheckSquare size={14} />} label="Check" />
-                </div>
+      const newAnnotation: Annotation = {
+          id: nanoid(),
+          type: 'redact',
+          x: result.x,
+          y: result.y,
+          width: result.width,
+          height: result.height,
+          color: redactColor === 'black' ? '#000000' : '#FFFFFF',
+          text: showLabel ? 'REDACTED' : undefined
+      };
 
-                <div className="h-6 w-px bg-slate-200 dark:bg-charcoal-700" />
-                
-                {/* Contextual Controls */}
-                <div className="flex items-center gap-2">
-                    <ColorPickerDropdown color={color} onChange={setColor} />
-                    
-                    {(activeTool === 'text' || activeTool === 'checkbox') && (
-                        <div className="flex items-center bg-slate-100 dark:bg-charcoal-800 rounded-lg p-0.5 border border-slate-200 dark:border-charcoal-700">
-                            <button onClick={() => setFontSize(s => Math.max(8, s - 2))} className="p-1.5 hover:bg-white dark:hover:bg-charcoal-700 rounded-md text-charcoal-500 transition-colors"><Minus size={12} /></button>
-                            <span className="w-8 text-center text-[10px] font-mono font-bold text-charcoal-600 dark:text-slate-300">{fontSize}</span>
-                            <button onClick={() => setFontSize(s => Math.min(72, s + 2))} className="p-1.5 hover:bg-white dark:hover:bg-charcoal-700 rounded-md text-charcoal-500 transition-colors"><Plus size={12} /></button>
-                        </div>
-                    )}
-                </div>
-             </div>
+      setPages(prev => prev.map((p, idx) => idx === result.pageIndex ? { ...p, annotations: [...(p.annotations || []), newAnnotation] } : p));
+      
+      // Auto-jump to that page
+      setActivePageId(targetPage.id);
+  };
 
-             <div className="flex items-center gap-2 shrink-0">
-                <motion.button 
-                  whileTap={buttonTap} 
-                  onClick={handleUndo} 
-                  disabled={(activePage?.annotations?.length || 0) === 0}
-                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-charcoal-700 text-charcoal-500 disabled:opacity-30 transition-colors"
-                  title="Undo"
-                >
-                   <Undo2 size={18} />
-                </motion.button>
-                
-                {/* Zoom Controls */}
-                <div className="hidden md:flex items-center bg-slate-100 dark:bg-charcoal-800 rounded-lg p-0.5 border border-slate-200 dark:border-charcoal-700">
-                   <button onClick={() => setZoom(z => Math.max(0.1, z - 0.1))} className="p-1.5 hover:bg-white dark:hover:bg-charcoal-700 rounded-md text-charcoal-500 transition-colors"><ZoomOut size={14} /></button>
-                   <span className="w-12 text-center text-xs font-mono font-bold text-charcoal-600 dark:text-slate-300">{Math.round(zoom * 100)}%</span>
-                   <button onClick={() => setZoom(z => Math.min(3, z + 0.1))} className="p-1.5 hover:bg-white dark:hover:bg-charcoal-700 rounded-md text-charcoal-500 transition-colors"><ZoomIn size={14} /></button>
-                </div>
-             </div>
-          </div>
+  // --- Secure Export Logic ---
+  const handleExport = async () => {
+      if (!file) return;
+      setIsGenerating(true);
+      setStatus('Initializing secure export...');
+      setProgress(0);
 
-          {/* ZONE 2: Main PDF Preview Area */}
-          <div ref={canvasContainerRef} className="flex-1 min-h-0 overflow-auto bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#27272a_1px,transparent_1px)] [background-size:20px_20px] grid place-items-center relative">
-             {/* Tech Grid Overlay */}
-             <div className="absolute inset-0 pointer-events-none border-t border-slate-200/50 dark:border-charcoal-700/50" />
-
-             {activePage && activePage.width && activePage.height && (
-                <motion.div 
-                   className="relative bg-white shadow-xl ring-1 ring-slate-200 dark:ring-charcoal-700 transition-transform duration-100 ease-linear"
-                   style={{ 
-                      width: activePage.width * renderScale, 
-                      height: activePage.height * renderScale,
-                      cursor: activeTool === 'redact' ? 'crosshair' : 'text'
-                   }}
-                >
-                   <div 
-                      className="absolute inset-0 z-10 touch-none"
-                      onPointerDown={handlePointerDown} 
-                      onPointerMove={handlePointerMove} 
-                      onPointerUp={handlePointerUp} 
-                      onPointerLeave={handlePointerUp}
-                      style={{ touchAction: 'none' }}
-                   />
-                   
-                   <img 
-                      ref={imageRef}
-                      src={activePage.previewUrl} 
-                      alt={`Page ${activePage.pageIndex + 1}`} 
-                      className="w-full h-full object-contain select-none pointer-events-none" 
-                      draggable={false} 
-                   />
-
-                   {/* Drawing Preview */}
-                   {isDrawing && currentDragRect && (
-                     <div className="absolute border-2 z-20 pointer-events-none" 
-                          style={{ 
-                            left: `${currentDragRect.left}%`, 
-                            top: `${currentDragRect.top}%`, 
-                            width: `${currentDragRect.width}%`, 
-                            height: `${currentDragRect.height}%`,
-                            borderColor: color,
-                            backgroundColor: color + '40' 
-                          }} 
-                     />
-                   )}
-
-                   {/* Annotations */}
-                   <AnimatePresence>
-                     {(activePage.annotations || []).map((ann) => (
-                       <motion.div 
-                          key={ann.id} 
-                          initial={{ opacity: 0 }} 
-                          animate={{ opacity: 1 }} 
-                          exit={{ opacity: 0 }} 
-                          className="absolute group z-20" 
-                          style={{ 
-                              left: `${ann.x}%`, 
-                              top: `${ann.y}%`, 
-                              width: ann.type === 'redact' ? `${ann.width}%` : 'auto', 
-                              height: ann.type === 'redact' ? `${ann.height}%` : 'auto', 
-                              backgroundColor: ann.type === 'redact' ? ann.color : 'transparent',
-                              color: ann.color,
-                              fontSize: ann.fontSize ? `${ann.fontSize * renderScale}px` : undefined, // Scale font visual
-                              whiteSpace: 'nowrap',
-                              pointerEvents: 'none',
-                              // Text & Checkbox are point-based, not rect-based
-                              transform: ann.type === 'redact' ? 'none' : 'translate(0, -50%)', 
-                              fontFamily: 'Helvetica, Arial, sans-serif',
-                              lineHeight: 1
-                          }}
-                       >
-                         {ann.type === 'redact' && (
-                             <div className="w-full h-full ring-1 ring-black/5" />
-                         )}
-                         {ann.type === 'text' && (
-                             <span className="font-bold drop-shadow-sm px-1 bg-white/50">{ann.text}</span>
-                         )}
-                         {ann.type === 'checkbox' && (
-                             <span className="font-bold drop-shadow-sm">{ann.text}</span>
-                         )}
-
-                         <button 
-                            onClick={() => removeAnnotation(ann.id)} 
-                            className="absolute -top-3 -right-3 w-5 h-5 bg-rose-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:scale-110 transition-all shadow-sm z-30 pointer-events-auto"
-                         >
-                            <X size={10} strokeWidth={3} />
-                         </button>
-                       </motion.div>
-                     ))}
-                   </AnimatePresence>
-                </motion.div>
-             )}
-          </div>
-
-          {/* ZONE 3: Filmstrip */}
-          {!isMobile && (
-            <div className="shrink-0 bg-white/80 dark:bg-charcoal-900/80 backdrop-blur-md border-t border-slate-200 dark:border-charcoal-800 z-20 relative shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)]">
-               <AnimatePresence>
-                  {showFilmstrip && (
-                     <motion.div 
-                        initial={{ height: 0 }} 
-                        animate={{ height: 140 }} 
-                        exit={{ height: 0 }} 
-                        transition={{ duration: 0.4, ease: techEase }}
-                        className="overflow-hidden"
-                     >
-                        <Filmstrip
-                           images={filmstripImages}
-                           activeImageId={activePageId}
-                           onSelect={setActivePageId}
-                           onReorder={() => {}}
-                           onRemove={() => {}}
-                           onRotate={() => {}}
-                           isMobile={false}
-                           direction="horizontal"
-                           showRemoveButton={false}
-                           showRotateButton={false}
-                           isReorderable={false}
-                           className="h-full"
-                        />
-                     </motion.div>
-                  )}
-               </AnimatePresence>
-            </div>
-          )}
-
-          {/* ZONE 4: Bottom Action Bar */}
-          <div className="shrink-0 h-16 bg-white dark:bg-charcoal-850 border-t border-slate-200 dark:border-charcoal-700 px-6 flex items-center justify-between z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] gap-4">
-             {isMobile ? (
-               <motion.button 
-                 whileTap={buttonTap}
-                 onClick={() => setIsFilmstripModalOpen(true)}
-                 className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 dark:bg-charcoal-800 text-charcoal-700 dark:text-slate-200 font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-charcoal-700 transition-colors"
-               >
-                 <LayoutGrid size={18} />
-                 <span>Pages ({pages.length})</span>
-               </motion.button>
-             ) : (
-                <div className="flex items-center gap-4">
-                    <motion.button
-                        onClick={() => setShowFilmstrip(!showFilmstrip)}
-                        whileTap={buttonTap}
-                        className={`
-                            p-2 rounded-lg border transition-all flex items-center gap-2
-                            ${showFilmstrip 
-                                ? 'bg-brand-purple/10 text-brand-purple border-brand-purple/20' 
-                                : 'bg-slate-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-slate-300 border-transparent hover:bg-slate-200 dark:hover:bg-charcoal-700'
-                            }
-                        `}
-                        title={showFilmstrip ? "Hide Filmstrip" : "Show Filmstrip"}
-                    >
-                        <PanelBottom size={16} />
-                        <span className="text-[10px] font-bold font-mono uppercase tracking-wide">{showFilmstrip ? 'Hide_Grid' : 'Show_Grid'}</span>
-                    </motion.button>
-
-                    <div className="text-xs font-mono font-bold text-charcoal-500 dark:text-slate-400 border-l border-slate-200 dark:border-charcoal-700 pl-4 h-8 flex items-center">
-                        PAGE_COUNT: {pages.length} // SIZE: {(file.size / 1024 / 1024).toFixed(1)}MB
-                    </div>
-                </div>
-             )}
-             
-             <motion.button 
-                whileTap={buttonTap} 
-                onClick={handleGenerate} 
-                disabled={isGenerating} 
-                className="flex-1 md:flex-none relative overflow-hidden px-6 py-2.5 bg-charcoal-900 dark:bg-white text-white dark:text-charcoal-900 font-mono font-bold text-xs uppercase tracking-wide rounded-lg shadow-lg shadow-brand-purple/20 flex items-center justify-center gap-2 disabled:opacity-50 transition-all hover:bg-brand-purple dark:hover:bg-slate-200"
-             >
-                {isGenerating && (
-                   <motion.div 
-                      className="absolute inset-y-0 left-0 bg-white/20 dark:bg-black/10" 
-                      initial={{ width: 0 }} 
-                      animate={{ width: `${progress}%` }} 
-                   />
-                )}
-                {isGenerating ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-                <span className="relative z-10">{isGenerating ? 'PROCESSING...' : 'DOWNLOAD_PDF'}</span>
-             </motion.button>
-          </div>
+      try {
+          const newPdf = await PDFDocument.create();
+          const originalBytes = await file.arrayBuffer();
+          const srcPdf = await PDFDocument.load(originalBytes);
           
-          {/* Mobile Filmstrip Modal */}
-          {isMobile && (
-            <FilmstripModal
-                isOpen={isFilmstripModalOpen}
-                onClose={() => setIsFilmstripModalOpen(false)}
-                title={`${pages.length} Pages`}
+          const pdfjsLib = await loadPdfJs();
+          const loadingTask = pdfjsLib.getDocument({ data: originalBytes.slice(0), cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/cmaps/', cMapPacked: true });
+          const pdfDoc = await loadingTask.promise;
+
+          for (let i = 0; i < pages.length; i++) {
+              const pageData = pages[i];
+              const hasRedactions = pageData.annotations && pageData.annotations.length > 0;
+              
+              setStatus(`Processing page ${i + 1}/${pages.length}...`);
+              setProgress(Math.round((i / pages.length) * 90));
+
+              if (hasRedactions) {
+                  const page = await pdfDoc.getPage(i + 1);
+                  const viewport = page.getViewport({ scale: 2.0 }); 
+                  const canvas = document.createElement('canvas');
+                  const ctx = canvas.getContext('2d');
+                  
+                  if (!ctx) continue;
+                  
+                  canvas.width = viewport.width;
+                  canvas.height = viewport.height;
+                  
+                  await page.render({ canvasContext: ctx, viewport }).promise;
+                  
+                  pageData.annotations?.forEach(ann => {
+                      const x = (ann.x / 100) * canvas.width;
+                      const y = (ann.y / 100) * canvas.height;
+                      const w = (ann.width! / 100) * canvas.width;
+                      const h = (ann.height! / 100) * canvas.height;
+                      
+                      ctx.fillStyle = ann.color || '#000000';
+                      ctx.fillRect(x, y, w, h);
+                      
+                      if (ann.text) {
+                          ctx.font = `bold ${h * 0.4}px monospace`;
+                          ctx.fillStyle = ann.color === '#000000' ? '#FFFFFF' : '#000000';
+                          ctx.textAlign = 'center';
+                          ctx.textBaseline = 'middle';
+                          ctx.fillText(ann.text, x + w/2, y + h/2);
+                      }
+                  });
+                  
+                  const imgData = canvas.toDataURL('image/jpeg', 0.85);
+                  const embeddedImage = await newPdf.embedJpg(imgData);
+                  const newPage = newPdf.addPage([viewport.width / 2, viewport.height / 2]);
+                  newPage.drawImage(embeddedImage, {
+                      x: 0, y: 0, 
+                      width: viewport.width / 2, 
+                      height: viewport.height / 2
+                  });
+
+              } else {
+                  const [copiedPage] = await newPdf.copyPages(srcPdf, [i]);
+                  newPdf.addPage(copiedPage);
+              }
+              await new Promise(resolve => setTimeout(resolve, 0));
+          }
+          
+          setStatus('Saving...');
+          const pdfBytes = await newPdf.save();
+          const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+          
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `redacted_${file.name}`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          
+          addToast("Success", "Secure PDF exported!", "success");
+
+      } catch (e) {
+          console.error(e);
+          addToast("Error", "Export failed.", "error");
+      } finally {
+          setIsGenerating(false);
+          setProgress(0);
+          setStatus('');
+      }
+  };
+
+  if (!file) {
+    return (
+      <ToolLandingLayout
+        title="Redact PDF"
+        description="Permanently obscure sensitive information. Securely rasterizes redacted pages to prevent data recovery."
+        icon={<EyeOff />}
+        onDrop={(files, rejections) => onDrop(files, rejections)}
+        accept={{ 'application/pdf': ['.pdf'] }}
+        isProcessing={isProcessing}
+        accentColor="text-slate-600"
+        specs={[
+          { label: "Method", value: "Rasterization", icon: <ShieldCheck /> },
+          { label: "Security", value: "Irreversible", icon: <Lock /> },
+          { label: "Search", value: "Pattern Match", icon: <Search /> },
+          { label: "Privacy", value: "Local Only", icon: <Cpu /> },
+        ]}
+        tip="Redacted pages are converted to images to ensure the text underneath is completely destroyed."
+      />
+    );
+  }
+
+  // --- Mobile Layout ---
+  if (isMobile) {
+    return (
+      <div className="flex flex-col h-full bg-slate-100 dark:bg-charcoal-950 overflow-hidden">
+        <PageReadyTracker />
+        
+        {/* Header */}
+        <div className="shrink-0 h-14 bg-white dark:bg-charcoal-900 border-b border-slate-200 dark:border-charcoal-800 flex items-center justify-between px-4 z-20 shadow-sm">
+            <div className="flex items-center gap-2 overflow-hidden">
+                <div className="p-1.5 bg-slate-100 dark:bg-charcoal-800 rounded-lg text-charcoal-600 dark:text-slate-300 shrink-0">
+                    <ShieldCheck size={18} />
+                </div>
+                <span className="font-mono font-bold text-sm text-charcoal-800 dark:text-white truncate">
+                    {file.name}
+                </span>
+            </div>
+            <motion.button 
+                whileTap={buttonTap} 
+                onClick={handleReset} 
+                className="p-2 text-charcoal-400 hover:text-charcoal-600 dark:text-charcoal-500 dark:hover:text-charcoal-300 transition-colors"
             >
+                <RefreshCw size={18} />
+            </motion.button>
+        </div>
+
+        {/* Canvas */}
+        <div ref={containerRef} className="flex-1 overflow-auto relative grid place-items-center p-4 bg-slate-100 dark:bg-black/20 custom-scrollbar">
+            {activePage && activePage.width && activePage.height ? (
+                <motion.div 
+                    layoutId="canvas"
+                    className="relative bg-white shadow-xl ring-1 ring-black/5"
+                    style={{ width: activePage.width * zoom, height: activePage.height * zoom }}
+                >
+                    {/* Interactive Layer */}
+                    <div 
+                        className="absolute inset-0 z-10 touch-none"
+                        onPointerDown={handlePointerDown}
+                        onPointerMove={handlePointerMove}
+                        onPointerUp={handlePointerUp}
+                        onPointerLeave={handlePointerUp}
+                    />
+                    
+                    <img 
+                        ref={imageRef}
+                        src={activePage.previewUrl} 
+                        className="w-full h-full object-contain pointer-events-none select-none" 
+                        draggable={false} 
+                        alt="Page"
+                    />
+
+                    {/* Drawing Preview */}
+                    {isDrawing && currentDragRect && (
+                        <div className="absolute z-20 border-2 border-brand-purple bg-brand-purple/20 pointer-events-none"
+                             style={{ left: `${currentDragRect.left}%`, top: `${currentDragRect.top}%`, width: `${currentDragRect.width}%`, height: `${currentDragRect.height}%` }}
+                        />
+                    )}
+
+                    {/* Annotations */}
+                    <AnimatePresence>
+                        {(activePage.annotations || []).map(ann => (
+                            <motion.div
+                                key={ann.id}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="absolute z-20 pointer-events-none"
+                                style={{
+                                    left: `${ann.x}%`, top: `${ann.y}%`, width: `${ann.width}%`, height: `${ann.height}%`,
+                                    backgroundColor: verificationMode ? (ann.color === '#FFFFFF' ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.2)') : ann.color,
+                                    backdropFilter: verificationMode ? 'blur(4px)' : 'none',
+                                    border: verificationMode ? `2px dashed ${ann.color === '#FFFFFF' ? 'black' : 'red'}` : 'none'
+                                }}
+                            >
+                                {(ann.text && !verificationMode) && (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                        <span 
+                                            className="text-[10px] font-bold font-mono tracking-widest opacity-50 select-none"
+                                            style={{ color: ann.color === '#FFFFFF' ? 'black' : 'white' }}
+                                        >
+                                            {ann.text}
+                                        </span>
+                                    </div>
+                                )}
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
+                </motion.div>
+            ) : (
+                <div className="text-charcoal-400 font-mono text-xs uppercase tracking-widest flex flex-col items-center gap-2">
+                   <Loader2 size={24} className="animate-spin opacity-50" />
+                   <span>Loading Page...</span>
+                </div>
+            )}
+        </div>
+
+        {/* Bottom Floating Bar */}
+        <div className="shrink-0 h-16 bg-white dark:bg-charcoal-900 border-t border-slate-200 dark:border-charcoal-800 px-4 flex items-center justify-between z-30 pb-[env(safe-area-inset-bottom)]">
+            <motion.button
+                whileTap={buttonTap}
+                onClick={() => setIsFilmstripOpen(true)}
+                className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-charcoal-800 rounded-xl text-charcoal-700 dark:text-slate-300 font-bold text-xs"
+            >
+                <Layers size={16} /> Pages
+            </motion.button>
+
+            <div className="flex items-center gap-2">
+                <motion.button
+                    whileTap={buttonTap}
+                    onClick={() => undoLastRedaction()}
+                    disabled={!activePage?.annotations?.length}
+                    className="p-2.5 bg-slate-100 dark:bg-charcoal-800 rounded-xl text-charcoal-600 dark:text-slate-300 disabled:opacity-50"
+                >
+                    <Undo2 size={18} />
+                </motion.button>
+
+                <motion.button
+                    whileTap={buttonTap}
+                    onClick={() => setIsToolsOpen(!isToolsOpen)}
+                    className={`p-2.5 rounded-xl transition-colors ${isToolsOpen ? 'bg-brand-purple text-white shadow-lg shadow-brand-purple/20' : 'bg-slate-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-slate-300'}`}
+                >
+                    <Settings size={18} />
+                </motion.button>
+
+                <motion.button
+                    whileTap={buttonTap}
+                    onClick={handleExport}
+                    disabled={isGenerating || pages.every(p => !p.annotations?.length)}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-charcoal-900 dark:bg-white text-white dark:text-charcoal-900 rounded-xl font-bold text-xs uppercase tracking-wide shadow-lg disabled:opacity-50"
+                >
+                    {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                    <span>Save</span>
+                </motion.button>
+            </div>
+        </div>
+
+        {/* Filmstrip Modal */}
+        <FilmstripModal
+            isOpen={isFilmstripOpen}
+            onClose={() => setIsFilmstripOpen(false)}
+            title={`Pages (${pages.length})`}
+        >
+            <Filmstrip 
+                images={pages.map(p => ({
+                    id: p.id, 
+                    file: file!, 
+                    previewUrl: p.previewUrl, 
+                    width: 0, height: 0, rotation: 0
+                }))}
+                activeImageId={activePageId}
+                onSelect={(id) => { setActivePageId(id); setIsFilmstripOpen(false); }}
+                onReorder={()=>{}} onRemove={()=>{}} onRotate={()=>{}}
+                isMobile={true} direction="vertical" size="md" isReorderable={false} showRemoveButton={false} showRotateButton={false}
+            />
+        </FilmstripModal>
+
+        {/* Tools Bottom Sheet */}
+        <AnimatePresence>
+            {isToolsOpen && (
+                <div className="fixed inset-0 z-[100] flex flex-col justify-end pointer-events-none">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setIsToolsOpen(false)}
+                        className="absolute inset-0 bg-charcoal-900/40 backdrop-blur-sm pointer-events-auto"
+                    />
+                    <motion.div
+                        initial={{ y: "100%" }}
+                        animate={{ y: 0 }}
+                        exit={{ y: "100%" }}
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        className="relative w-full bg-white dark:bg-charcoal-900 rounded-t-2xl shadow-2xl pointer-events-auto overflow-hidden pb-[env(safe-area-inset-bottom)]"
+                    >
+                        <div className="px-6 py-2 flex justify-center">
+                            <div className="w-12 h-1 bg-slate-200 dark:bg-charcoal-700 rounded-full" />
+                        </div>
+                        
+                        <div className="p-6 pt-2 space-y-6">
+                            {/* Mode Toggle */}
+                            <div className="flex bg-slate-100 dark:bg-charcoal-800 p-1 rounded-xl">
+                                <button 
+                                    onClick={() => setRedactionMode('draw')} 
+                                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${redactionMode === 'draw' ? 'bg-white dark:bg-charcoal-700 text-charcoal-900 dark:text-white shadow-sm' : 'text-charcoal-500'}`}
+                                >
+                                    <MousePointer2 size={14} /> Draw
+                                </button>
+                                <button 
+                                    onClick={() => setRedactionMode('search')} 
+                                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${redactionMode === 'search' ? 'bg-white dark:bg-charcoal-700 text-charcoal-900 dark:text-white shadow-sm' : 'text-charcoal-500'}`}
+                                >
+                                    <Search size={14} /> Search
+                                </button>
+                            </div>
+
+                            {redactionMode === 'draw' ? (
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-xs font-bold text-charcoal-500 uppercase tracking-wider">Color</label>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => setRedactColor('black')} className={`w-8 h-8 rounded-full bg-black border-2 ${redactColor === 'black' ? 'border-brand-purple' : 'border-transparent'}`} />
+                                            <button onClick={() => setRedactColor('white')} className={`w-8 h-8 rounded-full bg-white border-2 ${redactColor === 'white' ? 'border-brand-purple' : 'border-slate-200'}`} />
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-xs font-bold text-charcoal-500 uppercase tracking-wider">Label</label>
+                                        <button onClick={() => setShowLabel(!showLabel)} className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${showLabel ? 'bg-brand-purple text-white border-brand-purple' : 'bg-transparent border-slate-200 text-charcoal-600'}`}>
+                                            {showLabel ? 'SHOWN' : 'HIDDEN'}
+                                        </button>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-xs font-bold text-charcoal-500 uppercase tracking-wider">Verify</label>
+                                        <button onClick={() => setVerificationMode(!verificationMode)} className={`px-3 py-1.5 rounded-lg text-xs font-bold border flex items-center gap-2 ${verificationMode ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-transparent border-slate-200 text-charcoal-600'}`}>
+                                            {verificationMode ? <Eye size={14} /> : <EyeOff size={14} />}
+                                            {verificationMode ? 'ON' : 'OFF'}
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    <div className="relative">
+                                        <input 
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            placeholder="Find text..."
+                                            className="w-full bg-slate-50 dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 rounded-xl px-4 py-3 pl-10 text-sm font-mono outline-none"
+                                        />
+                                        <Search size={16} className="absolute left-3.5 top-3.5 text-charcoal-400" />
+                                    </div>
+                                    <button 
+                                        onClick={handleSearch}
+                                        disabled={isSearching || !searchQuery}
+                                        className="w-full py-3 bg-brand-purple text-white rounded-xl text-xs font-bold font-mono hover:bg-brand-purpleDark disabled:opacity-50"
+                                    >
+                                        {isSearching ? 'Searching...' : 'Find Matches'}
+                                    </button>
+                                    {searchResults.length > 0 && (
+                                        <div className="max-h-32 overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-charcoal-800 rounded-xl border border-slate-100 dark:border-charcoal-700 p-2 space-y-1">
+                                            {searchResults.map(r => (
+                                                <button key={r.id} onClick={() => { applySearchResult(r); setIsToolsOpen(false); }} className="w-full text-left p-2 rounded-lg hover:bg-white dark:hover:bg-charcoal-700 text-xs font-mono truncate">
+                                                    {r.text} <span className="opacity-50 ml-1">(Pg {r.pageIndex + 1})</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+        </AnimatePresence>
+      </div>
+    );
+  }
+
+  // --- Desktop 3-Panel Layout ---
+  return (
+    <div className="flex w-full h-full bg-slate-100 dark:bg-charcoal-950 font-sans overflow-hidden">
+        <PageReadyTracker />
+        
+        {/* 1. LEFT PANE: Filmstrip */}
+        <div className="w-72 bg-white dark:bg-charcoal-900 border-r border-slate-200 dark:border-charcoal-800 flex flex-col shrink-0 z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+            <div className="h-14 border-b border-slate-100 dark:border-charcoal-800 flex items-center px-4 shrink-0 bg-slate-50/50 dark:bg-charcoal-850/50">
+                <Layers size={16} className="text-charcoal-400 mr-2" />
+                <span className="font-mono text-xs font-bold uppercase tracking-widest text-charcoal-600 dark:text-charcoal-300">Pages ({pages.length})</span>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 bg-slate-50/30 dark:bg-charcoal-900">
                 <Filmstrip 
-                    images={filmstripImages}
+                    images={pages.map(p => ({
+                        id: p.id, 
+                        file: file, 
+                        previewUrl: p.previewUrl, 
+                        width: 0, height: 0, rotation: 0
+                    }))}
                     activeImageId={activePageId}
-                    onSelect={handleSelectFromModal}
-                    onReorder={() => {}}
-                    onRemove={() => {}}
-                    onRotate={() => {}}
-                    isMobile={true}
-                    direction="vertical"
-                    showRemoveButton={false}
-                    showRotateButton={false}
-                    isReorderable={false}
-                    className="h-full"
+                    onSelect={(id) => setActivePageId(id)}
+                    onReorder={()=>{}} onRemove={()=>{}} onRotate={()=>{}}
+                    isMobile={false} direction="vertical" size="md" isReorderable={false} showRemoveButton={false} showRotateButton={false}
                 />
-            </FilmstripModal>
-          )}
-        </>
-      )}
+            </div>
+        </div>
+
+        {/* 2. CENTER PANE: Canvas */}
+        <div className="flex-1 flex flex-col min-w-0 relative z-10 bg-slate-100/50 dark:bg-black/20">
+            {/* Toolbar */}
+            <div className="h-14 border-b border-slate-200 dark:border-charcoal-800 bg-white dark:bg-charcoal-900 flex items-center justify-between px-4 shrink-0 shadow-sm z-20">
+                <div className="flex items-center gap-4 text-xs font-mono text-charcoal-500 dark:text-charcoal-400">
+                    <span className="font-bold text-charcoal-700 dark:text-charcoal-200 truncate max-w-[200px]">{file.name}</span>
+                    {activePage && <span className="opacity-50">Page {activeIndex + 1}</span>}
+                </div>
+
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-charcoal-800 p-1 rounded-lg border border-slate-200 dark:border-charcoal-700">
+                    <button onClick={() => setZoom(z => Math.max(0.1, z - 0.1))} className="p-1.5 hover:bg-white dark:hover:bg-charcoal-700 rounded text-charcoal-500 transition-colors"><ZoomOut size={14} /></button>
+                    <span className="min-w-[3rem] text-center text-xs font-mono font-bold text-charcoal-600 dark:text-charcoal-300 select-none">{Math.round(zoom * 100)}%</span>
+                    <button onClick={() => setZoom(z => Math.min(3, z + 0.1))} className="p-1.5 hover:bg-white dark:hover:bg-charcoal-700 rounded text-charcoal-500 transition-colors"><ZoomIn size={14} /></button>
+                    <div className="w-px h-4 bg-slate-300 dark:bg-charcoal-600 mx-1" />
+                    <button onClick={() => setFitMode(fitMode === 'fit' ? 'width' : 'fit')} className="p-1.5 hover:bg-white dark:hover:bg-charcoal-700 rounded text-charcoal-500 transition-colors" title="Toggle Fit"><Maximize size={14} /></button>
+                </div>
+            </div>
+
+            {/* Main Stage */}
+            <div ref={containerRef} className="flex-1 overflow-auto relative grid place-items-center p-8 custom-scrollbar">
+                <div className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05]" style={{ backgroundImage: 'linear-gradient(#94a3b8 1px, transparent 1px), linear-gradient(to right, #94a3b8 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+                
+                {activePage && activePage.width && activePage.height && (
+                    <motion.div 
+                        layoutId="canvas"
+                        className="relative bg-white shadow-2xl ring-1 ring-black/5"
+                        style={{ width: activePage.width * zoom, height: activePage.height * zoom }}
+                    >
+                        {/* Interactive Layer */}
+                        <div 
+                            className="absolute inset-0 z-10 touch-none"
+                            onPointerDown={handlePointerDown}
+                            onPointerMove={handlePointerMove}
+                            onPointerUp={handlePointerUp}
+                            onPointerLeave={handlePointerUp}
+                            style={{ cursor: redactionMode === 'draw' ? 'crosshair' : 'default' }}
+                        />
+                        
+                        <img 
+                            ref={imageRef}
+                            src={activePage.previewUrl} 
+                            className="w-full h-full object-contain pointer-events-none select-none" 
+                            draggable={false} 
+                            alt="Page"
+                        />
+
+                        {/* Drawing Preview */}
+                        {isDrawing && currentDragRect && (
+                            <div className="absolute z-20 border-2 border-brand-purple bg-brand-purple/20 pointer-events-none"
+                                 style={{ left: `${currentDragRect.left}%`, top: `${currentDragRect.top}%`, width: `${currentDragRect.width}%`, height: `${currentDragRect.height}%` }}
+                            />
+                        )}
+
+                        {/* Annotations */}
+                        <AnimatePresence>
+                            {(activePage.annotations || []).map(ann => (
+                                <motion.div
+                                    key={ann.id}
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    className="absolute z-20 group"
+                                    style={{
+                                        left: `${ann.x}%`, top: `${ann.y}%`, width: `${ann.width}%`, height: `${ann.height}%`,
+                                        backgroundColor: verificationMode ? (ann.color === '#FFFFFF' ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.2)') : ann.color,
+                                        backdropFilter: verificationMode ? 'blur(4px)' : 'none',
+                                        border: verificationMode ? `2px dashed ${ann.color === '#FFFFFF' ? 'black' : 'red'}` : 'none'
+                                    }}
+                                >
+                                    {(ann.text && !verificationMode) && (
+                                        <div className="w-full h-full flex items-center justify-center">
+                                            <span 
+                                                className="text-xs font-bold font-mono tracking-widest opacity-50 select-none"
+                                                style={{ color: ann.color === '#FFFFFF' ? 'black' : 'white', fontSize: `${zoom * 12}px` }}
+                                            >
+                                                {ann.text}
+                                            </span>
+                                        </div>
+                                    )}
+                                    
+                                    {/* Remove Button */}
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); removeAnnotation(activePage.id, ann.id); }}
+                                        className="absolute -top-3 -right-3 w-6 h-6 flex items-center justify-center bg-rose-500 text-white rounded-full opacity-0 group-hover:opacity-100 hover:scale-110 transition-all shadow-sm z-30 pointer-events-auto"
+                                    >
+                                        <X size={12} strokeWidth={3} />
+                                    </button>
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
+                    </motion.div>
+                )}
+            </div>
+        </div>
+
+        {/* 3. RIGHT PANE: Controls */}
+        <div className="w-80 bg-white dark:bg-charcoal-900 border-l border-slate-200 dark:border-charcoal-800 flex flex-col shrink-0 z-20 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
+            {/* Control Tabs */}
+            <div className="h-14 border-b border-slate-100 dark:border-charcoal-800 flex items-center px-4 shrink-0 bg-slate-50 dark:bg-charcoal-850/50 gap-2">
+                <button 
+                    onClick={() => setRedactionMode('draw')}
+                    className={`flex-1 flex items-center justify-center gap-2 h-9 rounded-lg text-xs font-bold transition-colors ${redactionMode === 'draw' ? 'bg-white dark:bg-charcoal-700 text-brand-purple shadow-sm ring-1 ring-black/5' : 'text-charcoal-500 hover:bg-white/50'}`}
+                >
+                    <MousePointer2 size={14} /> Draw
+                </button>
+                <button 
+                    onClick={() => setRedactionMode('search')}
+                    className={`flex-1 flex items-center justify-center gap-2 h-9 rounded-lg text-xs font-bold transition-colors ${redactionMode === 'search' ? 'bg-white dark:bg-charcoal-700 text-brand-purple shadow-sm ring-1 ring-black/5' : 'text-charcoal-500 hover:bg-white/50'}`}
+                >
+                    <Search size={14} /> Search
+                </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8">
+                
+                {redactionMode === 'draw' && (
+                    <div className="space-y-6">
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-bold text-charcoal-400 dark:text-charcoal-500 uppercase tracking-widest font-mono pl-1">Appearance</label>
+                            <div className="flex gap-2">
+                                <button 
+                                    onClick={() => setRedactColor('black')}
+                                    className={`flex-1 p-3 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${redactColor === 'black' ? 'border-brand-purple bg-brand-purple/5' : 'border-slate-200 dark:border-charcoal-700 hover:border-slate-300'}`}
+                                >
+                                    <div className="w-6 h-6 bg-black rounded-full shadow-sm" />
+                                    <span className="text-[10px] font-mono font-bold text-charcoal-700 dark:text-charcoal-300">Black</span>
+                                </button>
+                                <button 
+                                    onClick={() => setRedactColor('white')}
+                                    className={`flex-1 p-3 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${redactColor === 'white' ? 'border-brand-purple bg-brand-purple/5' : 'border-slate-200 dark:border-charcoal-700 hover:border-slate-300'}`}
+                                >
+                                    <div className="w-6 h-6 bg-white border border-slate-200 rounded-full shadow-sm" />
+                                    <span className="text-[10px] font-mono font-bold text-charcoal-700 dark:text-charcoal-300">White</span>
+                                </button>
+                            </div>
+                            
+                            <button 
+                                onClick={() => setShowLabel(!showLabel)}
+                                className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${showLabel ? 'bg-brand-purple/5 border-brand-purple text-brand-purple' : 'bg-white dark:bg-charcoal-800 border-slate-200 dark:border-charcoal-700 text-charcoal-600 dark:text-charcoal-300'}`}
+                            >
+                                <span className="text-xs font-bold font-mono">Show "REDACTED" Label</span>
+                                {showLabel ? <CheckSquare size={16} /> : <div className="w-4 h-4 rounded border border-current opacity-50" />}
+                            </button>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-charcoal-400 dark:text-charcoal-500 uppercase tracking-widest font-mono pl-1">Page History</label>
+                            {activePage?.annotations && activePage.annotations.length > 0 ? (
+                                <div className="space-y-2">
+                                    {activePage.annotations.map((ann, idx) => (
+                                        <div key={ann.id} className="flex items-center justify-between p-2 bg-slate-50 dark:bg-charcoal-800 rounded-lg border border-slate-200 dark:border-charcoal-700 text-xs font-mono group">
+                                            <span className="text-charcoal-600 dark:text-charcoal-300">Item #{idx + 1}</span>
+                                            <button onClick={() => removeAnnotation(activePage.id, ann.id)} className="text-charcoal-400 hover:text-rose-500 transition-colors"><Trash2 size={12} /></button>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center p-4 border border-dashed border-slate-200 dark:border-charcoal-700 rounded-xl text-xs text-charcoal-400 font-mono">
+                                    No redactions on this page
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {redactionMode === 'search' && (
+                    <div className="space-y-4 h-full flex flex-col">
+                        <div className="relative">
+                            <input 
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                                placeholder="Enter text pattern..."
+                                className="w-full bg-slate-50 dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 rounded-xl px-4 py-3 pl-10 text-sm font-mono focus:ring-2 focus:ring-brand-purple/50 outline-none"
+                            />
+                            <Search size={16} className="absolute left-3.5 top-3.5 text-charcoal-400" />
+                        </div>
+                        <button 
+                            onClick={handleSearch}
+                            disabled={isSearching || !searchQuery}
+                            className="w-full py-2 bg-brand-purple text-white rounded-lg text-xs font-bold font-mono hover:bg-brand-purpleDark disabled:opacity-50 transition-colors"
+                        >
+                            {isSearching ? 'Searching...' : 'Find Matches'}
+                        </button>
+
+                        <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 min-h-0 border-t border-slate-100 dark:border-charcoal-800 pt-4">
+                            {searchResults.length > 0 ? (
+                                searchResults.map((result) => (
+                                    <button 
+                                        key={result.id}
+                                        onClick={() => applySearchResult(result)}
+                                        className="w-full text-left p-3 rounded-lg border border-slate-200 dark:border-charcoal-700 hover:border-brand-purple bg-white dark:bg-charcoal-800 transition-all group"
+                                    >
+                                        <div className="flex justify-between mb-1">
+                                            <span className="text-[10px] font-bold text-brand-purple uppercase tracking-wider">Page {result.pageIndex + 1}</span>
+                                            <span className="opacity-0 group-hover:opacity-100 text-[10px] font-bold text-green-500">APPLY</span>
+                                        </div>
+                                        <p className="text-xs text-charcoal-600 dark:text-charcoal-300 font-mono truncate">"{result.text}"</p>
+                                    </button>
+                                ))
+                            ) : (
+                                <div className="text-center text-xs text-charcoal-400 mt-8 font-mono">
+                                    No matches found.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+            </div>
+
+            {/* Footer Actions */}
+            <div className="p-4 border-t border-slate-200 dark:border-charcoal-800 bg-slate-50 dark:bg-charcoal-900 shrink-0 space-y-3">
+                <button 
+                    onClick={() => setVerificationMode(!verificationMode)}
+                    className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold font-mono border transition-all ${verificationMode ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-white text-charcoal-600 border-slate-200 hover:bg-slate-50'}`}
+                >
+                    {verificationMode ? <Eye size={14} /> : <EyeOff size={14} />} 
+                    {verificationMode ? 'Exit Verification' : 'Verify Redactions'}
+                </button>
+
+                <motion.button 
+                    onClick={handleExport} 
+                    disabled={isGenerating || pages.every(p => !p.annotations?.length)} 
+                    whileTap={buttonTap} 
+                    className="
+                        relative overflow-hidden w-full h-12
+                        bg-charcoal-900 dark:bg-white text-white dark:text-charcoal-900
+                        font-bold font-mono text-xs tracking-wider uppercase
+                        rounded-xl shadow-lg hover:shadow-xl hover:bg-brand-purple dark:hover:bg-slate-200
+                        transition-all disabled:opacity-50 disabled:shadow-none
+                        flex items-center justify-center gap-2 group
+                    "
+                >
+                    {isGenerating && (
+                        <motion.div 
+                            className="absolute inset-y-0 left-0 bg-white/20 dark:bg-black/10" 
+                            initial={{ width: '0%' }} 
+                            animate={{ width: `${progress}%` }} 
+                            transition={{ duration: 0.1, ease: "linear" }} 
+                        />
+                    )}
+                    <div className="relative flex items-center justify-center gap-2 z-10">
+                        {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <ShieldCheck size={18} />}
+                        <span>{isGenerating ? status || 'SECURING...' : 'SECURE EXPORT'}</span>
+                    </div>
+                </motion.button>
+                
+                {pages.some(p => p.annotations?.length) && (
+                    <p className="text-[9px] text-center text-rose-500 font-mono font-bold uppercase tracking-wider animate-pulse">
+                        Irreversible Operation
+                    </p>
+                )}
+            </div>
+        </div>
     </div>
   );
 };

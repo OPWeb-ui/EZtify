@@ -10,6 +10,9 @@ export const springFast = { type: "spring", stiffness: 500, damping: 30, mass: 0
 export const springMedium = { type: "spring", stiffness: 350, damping: 30, mass: 1 };
 export const springSlow = { type: "spring", stiffness: 150, damping: 20 };
 
+// --- STANDARD TRANSITIONS ---
+export const standardLayoutTransition = { duration: 0.3, ease: techEase };
+
 // --- INTERACTION VARIANTS ---
 export const buttonTap = { scale: 0.97 };
 

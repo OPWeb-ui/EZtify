@@ -10,6 +10,7 @@ import { PwaInstallPrompt } from './PwaInstallPrompt';
 import { CookieConsentBanner } from './CookieConsentBanner';
 import { pageVariants } from '../utils/animations';
 import { FileProcessingLoader } from './FileProcessingLoader';
+import { allTools } from '../utils/tool-list';
 
 // --- CONTEXT DEFINITION ---
 interface LayoutContextType {
@@ -40,28 +41,12 @@ export const Layout: React.FC = () => {
   // Cookie Consent State
   const [showCookieBanner, setShowCookieBanner] = useState(false);
 
-  // Determine current mode from URL
-  let currentMode: AppMode = 'home';
+  // Determine current mode from URL - SINGLE SOURCE OF TRUTH
+  // Derived strictly from the route path matching the tool configuration.
+  // This ensures the active state always reflects the URL, regardless of navigation method.
   const path = location.pathname;
-  if (path === '/' || path === '') currentMode = 'home';
-  else if (path.includes('images-to-pdf')) currentMode = 'image-to-pdf';
-  else if (path.includes('pdf-to-images')) currentMode = 'pdf-to-image';
-  else if (path.includes('compress-pdf')) currentMode = 'compress-pdf';
-  else if (path.includes('merge-pdf')) currentMode = 'merge-pdf';
-  else if (path.includes('split-pdf')) currentMode = 'split-pdf';
-  else if (path.includes('zip-it')) currentMode = 'zip-files';
-  else if (path.includes('word-to-pdf')) currentMode = 'word-to-pdf';
-  else if (path.includes('reorder-pdf')) currentMode = 'reorder-pdf';
-  else if (path.includes('rotate-pdf')) currentMode = 'rotate-pdf';
-  else if (path.includes('delete-pdf-pages')) currentMode = 'delete-pdf-pages';
-  else if (path.includes('pdf-to-word')) currentMode = 'pdf-to-word';
-  else if (path.includes('pdf-to-pptx')) currentMode = 'pdf-to-pptx';
-  else if (path.includes('pptx-to-pdf')) currentMode = 'pptx-to-pdf' as any;
-  else if (path.includes('unlock-pdf')) currentMode = 'unlock-pdf';
-  else if (path.includes('add-page-numbers')) currentMode = 'add-page-numbers';
-  else if (path.includes('redact-pdf')) currentMode = 'redact-pdf';
-  else if (path.includes('grayscale-pdf')) currentMode = 'grayscale-pdf';
-  else if (path.includes('code-editor')) currentMode = 'code-editor';
+  const activeTool = allTools.find(t => path === t.path || path.startsWith(`${t.path}/`));
+  const currentMode: AppMode = activeTool ? (activeTool.id as AppMode) : 'home';
 
   // PWA & Cookie Logic on initial mount
   useEffect(() => {
@@ -124,17 +109,37 @@ export const Layout: React.FC = () => {
     durationOrAction?: number | ToastAction
   ) => {
     const id = nanoid();
-    let toast: ToastMessage = { id, title, message, type };
+    let duration = 3500; // Default warning
 
-    if (typeof durationOrAction === 'number') toast.duration = durationOrAction;
-    else if (typeof durationOrAction === 'object') {
-      toast.action = durationOrAction;
-      toast.duration = 6000;
-    } else {
-      toast.duration = 2000;
+    if (type === 'success') duration = 2500;
+    else if (type === 'error') duration = Infinity; // Manual dismiss only
+    
+    // Override if provided explicitly
+    if (typeof durationOrAction === 'number') {
+      duration = durationOrAction;
+    } else if (typeof durationOrAction === 'object') {
+      // Toast with action, usually keep longer or manual
+      duration = 6000;
     }
 
-    setToasts(prev => [...prev, toast].slice(-5));
+    const toast: ToastMessage = { 
+      id, 
+      title, 
+      message, 
+      type, 
+      duration,
+      action: typeof durationOrAction === 'object' ? durationOrAction : undefined
+    };
+
+    // Max 2 toasts, newest replaces oldest
+    setToasts(prev => {
+      const current = [...prev, toast];
+      if (current.length > 2) {
+        return current.slice(current.length - 2);
+      }
+      return current;
+    });
+    
     return id;
   };
 
@@ -150,11 +155,10 @@ export const Layout: React.FC = () => {
         <ToastContainer toasts={toasts} onDismiss={removeToast} isMobile={isMobile} />
         <Header currentMode={currentMode} />
 
-        <main className="flex-1 relative w-full pt-safe pt-16 min-h-0 overflow-hidden">
-          {/* 
-            AnimatePresence without mode="wait" allows simultaneous animations (overlap).
-            Absolute positioning ensures they don't visually collide (stack vertically).
-          */}
+        <main 
+          className="flex-1 relative w-full min-h-0 overflow-hidden"
+          style={{ paddingTop: 'calc(4rem + env(safe-area-inset-top))' }}
+        >
           <AnimatePresence initial={false}>
             <motion.div 
               key={location.pathname} 
@@ -164,8 +168,6 @@ export const Layout: React.FC = () => {
               variants={pageVariants}
               className="absolute inset-0 w-full h-full flex flex-col bg-white dark:bg-charcoal-950 overflow-hidden"
             >
-              {/* Suspense is INSIDE the motion.div. If the page code is lazy loading, the container 
-                  animates in immediately with the fallback, preventing a full white screen flash. */}
               <Suspense fallback={<FileProcessingLoader />}>
                 <Outlet />
               </Suspense>

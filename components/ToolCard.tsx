@@ -2,8 +2,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, CornerDownRight } from 'lucide-react';
-import { cardHover } from '../utils/animations'; 
+import { ArrowRight } from 'lucide-react';
+import { cardHover, standardLayoutTransition } from '../utils/animations'; 
 
 export interface ToolData {
   id: string;
@@ -39,7 +39,7 @@ export const ToolCard: React.FC<ToolCardProps> = ({ tool, className }) => {
           className="
             bg-white dark:bg-charcoal-900 rounded-xl border border-slate-200 dark:border-charcoal-700 
             relative overflow-hidden aspect-square flex flex-col justify-between p-5
-            transition-colors duration-150 ease-linear
+            transition-colors duration-200 ease-linear
           "
           whileHover={cardHover}
           whileTap={{ scale: 0.98 }}
@@ -54,11 +54,11 @@ export const ToolCard: React.FC<ToolCardProps> = ({ tool, className }) => {
           <div className="flex justify-between items-start">
              <div className={`w-10 h-10 rounded-lg ${tool.color} flex items-center justify-center border border-black/5 dark:border-white/10`}>
                   {React.isValidElement(tool.icon) 
-                      ? React.cloneElement(tool.icon as React.ReactElement, { size: 20 }) 
+                      ? React.cloneElement(tool.icon as React.ReactElement, { size: 20, strokeWidth: 1.5 }) 
                       : tool.icon}
               </div>
               <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 -mr-2 -mt-2">
-                 <ArrowRight className="text-brand-purple -rotate-45 group-hover:rotate-0 transition-transform duration-300" size={20} />
+                 <ArrowRight className="text-brand-purple -rotate-45 group-hover:rotate-0 transition-transform duration-300" size={20} strokeWidth={1.5} />
               </div>
           </div>
 

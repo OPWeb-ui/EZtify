@@ -1,8 +1,21 @@
+
 import { jsPDF } from 'jspdf';
 import mammoth from 'mammoth';
 
+export interface WordPdfConfig {
+  pageSize: 'a4' | 'letter';
+  orientation: 'portrait' | 'landscape';
+}
+
+export const getDocxPreview = async (file: File): Promise<string> => {
+  const arrayBuffer = await file.arrayBuffer();
+  const result = await mammoth.convertToHtml({ arrayBuffer });
+  return result.value;
+};
+
 export const convertWordToPdf = async (
   file: File,
+  config: WordPdfConfig = { pageSize: 'a4', orientation: 'portrait' },
   onProgress?: (percent: number) => void,
   onStatusUpdate?: (status: string) => void
 ): Promise<Blob> => {
@@ -22,12 +35,38 @@ export const convertWordToPdf = async (
   const container = document.createElement('div');
   container.innerHTML = html;
   
-  // Style the container to match A4 proportions (approx 794px width at 96 DPI)
-  // IMPORTANT: Do NOT use 'left: -9999px' as html2canvas often fails to render off-screen elements.
-  // Instead, place it fixed at 0,0 but deeply behind everything (z-index -10000).
-  container.style.width = '794px'; 
-  container.style.minHeight = '1123px'; // A4 height approx
-  container.style.padding = '48px'; // Approx 0.5 inch margins
+  // Determine dimensions based on config
+  // 96 DPI pixels roughly mapping to points
+  // A4: 595.28pt x 841.89pt
+  // Letter: 612pt x 792pt
+  
+  let targetWidthPt = 595.28;
+  // let targetHeightPt = 841.89; // Not strictly needed for HTML flow unless limiting
+  
+  if (config.pageSize === 'letter') {
+    targetWidthPt = 612;
+  }
+  
+  if (config.orientation === 'landscape') {
+    // Swap for logic if needed, though jsPDF handles orientation.
+    // However, the HTML container width defines the text wrap.
+    // If Landscape A4: width is 841.89pt
+    targetWidthPt = config.pageSize === 'letter' ? 792 : 841.89;
+  }
+
+  // Convert points to pixels for the HTML container (approx 1.33 px per pt, but html2canvas uses window resolution)
+  // To get a 1:1 mapping with jsPDF 'pt' unit, we size the container in 'pt' or equivalent 'px'.
+  // jsPDF .html() uses a scale factor.
+  // Best practice: Set container width to the target PDF width in pixels (e.g. at 96DPI) and scale down.
+  // Or match the PDF point width and use appropriate scale.
+  
+  // Let's set a fixed width for the HTML rendering that mimics a document page width.
+  // 800px is a decent "web" rendering width. We will calculate scale later.
+  const htmlRenderWidth = 800; 
+  
+  container.style.width = `${htmlRenderWidth}px`;
+  container.style.minHeight = '100px'; 
+  container.style.padding = '40px'; // Margins
   container.style.backgroundColor = 'white';
   container.style.color = 'black';
   container.style.position = 'fixed';
@@ -57,11 +96,10 @@ export const convertWordToPdf = async (
   if (onProgress) onProgress(50);
   
   // 3. Use jsPDF to capture the HTML
-  // A4 size in points: 595.28 x 841.89
   const doc = new jsPDF({
     unit: 'pt',
-    format: 'a4',
-    orientation: 'portrait'
+    format: config.pageSize,
+    orientation: config.orientation
   });
 
   // Set standardized metadata
@@ -74,8 +112,7 @@ export const convertWordToPdf = async (
   });
 
   // Calculate scale factor: PDF Width (pt) / HTML Width (px)
-  // 595.28 / 794 ≈ 0.75
-  const scale = 595.28 / 794;
+  const scale = targetWidthPt / htmlRenderWidth;
 
   return new Promise<Blob>((resolve, reject) => {
     doc.html(container, {
@@ -89,7 +126,9 @@ export const convertWordToPdf = async (
            if (onProgress) onProgress(100);
            
            // Cleanup
-           document.body.removeChild(container);
+           if (document.body.contains(container)) {
+             document.body.removeChild(container);
+           }
            resolve(blob);
          } catch (err) {
            if (document.body.contains(container)) {
@@ -100,9 +139,9 @@ export const convertWordToPdf = async (
       },
       x: 0,
       y: 0,
-      width: 595.28,
-      windowWidth: 794, 
-      margin: [0, 0, 0, 0], // Margins are handled by container padding
+      width: targetWidthPt, // The width in the PDF
+      windowWidth: htmlRenderWidth, // The window width to render the HTML
+      margin: [0, 0, 0, 0], // Margins are handled by container padding or CSS
       autoPaging: 'text',
       html2canvas: {
         scale: scale, 

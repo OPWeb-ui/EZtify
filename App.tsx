@@ -9,6 +9,7 @@ import { ScrollToTop } from './components/ScrollToTop';
 // Lazy Load Pages (Code Splitting)
 const Home = React.lazy(() => import('./pages/Home').then(module => ({ default: module.Home })));
 const About = React.lazy(() => import('./pages/About').then(module => ({ default: module.About })));
+const FAQ = React.lazy(() => import('./pages/FAQ').then(module => ({ default: module.FAQ })));
 const ImageToPdfPage = React.lazy(() => import('./pages/ImageToPdf').then(module => ({ default: module.ImageToPdfPage })));
 const PdfToImagePage = React.lazy(() => import('./pages/PdfToImage').then(module => ({ default: module.PdfToImagePage })));
 const CompressPdfPage = React.lazy(() => import('./pages/CompressPdf').then(module => ({ default: module.CompressPdfPage })));
@@ -27,6 +28,9 @@ const AddPageNumbersPage = React.lazy(() => import('./pages/AddPageNumbers').the
 const RedactPdfPage = React.lazy(() => import('./pages/RedactPdf').then(module => ({ default: module.RedactPdfPage })));
 const GrayscalePdfPage = React.lazy(() => import('./pages/GrayscalePdf').then(module => ({ default: module.GrayscalePdfPage })));
 const CodeEditorPage = React.lazy(() => import('./pages/CodeEditor').then(module => ({ default: module.CodeEditorPage })));
+const PdfMultiToolPage = React.lazy(() => import('./pages/PdfMultiTool').then(module => ({ default: module.PdfMultiToolPage })));
+const CropPdfPage = React.lazy(() => import('./pages/CropPdf').then(module => ({ default: module.CropPdfPage })));
+
 
 const App: React.FC = () => {
   return (
@@ -61,6 +65,36 @@ const App: React.FC = () => {
                     canonical="https://eztify.com/#/about"
                   />
                   <About />
+                </>
+              } 
+            />
+
+            {/* FAQ Page */}
+            <Route 
+              path="faq" 
+              element={
+                <>
+                  <SEO 
+                    title="EZtify Support — FAQ & Troubleshooting"
+                    description="Answers to common questions about file formats, privacy, and browser support."
+                    canonical="https://eztify.com/#/faq"
+                  />
+                  <FAQ />
+                </>
+              } 
+            />
+            
+            {/* Tool: PDF Multi-Tool */}
+            <Route 
+              path="pdf-multi-tool" 
+              element={
+                <>
+                  <SEO 
+                    title="PDF Multi-Tool — Merge, Split, Rotate & Organize PDF"
+                    description="A powerful all-in-one PDF editor to merge, split, rotate, delete, and organize pages securely in your browser."
+                    canonical="https://eztify.com/#/pdf-multi-tool"
+                  />
+                  <PdfMultiToolPage />
                 </>
               } 
             />
@@ -125,14 +159,14 @@ const App: React.FC = () => {
               } 
             />
             
-            {/* Tool: PDF to PowerPoint */}
+            {/* Tool: PDF to PPTX */}
             <Route 
               path="pdf-to-pptx" 
               element={
                 <>
                   <SEO 
-                    title="PDF to PowerPoint Online — EZtify"
-                    description="Convert each PDF page into a slide in a PowerPoint (PPTX) presentation. Fast, private, and client-side."
+                    title="PDF to PPTX Online — EZtify"
+                    description="Convert each PDF page into a slide in a PPTX presentation. Fast, private, and client-side."
                     canonical="https://eztify.com/#/pdf-to-pptx"
                   />
                   <PdfToPptxPage />
@@ -301,6 +335,21 @@ const App: React.FC = () => {
                     canonical="https://eztify.com/#/grayscale-pdf"
                   />
                   <GrayscalePdfPage />
+                </>
+              } 
+            />
+
+            {/* Tool: Crop PDF */}
+            <Route 
+              path="crop-pdf" 
+              element={
+                <>
+                  <SEO 
+                    title="Crop PDF — Visually Crop PDF Pages Online"
+                    description="Select a visible area and crop PDF pages for free. 100% private, client-side PDF cropping tool."
+                    canonical="https://eztify.com/#/crop-pdf"
+                  />
+                  <CropPdfPage />
                 </>
               } 
             />

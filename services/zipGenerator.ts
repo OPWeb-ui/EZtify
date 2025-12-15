@@ -1,3 +1,4 @@
+
 import JSZip from 'jszip';
 import { UploadedImage, ExportConfig } from '../types';
 
@@ -8,6 +9,9 @@ export const generateZip = async (
 ): Promise<void> => {
   const zip = new JSZip();
   const folder = zip.folder("EZtify-Images");
+  
+  // Default scale to 1 if not provided (72 DPI base)
+  const scale = config.scale || 1;
 
   for (let i = 0; i < images.length; i++) {
     // Yield
@@ -32,9 +36,9 @@ export const generateZip = async (
     const srcWidth = loadedImg.width;
     const srcHeight = loadedImg.height;
 
-    // Set canvas dimensions based on rotation
-    canvas.width = isRotatedSideways ? srcHeight : srcWidth;
-    canvas.height = isRotatedSideways ? srcWidth : srcHeight;
+    // Set canvas dimensions based on rotation AND scale
+    canvas.width = (isRotatedSideways ? srcHeight : srcWidth) * scale;
+    canvas.height = (isRotatedSideways ? srcWidth : srcHeight) * scale;
     
     // Fill white for JPG to avoid black backgrounds
     if (config.format === 'jpeg') {
@@ -42,9 +46,17 @@ export const generateZip = async (
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
-    // Apply rotation transformation
+    // Apply scale and rotation transformation
+    // Translate to center
     ctx.translate(canvas.width / 2, canvas.height / 2);
+    // Rotate
     ctx.rotate((imgData.rotation * Math.PI) / 180);
+    // Scale (applied after rotation conceptually, but canvas transforms are matrix based)
+    // We scale the drawImage call or the context. 
+    // Since we increased canvas size by scale, we need to draw the image larger.
+    ctx.scale(scale, scale);
+    
+    // Draw centered
     ctx.drawImage(loadedImg, -srcWidth / 2, -srcHeight / 2);
     
     const mimeType = config.format === 'png' ? 'image/png' : 'image/jpeg';
