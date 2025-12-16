@@ -2,7 +2,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useLayoutContext } from '../components/Layout';
 import { PageReadyTracker } from '../components/PageReadyTracker';
-import { convertPdfToPptx, PptxConfig } from '../services/pdfToPptxConverter';
+import { convertPptxToPdf, PptxConfig } from '../services/pdfToPptxConverter';
 import { loadPdfPages } from '../services/pdfSplitter';
 import { FileRejection, useDropzone } from 'react-dropzone';
 import { 
@@ -58,7 +58,8 @@ export const PdfToPptxPage: React.FC = () => {
     if (acceptedFiles.length === 0) return;
     const f = acceptedFiles[0];
     
-    setIsProcessingFiles(true);
+    // Fix: Corrected function name from setIsProcessingFiles to setIsProcessing.
+    setIsProcessing(true);
     setStatus('Parsing PDF...');
     
     try {

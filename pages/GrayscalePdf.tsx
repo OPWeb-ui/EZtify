@@ -10,7 +10,7 @@ import { nanoid } from 'nanoid';
 import { 
   Download, RefreshCw, Palette, Lock, Zap, FileText, 
   X, Moon, Sun, Monitor, Layers, Loader2, ChevronLeft, ChevronRight, 
-  LayoutGrid, Check, Settings, ZoomIn, ZoomOut, Maximize
+  LayoutGrid, Check, Settings, ZoomIn, ZoomOut, Maximize, Minimize
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { buttonTap, techEase } from '../utils/animations';
@@ -38,6 +38,7 @@ export const GrayscalePdfPage: React.FC = () => {
   const [zoom, setZoom] = useState(1);
   const [fitMode, setFitMode] = useState<'fit' | 'actual'>('fit');
   const containerRef = useRef<HTMLDivElement>(null);
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
   
   // UI State
   const [isFilmstripOpen, setIsFilmstripOpen] = useState(false);
@@ -86,32 +87,41 @@ export const GrayscalePdfPage: React.FC = () => {
 
   // Zoom Calculation Effect (Desktop Only)
   useEffect(() => {
-    if (isMobile || !containerRef.current || !activePage || fitMode === 'actual') return;
+    if (isMobile || !canvasContainerRef.current || !activePage || fitMode === 'actual') return;
 
     const updateZoom = () => {
-      if (!containerRef.current || !activePage?.width || !activePage?.height) return;
+      if (!canvasContainerRef.current || !activePage?.width || !activePage?.height) return;
       
-      const { width: contW, height: contH } = containerRef.current.getBoundingClientRect();
-      // Match padding from Images -> PDF 3-panel layout (p-8 = 32px each side = 64px total)
+      const { width: contW, height: contH } = canvasContainerRef.current.getBoundingClientRect();
       const padding = 64; 
       
       const availW = Math.max(0, contW - padding);
       const availH = Math.max(0, contH - padding);
       
-      // Calculate fit scale
       const scale = Math.min(availW / activePage.width, availH / activePage.height);
       
-      // Set zoom (guard against zero/infinity)
       setZoom(Number.isFinite(scale) && scale > 0 ? scale : 1);
     };
 
     const observer = new ResizeObserver(updateZoom);
-    observer.observe(containerRef.current);
-    // Initial call
+    observer.observe(canvasContainerRef.current);
     updateZoom();
 
     return () => observer.disconnect();
   }, [activePage, fitMode, isMobile]);
+  
+  const currentScale = useMemo(() => {
+    if (fitMode === 'fit') {
+        if (!canvasContainerRef.current || !activePage?.width || !activePage?.height) return 1;
+        const { width: contW, height: contH } = canvasContainerRef.current.getBoundingClientRect();
+        const padding = 64;
+        const availW = Math.max(0, contW - padding);
+        const availH = Math.max(0, contH - padding);
+        return Math.min(availW / activePage.width, availH / activePage.height);
+    }
+    return zoom;
+  }, [activePage, fitMode, zoom, canvasContainerRef.current]);
+
 
   const handleGenerate = async () => {
     if (!file) return;
@@ -168,7 +178,7 @@ export const GrayscalePdfPage: React.FC = () => {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [file, activeIndex]);
+  }, [file, activeIndex, pages]);
 
   // Visual Style Calculation (CSS Filter for Preview)
   const getFilterStyle = () => {
@@ -359,9 +369,11 @@ export const GrayscalePdfPage: React.FC = () => {
       
       {/* 1. LEFT PANE: Filmstrip */}
       <div className="w-72 bg-white dark:bg-charcoal-900 border-r border-slate-200 dark:border-charcoal-800 flex flex-col shrink-0 z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
-          <div className="h-14 border-b border-slate-100 dark:border-charcoal-800 flex items-center px-4 shrink-0 bg-slate-50/50 dark:bg-charcoal-850/50">
-              <Layers size={16} className="text-charcoal-400 mr-2" />
-              <span className="font-mono text-xs font-bold uppercase tracking-widest text-charcoal-600 dark:text-charcoal-300">Pages ({pages.length})</span>
+          <div className="h-14 border-b border-slate-100 dark:border-charcoal-800 flex items-center justify-between px-4 shrink-0 bg-slate-50/50 dark:bg-charcoal-850/50">
+              <div className="flex items-center gap-2">
+                  <Layers size={16} className="text-charcoal-400" />
+                  <span className="font-mono text-xs font-bold uppercase tracking-widest text-charcoal-600 dark:text-charcoal-300">Pages ({pages.length})</span>
+              </div>
           </div>
           
           <div className="flex-1 overflow-y-auto custom-scrollbar p-3 bg-slate-50/30 dark:bg-charcoal-900">
@@ -383,4 +395,112 @@ export const GrayscalePdfPage: React.FC = () => {
       <div className="flex-1 flex flex-col min-w-0 relative z-10 bg-slate-100/50 dark:bg-black/20">
           {/* Toolbar */}
           <div className="h-14 border-b border-slate-200 dark:border-charcoal-800 bg-white dark:bg-charcoal-900 flex items-center justify-between px-4 shrink-0 shadow-sm z-20">
-              <div className="flex items-center gap
+              <div className="flex items-center gap-4 text-xs font-mono text-charcoal-500 dark:text-charcoal-400">
+                  <span className="font-bold text-charcoal-700 dark:text-charcoal-200 truncate max-w-[200px]">{file.file.name}</span>
+              </div>
+
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-charcoal-800 p-1 rounded-lg border border-slate-200 dark:border-charcoal-700">
+                  <button onClick={() => { setFitMode('actual'); setZoom(z => Math.max(0.1, z - 0.1)); }} className="p-1.5 hover:bg-white dark:hover:bg-charcoal-700 rounded text-charcoal-500 transition-colors"><ZoomOut size={14} /></button>
+                  <span className="min-w-[3rem] text-center text-xs font-mono font-bold text-charcoal-600 dark:text-charcoal-300 select-none">{Math.round(zoom * 100)}%</span>
+                  <button onClick={() => { setFitMode('actual'); setZoom(z => Math.min(4, z + 0.1)); }} className="p-1.5 hover:bg-white dark:hover:bg-charcoal-700 rounded text-charcoal-500 transition-colors"><ZoomIn size={14} /></button>
+                  <div className="w-px h-4 bg-slate-300 dark:bg-charcoal-600 mx-1" />
+                  <button onClick={() => setFitMode(fitMode === 'fit' ? 'actual' : 'fit')} className="p-1.5 hover:bg-white dark:hover:bg-charcoal-700 rounded text-charcoal-500 transition-colors" title="Toggle Fit">{fitMode === 'fit' ? <Maximize size={14} /> : <Minimize size={14} />}</button>
+              </div>
+          </div>
+          
+          {/* Canvas Area */}
+           <div ref={canvasContainerRef} className="flex-1 overflow-auto relative grid place-items-center p-8">
+                {/* Grid Background */}
+                <div className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05]" style={{ backgroundImage: 'linear-gradient(#94a3b8 1px, transparent 1px), linear-gradient(to right, #94a3b8 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+                
+                {activePage && activePage.width && activePage.height && (
+                    <motion.div 
+                        layout
+                        className="relative bg-white shadow-2xl ring-1 ring-black/5"
+                        style={{ width: activePage.width * currentScale, height: activePage.height * currentScale }}
+                    >
+                        <motion.img 
+                            src={activePage.previewUrl} 
+                            alt="Preview" 
+                            className="w-full h-full object-contain pointer-events-none select-none"
+                            draggable={false}
+                            style={{ 
+                                filter: getFilterStyle(),
+                                transition: 'filter 0.3s ease-in-out'
+                            }}
+                        />
+                    </motion.div>
+                )}
+           </div>
+       </div>
+
+      {/* 3. RIGHT: Inspector */}
+      <div className="w-80 bg-white dark:bg-charcoal-900 border-l border-slate-200 dark:border-charcoal-800 flex flex-col shrink-0 z-20 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
+          <div className="h-14 border-b border-slate-100 dark:border-charcoal-800 flex items-center px-6 shrink-0 bg-slate-50/50 dark:bg-charcoal-850/50">
+              <Settings size={16} className="text-charcoal-400 mr-2" />
+              <span className="font-mono text-xs font-bold uppercase tracking-widest text-charcoal-600 dark:text-charcoal-300">Visual Mode</span>
+          </div>
+
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
+              <div className="space-y-3">
+                  {visualModes.map((mode) => {
+                      const isActive = visualMode === mode.id;
+                      return (
+                          <button
+                              key={mode.id}
+                              onClick={() => setVisualMode(mode.id)}
+                              className={`
+                                  w-full p-4 rounded-xl border text-left transition-all duration-200 group relative z-10
+                                  ${isActive 
+                                      ? 'border-brand-purple/50 bg-brand-purple/5' 
+                                      : 'border-slate-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 hover:border-slate-300 dark:hover:border-charcoal-600'
+                                  }
+                              `}
+                          >
+                              <div className="flex items-center justify-between mb-1.5">
+                                  <div className={`flex items-center gap-2 text-sm font-bold ${isActive ? 'text-brand-purple' : 'text-charcoal-800 dark:text-slate-200'}`}>
+                                      {mode.icon} {mode.label}
+                                  </div>
+                                  {isActive && <div className="w-2 h-2 rounded-full bg-brand-purple" />}
+                              </div>
+                              <p className={`text-[10px] leading-tight ${isActive ? 'text-brand-purple/70' : 'text-charcoal-500 dark:text-slate-400'}`}>
+                                  {mode.desc}
+                              </p>
+                          </button>
+                      )
+                  })}
+              </div>
+          </div>
+
+          <div className="p-4 border-t border-slate-200 dark:border-charcoal-800 bg-slate-50 dark:bg-charcoal-900 shrink-0">
+              <motion.button 
+                  onClick={handleGenerate} 
+                  disabled={isGenerating} 
+                  whileTap={buttonTap} 
+                  className="
+                      relative overflow-hidden w-full h-12
+                      bg-charcoal-900 dark:bg-white text-white dark:text-charcoal-900
+                      font-bold font-mono text-sm tracking-wider uppercase
+                      rounded-xl shadow-lg hover:shadow-xl hover:bg-brand-purple dark:hover:bg-slate-200
+                      transition-all disabled:opacity-50 disabled:shadow-none
+                      flex items-center justify-center gap-2 group
+                  "
+              >
+                  {isGenerating && (
+                      <motion.div 
+                          className="absolute inset-y-0 left-0 bg-white/20 dark:bg-black/10" 
+                          initial={{ width: '0%' }} 
+                          animate={{ width: `${progress}%` }} 
+                          transition={{ duration: 0.1, ease: "linear" }} 
+                      />
+                  )}
+                  <div className="relative flex items-center justify-center gap-2 z-10">
+                      {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+                      <span>{isGenerating ? status || 'PROCESSING...' : 'EXPORT PDF'}</span>
+                  </div>
+              </motion.button>
+          </div>
+      </div>
+    </div>
+  );
+};
