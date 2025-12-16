@@ -15,8 +15,10 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { buttonTap, techEase } from '../utils/animations';
 import { ToolLandingLayout } from '../components/ToolLandingLayout';
-import { FileRejection } from 'react-dropzone';
+import { useDropzone, FileRejection } from 'react-dropzone';
 import { FilmstripModal } from '../components/FilmstripModal';
+import { DragDropOverlay } from '../components/DragDropOverlay';
+import { IconBox } from '../components/IconBox';
 
 export const GrayscalePdfPage: React.FC = () => {
   const { addToast, isMobile } = useLayoutContext();
@@ -71,6 +73,14 @@ export const GrayscalePdfPage: React.FC = () => {
       setStatus('');
     }
   }, [addToast]);
+
+  const { getRootProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { 'application/pdf': ['.pdf'] },
+    noClick: true,
+    noKeyboard: true,
+    disabled: isProcessingFiles || isGenerating
+  });
 
   const activePage = pages.find(p => p.id === activePageId) || null;
 
@@ -204,18 +214,24 @@ export const GrayscalePdfPage: React.FC = () => {
     );
   }
 
-  // --- MOBILE LAYOUT (UNCHANGED) ---
+  const visualModes: { id: VisualFilterMode; label: string; icon: React.ReactNode; desc: string }[] = [
+    { id: 'original', label: 'Original', icon: <FileText size={18} />, desc: 'No changes applied.' },
+    { id: 'grayscale', label: 'Grayscale', icon: <Monitor size={18} />, desc: 'Classic black & white.' },
+    { id: 'sepia', label: 'Sepia', icon: <Sun size={18} />, desc: 'Warm, antique aesthetic.' },
+    { id: 'night', label: 'Night Mode', icon: <Moon size={18} />, desc: 'Inverted colors for dark reading.' },
+  ];
+
+  // --- MOBILE LAYOUT ---
   if (isMobile) {
     return (
-      <div className="flex flex-col h-full bg-slate-50 dark:bg-charcoal-900 overflow-hidden font-sans">
+      <div className="flex flex-col h-full bg-slate-50 dark:bg-charcoal-900 overflow-hidden font-sans relative" {...getRootProps()}>
         <PageReadyTracker />
+        <DragDropOverlay isDragActive={isDragActive} message="Drop to Replace PDF" variant="indigo" />
         
         {/* Header */}
         <div className="shrink-0 h-14 bg-white dark:bg-charcoal-850 border-b border-slate-200 dark:border-charcoal-800 flex items-center justify-between px-4 z-30">
            <div className="flex items-center gap-3">
-              <div className="p-1.5 bg-indigo-50 dark:bg-indigo-900/20 rounded-md text-indigo-600 dark:text-indigo-400">
-                 <Palette size={18} />
-              </div>
+              <IconBox icon={<Palette />} size="sm" toolAccentColor="#737373" active />
               <div className="flex flex-col">
                  <span className="text-xs font-bold text-charcoal-900 dark:text-white font-mono tracking-tight">{file.file.name}</span>
                  <span className="text-[10px] text-charcoal-500 dark:text-charcoal-400 font-mono">{pages.length} Pages • {(file.file.size / 1024 / 1024).toFixed(2)} MB</span>
@@ -267,27 +283,24 @@ export const GrayscalePdfPage: React.FC = () => {
         {/* Control Deck */}
         <div className="shrink-0 bg-white dark:bg-charcoal-900 border-t border-slate-200 dark:border-charcoal-800 z-40 pb-[env(safe-area-inset-bottom)]">
            <div className="max-w-4xl mx-auto px-4 py-3 flex flex-col items-center gap-4">
-              <div className="flex items-center p-1 bg-slate-100 dark:bg-charcoal-800 rounded-xl w-full">
-                 {[
-                    { id: 'original', label: 'Original', icon: <FileText size={14} /> },
-                    { id: 'grayscale', label: 'Grayscale', icon: <Monitor size={14} /> },
-                    { id: 'sepia', label: 'Sepia', icon: <Sun size={14} /> },
-                    { id: 'night', label: 'Night', icon: <Moon size={14} /> }
-                 ].map((mode) => (
-                    <button
-                       key={mode.id}
-                       onClick={() => setVisualMode(mode.id as VisualFilterMode)}
-                       className={`
-                          flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-bold font-mono transition-all
-                          ${visualMode === mode.id 
-                             ? 'bg-white dark:bg-charcoal-700 text-brand-purple shadow-sm' 
-                             : 'text-charcoal-500 dark:text-slate-400 hover:text-charcoal-800 dark:hover:text-slate-200'}
-                       `}
-                    >
-                       {mode.icon}
-                       <span className="hidden xs:inline">{mode.label}</span>
-                    </button>
-                 ))}
+              <div className="flex items-center p-1 bg-slate-100 dark:bg-charcoal-800 rounded-xl w-full relative isolate">
+                 {visualModes.map((mode) => {
+                    const isActive = visualMode === mode.id;
+                    return (
+                        <button
+                           key={mode.id}
+                           onClick={() => setVisualMode(mode.id)}
+                           className={`
+                              flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-bold font-mono transition-colors relative z-10
+                              ${isActive ? 'text-brand-purple' : 'text-charcoal-500 dark:text-slate-400 hover:text-charcoal-800 dark:hover:text-slate-200'}
+                           `}
+                        >
+                           {mode.icon}
+                           <span className="hidden xs:inline">{mode.label}</span>
+                           {isActive && <motion.div layoutId="mobile-mode-bg" className="absolute inset-0 bg-white dark:bg-charcoal-700 shadow-sm rounded-lg -z-10" transition={{ type: "spring", bounce: 0.2, duration: 0.6 }} />}
+                        </button>
+                    );
+                 })}
               </div>
 
               <div className="flex items-center gap-3 w-full">
@@ -330,7 +343,7 @@ export const GrayscalePdfPage: React.FC = () => {
                  activeImageId={activePageId}
                  onSelect={(id) => { setActivePageId(id); setIsFilmstripOpen(false); }}
                  onReorder={() => {}} onRemove={() => {}} onRotate={() => {}} 
-                 isMobile={true} direction="vertical" size="md" isReorderable={false} showRemoveButton={false} showRotateButton={false} 
+                 isMobile={true} direction="vertical" isReorderable={false} showRemoveButton={false} showRotateButton={false} 
               />
            </div>
         </FilmstripModal>
@@ -338,17 +351,11 @@ export const GrayscalePdfPage: React.FC = () => {
     );
   }
 
-  // --- DESKTOP LAYOUT (3-PANEL) ---
-  const visualModes: { id: VisualFilterMode; label: string; icon: React.ReactNode; desc: string }[] = [
-    { id: 'original', label: 'Original', icon: <FileText size={18} />, desc: 'No changes applied.' },
-    { id: 'grayscale', label: 'Grayscale', icon: <Monitor size={18} />, desc: 'Classic black & white.' },
-    { id: 'sepia', label: 'Sepia', icon: <Sun size={18} />, desc: 'Warm, antique aesthetic.' },
-    { id: 'night', label: 'Night Mode', icon: <Moon size={18} />, desc: 'Inverted colors for dark reading.' },
-  ];
-
+  // --- DESKTOP LAYOUT ---
   return (
-    <div className="flex w-full h-full bg-slate-100 dark:bg-charcoal-950 font-sans overflow-hidden">
+    <div className="flex w-full h-full bg-slate-100 dark:bg-charcoal-950 font-sans overflow-hidden relative" {...getRootProps()}>
       <PageReadyTracker />
+      <DragDropOverlay isDragActive={isDragActive} message="Drop to Replace PDF" variant="indigo" />
       
       {/* 1. LEFT PANE: Filmstrip */}
       <div className="w-72 bg-white dark:bg-charcoal-900 border-r border-slate-200 dark:border-charcoal-800 flex flex-col shrink-0 z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
@@ -365,7 +372,6 @@ export const GrayscalePdfPage: React.FC = () => {
                   onReorder={() => {}} onRemove={() => {}} onRotate={() => {}}
                   isMobile={false}
                   direction="vertical"
-                  size="md"
                   isReorderable={false}
                   showRemoveButton={false}
                   showRotateButton={false}
@@ -377,154 +383,4 @@ export const GrayscalePdfPage: React.FC = () => {
       <div className="flex-1 flex flex-col min-w-0 relative z-10 bg-slate-100/50 dark:bg-black/20">
           {/* Toolbar */}
           <div className="h-14 border-b border-slate-200 dark:border-charcoal-800 bg-white dark:bg-charcoal-900 flex items-center justify-between px-4 shrink-0 shadow-sm z-20">
-              <div className="flex items-center gap-4 text-xs font-mono text-charcoal-500 dark:text-charcoal-400">
-                  <span className="font-bold text-charcoal-700 dark:text-charcoal-200 truncate max-w-[200px]">{file.file.name}</span>
-                  <div className="w-px h-3 bg-slate-300 dark:bg-charcoal-700" />
-                  <div className="flex items-center gap-2">
-                     <span className="font-bold text-charcoal-700 dark:text-charcoal-200">MODE:</span>
-                     <span className="uppercase">{visualMode}</span>
-                  </div>
-              </div>
-
-              <div className="flex items-center gap-1 bg-slate-100 dark:bg-charcoal-800 p-1 rounded-lg border border-slate-200 dark:border-charcoal-700">
-                  <button 
-                    onClick={() => { setFitMode('actual'); setZoom(z => Math.max(0.1, z - 0.1)); }} 
-                    className="p-1.5 hover:bg-white dark:hover:bg-charcoal-700 rounded text-charcoal-500 transition-colors"
-                  >
-                    <ZoomOut size={14} />
-                  </button>
-                  <span className="min-w-[3rem] text-center text-xs font-mono font-bold text-charcoal-600 dark:text-charcoal-300 select-none">{Math.round(zoom * 100)}%</span>
-                  <button 
-                    onClick={() => { setFitMode('actual'); setZoom(z => Math.min(3, z + 0.1)); }} 
-                    className="p-1.5 hover:bg-white dark:hover:bg-charcoal-700 rounded text-charcoal-500 transition-colors"
-                  >
-                    <ZoomIn size={14} />
-                  </button>
-                  <div className="w-px h-4 bg-slate-300 dark:bg-charcoal-600 mx-1" />
-                  <button 
-                    onClick={() => setFitMode('fit')} 
-                    className="p-1.5 hover:bg-white dark:hover:bg-charcoal-700 rounded text-charcoal-500 transition-colors" 
-                    title="Fit to Viewport"
-                  >
-                    <Maximize size={14} />
-                  </button>
-              </div>
-          </div>
-
-          {/* Canvas Area */}
-          <div ref={containerRef} className="flex-1 overflow-auto relative grid place-items-center p-8 custom-scrollbar">
-              <div className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05]" 
-                   style={{ backgroundImage: 'linear-gradient(#94a3b8 1px, transparent 1px), linear-gradient(to right, #94a3b8 1px, transparent 1px)', backgroundSize: '20px 20px' }} 
-              />
-              
-              {activePage ? (
-                 <motion.div
-                    layoutId={`preview-${activePage.id}`}
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={techEase}
-                    className="relative shadow-2xl ring-1 ring-black/5"
-                    style={{ width: (activePage.width || 600) * zoom, height: (activePage.height || 800) * zoom }}
-                 >
-                    <img 
-                       src={activePage.previewUrl} 
-                       alt="Active Page" 
-                       className="w-full h-full object-contain bg-white"
-                       style={{ 
-                          filter: getFilterStyle(),
-                          transition: 'filter 0.3s ease-in-out'
-                       }}
-                       draggable={false}
-                    />
-                 </motion.div>
-              ) : (
-                 <Loader2 className="w-8 h-8 animate-spin text-charcoal-300" />
-              )}
-          </div>
-      </div>
-
-      {/* 3. RIGHT PANE: Settings */}
-      <div className="w-80 bg-white dark:bg-charcoal-900 border-l border-slate-200 dark:border-charcoal-800 flex flex-col shrink-0 z-20 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
-          <div className="h-14 border-b border-slate-100 dark:border-charcoal-800 flex items-center px-6 shrink-0 bg-slate-50 dark:bg-charcoal-850">
-              <Settings size={16} className="text-charcoal-400 mr-2" />
-              <span className="font-mono text-xs font-bold uppercase tracking-widest text-charcoal-600 dark:text-charcoal-300">Visual Settings</span>
-          </div>
-
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
-              <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-charcoal-400 dark:text-charcoal-500 uppercase tracking-widest font-mono pl-1">
-                      Filter Mode
-                  </label>
-                  <div className="space-y-2">
-                      {visualModes.map((mode) => (
-                          <button
-                              key={mode.id}
-                              onClick={() => setVisualMode(mode.id)}
-                              className={`
-                                  w-full flex items-start gap-3 p-3 rounded-xl border text-left transition-all group
-                                  ${visualMode === mode.id 
-                                      ? 'bg-brand-purple/5 border-brand-purple ring-1 ring-brand-purple/20' 
-                                      : 'bg-white dark:bg-charcoal-800 border-slate-200 dark:border-charcoal-700 hover:border-brand-purple/50'}
-                              `}
-                          >
-                              <div className={`shrink-0 p-2 rounded-lg transition-colors ${visualMode === mode.id ? 'bg-brand-purple text-white' : 'bg-slate-100 dark:bg-charcoal-700 text-charcoal-500 dark:text-slate-400 group-hover:text-brand-purple'}`}>
-                                  {mode.icon}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                  <div className="flex items-center justify-between">
-                                      <span className={`text-xs font-bold font-mono ${visualMode === mode.id ? 'text-brand-purple' : 'text-charcoal-700 dark:text-slate-200'}`}>
-                                          {mode.label}
-                                      </span>
-                                      {visualMode === mode.id && <Check size={14} className="text-brand-purple" />}
-                                  </div>
-                                  <p className="text-[10px] text-charcoal-500 dark:text-slate-400 mt-0.5 leading-tight">
-                                      {mode.desc}
-                                  </p>
-                              </div>
-                          </button>
-                      ))}
-                  </div>
-              </div>
-          </div>
-
-          {/* Action Footer */}
-          <div className="p-4 border-t border-slate-200 dark:border-charcoal-800 bg-slate-50 dark:bg-charcoal-900 shrink-0 space-y-3">
-              <motion.button 
-                  onClick={handleGenerate} 
-                  disabled={isGenerating} 
-                  whileTap={buttonTap} 
-                  className="
-                      relative overflow-hidden w-full h-12
-                      bg-charcoal-900 dark:bg-white text-white dark:text-charcoal-900
-                      font-bold font-mono text-xs tracking-wider uppercase
-                      rounded-xl shadow-lg hover:shadow-xl hover:bg-brand-purple dark:hover:bg-slate-200
-                      transition-all disabled:opacity-50 disabled:shadow-none
-                      flex items-center justify-center gap-2 group
-                  "
-              >
-                  {isGenerating && (
-                      <motion.div 
-                          className="absolute inset-y-0 left-0 bg-white/20 dark:bg-black/10" 
-                          initial={{ width: '0%' }} 
-                          animate={{ width: `${progress}%` }} 
-                          transition={{ duration: 0.1, ease: "linear" }} 
-                      />
-                  )}
-                  <div className="relative flex items-center justify-center gap-2 z-10">
-                      {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-                      <span>{isGenerating ? status || 'PROCESSING...' : 'EXPORT PDF'}</span>
-                  </div>
-              </motion.button>
-              
-              <motion.button 
-                  whileTap={buttonTap} 
-                  onClick={handleReset} 
-                  className="w-full flex items-center justify-center gap-2 py-2 text-[10px] font-bold uppercase tracking-wide text-charcoal-400 hover:text-charcoal-600 dark:text-charcoal-500 dark:hover:text-charcoal-300 transition-colors"
-              >
-                  <RefreshCw size={12} /> Reset All
-              </motion.button>
-          </div>
-      </div>
-    </div>
-  );
-};
+              <div className="flex items-center gap

@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion, Transition } from 'framer-motion';
 
 export const Logo: React.FC<{ size?: 'sm' | 'lg' | 'mono' }> = ({ size = 'lg' }) => {
   const isSmall = size === 'sm';
@@ -16,14 +16,14 @@ export const Logo: React.FC<{ size?: 'sm' | 'lg' | 'mono' }> = ({ size = 'lg' })
        ? ["brightness(1)", "brightness(1.15) drop-shadow(0 0 8px rgba(250, 204, 21, 0.6))", "brightness(1)"] 
        : undefined
   };
-  const boltTransition = { 
+  const boltTransition: Transition = { 
      duration: 2.5, 
      repeat: Infinity, 
      ease: "easeInOut" 
   };
   
   const flashAnimation = { opacity: [0, 0.5, 0] };
-  const flashTransition = { duration: 2.5, repeat: Infinity, times: [0, 0.5, 1], ease: "easeInOut" };
+  const flashTransition: Transition = { duration: 2.5, repeat: Infinity, times: [0, 0.5, 1], ease: "easeInOut" };
 
   return (
     <div className="relative flex items-center justify-center">

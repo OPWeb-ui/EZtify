@@ -1,415 +1,267 @@
 
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useLayoutContext } from '../components/Layout';
 import { PageReadyTracker } from '../components/PageReadyTracker';
-import { convertPptxToPdf } from '../services/pptxConverter';
-import { loadPdfPages } from '../services/pdfSplitter';
-import { generatePDF } from '../services/pdfGenerator';
-import { FileRejection } from 'react-dropzone';
-import { 
-  Presentation, RefreshCw, Lock, Cpu, Settings, Loader2, 
-  Download, Layers, Maximize, Minimize, ZoomIn, ZoomOut, CheckSquare, XSquare
-} from 'lucide-react';
-import { motion } from 'framer-motion';
-import { buttonTap } from '../utils/animations';
+import { convertPptxToPdf, detectPptxOrientation } from '../services/pptxConverter';
+import { useDropzone, FileRejection } from 'react-dropzone';
+import { Presentation, Lock, Cpu, Zap, FilePlus, RefreshCw, Loader2, ArrowRight, HardDrive, Settings } from 'lucide-react';
 import { ToolLandingLayout } from '../components/ToolLandingLayout';
-import { UploadedImage, PdfConfig } from '../types';
-import { Filmstrip } from '../components/Filmstrip';
-import { Preview } from '../components/Preview';
-import { Sidebar } from '../components/Sidebar';
-import { FilmstripModal } from '../components/FilmstripModal';
+import { motion, AnimatePresence } from 'framer-motion';
+import { buttonTap, techEase } from '../utils/animations';
+import { DragDropOverlay } from '../components/DragDropOverlay';
+import { IconBox } from '../components/IconBox';
+import { PdfConfig } from '../types';
 
 export const PptxToPdfPage: React.FC = () => {
   const { addToast, isMobile } = useLayoutContext();
-  
-  // --- State ---
   const [file, setFile] = useState<File | null>(null);
-  const [slides, setSlides] = useState<UploadedImage[]>([]);
-  const [activeSlideId, setActiveSlideId] = useState<string | null>(null);
-  const [selectedSlideIds, setSelectedSlideIds] = useState<Set<string>>(new Set());
   
-  // Processing State
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isProcessingFiles, setIsProcessingFiles] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('');
   
-  // Configuration
+  // Config
   const [config, setConfig] = useState<PdfConfig>({
     pageSize: 'a4',
-    orientation: 'landscape', // Default for PPTX
+    orientation: 'landscape', // PPTX default
     fitMode: 'contain',
-    margin: 0,
-    quality: 1.0
+    margin: 20,
+    quality: 1
   });
-
-  // UI State
-  const [zoom, setZoom] = useState(1);
-  const [fitMode, setFitMode] = useState<'fit' | 'width' | 'actual'>('fit');
-  const [isFilmstripOpen, setIsFilmstripOpen] = useState(false); // Mobile
-  const containerRef = useRef<HTMLDivElement>(null);
-  const baseDimensionsRef = useRef<{ width: number; height: number } | null>(null);
-
-  // --- Handlers ---
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const onDrop = useCallback(async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
     if (fileRejections.length > 0) {
-      addToast("Invalid File", "Please upload a valid PPTX file.", "error");
+      addToast("Invalid File", "Please upload a valid .pptx file.", "error");
       return;
     }
     if (acceptedFiles.length === 0) return;
     const f = acceptedFiles[0];
     
-    if (!f.name.toLowerCase().endsWith('.pptx')) {
-       addToast("Unsupported Format", "Only .pptx files are supported.", "error");
-       return;
-    }
-
-    setIsProcessing(true);
-    setFile(f);
-    setProgress(0);
+    setIsProcessingFiles(true);
+    setStatus('Checking file...');
     
     try {
-       // 1. Convert PPTX to Intermediate PDF
-       setStatus('Parsing presentation...');
-       const pdfBlob = await convertPptxToPdf(f, (p) => setProgress(p * 0.5), setStatus);
-       
-       // 2. Render PDF pages to Images (Slides)
-       setStatus('Extracting slides...');
-       const tempPdfFile = new File([pdfBlob], "temp.pdf", { type: 'application/pdf' });
-       const pdfPages = await loadPdfPages(tempPdfFile, (p) => setProgress(50 + (p * 0.5)), setStatus, { scale: 1.5 }); // High quality preview
-       
-       // 3. Map to UploadedImage format for compatibility with existing components
-       const extractedSlides: UploadedImage[] = pdfPages.map(p => ({
-           id: p.id,
-           file: f, // Reference original file
-           previewUrl: p.previewUrl,
-           width: p.width || 1920,
-           height: p.height || 1080,
-           rotation: 0
-       }));
-
-       setSlides(extractedSlides);
-       if (extractedSlides.length > 0) {
-           setActiveSlideId(extractedSlides[0].id);
-           setSelectedSlideIds(new Set(extractedSlides.map(s => s.id))); // Select all by default
-       }
-       
-       addToast("Success", `Loaded ${extractedSlides.length} slides`, "success");
-
-    } catch (e) {
-       console.error(e);
-       addToast("Conversion Failed", "Could not process presentation.", "error");
-       setFile(null);
-    } finally {
-       setIsProcessing(false);
-       setProgress(0);
-       setStatus('');
+        const detected = await detectPptxOrientation(f);
+        setConfig(prev => ({ ...prev, orientation: detected }));
+        
+        // Simulate check
+        setTimeout(() => {
+            setFile(f);
+            addToast("Success", "PPTX file loaded.", "success");
+            setIsProcessingFiles(false);
+            setStatus('');
+        }, 500);
+    } catch(e) {
+        setIsProcessingFiles(false);
+        addToast("Error", "Failed to analyze PPTX", "error");
     }
   }, [addToast]);
 
+  const { getRootProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { 'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'] },
+    noClick: true,
+    noKeyboard: true,
+    disabled: isProcessingFiles || isGenerating
+  });
+
+  const handleAddFilesClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+        onDrop(Array.from(e.target.files), []);
+    }
+    if (e.target) e.target.value = '';
+  };
+
   const handleReset = () => {
     setFile(null);
-    setSlides([]);
-    setActiveSlideId(null);
-    setSelectedSlideIds(new Set());
     setProgress(0);
     setStatus('');
   };
 
-  const handleExport = async () => {
-      if (slides.length === 0) return;
-      
-      const slidesToExport = slides.filter(s => selectedSlideIds.has(s.id));
-      if (slidesToExport.length === 0) {
-          addToast("Warning", "No slides selected for export", "warning");
-          return;
-      }
-
-      setIsGenerating(true);
-      try {
-          // Use the Image-to-PDF generator to create the final PDF with precise layout control
-          await generatePDF(slidesToExport, config, setProgress, setStatus);
-          addToast("Success", "PDF exported successfully!", "success");
-      } catch (e) {
-          console.error(e);
-          addToast("Error", "Export failed.", "error");
-      } finally {
-          setIsGenerating(false);
-          setProgress(0);
-          setStatus('');
-      }
+  const handleConvert = async () => {
+    if (!file) return;
+    setIsGenerating(true);
+    try {
+      const blob = await convertPptxToPdf(file, config, setProgress, setStatus);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${file.name.replace(/\.[^/.]+$/, "")}_EZtify.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      addToast("Success", "PDF created successfully!", "success");
+    } catch (e) {
+      console.error(e);
+      addToast("Error", "Conversion failed. File may be encrypted or complex.", "error");
+    } finally {
+      setIsGenerating(false);
+      setProgress(0);
+      setStatus('');
+    }
   };
 
-  // --- Zoom Logic ---
-  useEffect(() => {
-    if (!containerRef.current || fitMode === 'actual' || !activeSlideId) return;
+  const ConfigPanel = () => (
+    <div className="space-y-4">
+        <div className="space-y-2">
+            <label className="text-[10px] font-bold text-charcoal-400 dark:text-charcoal-500 uppercase tracking-widest font-mono pl-1">Page Size</label>
+            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-charcoal-800 rounded-xl border border-slate-200 dark:border-charcoal-700">
+                {(['a4', 'letter'] as const).map(size => {
+                    const isActive = config.pageSize === size;
+                    return (
+                        <button 
+                            key={size}
+                            onClick={() => setConfig({...config, pageSize: size})} 
+                            className={`relative py-2 rounded-lg text-xs font-bold font-mono transition-colors z-10 ${isActive ? 'text-orange-600' : 'text-charcoal-500 hover:text-charcoal-700 dark:text-slate-400'}`}
+                        >
+                            {size.toUpperCase()}
+                            {isActive && <motion.div layoutId="size-bg" className="absolute inset-0 bg-white dark:bg-charcoal-700 shadow-sm rounded-lg -z-10" transition={{ type: "spring", bounce: 0.2, duration: 0.6 }} />}
+                        </button>
+                    )
+                })}
+            </div>
+        </div>
 
-    const updateZoom = () => {
-      if (!containerRef.current || !baseDimensionsRef.current) return;
-      const { width: contW, height: contH } = containerRef.current.getBoundingClientRect();
-      const { width: baseW, height: baseH } = baseDimensionsRef.current;
-      
-      const padding = 64; 
-      const availW = Math.max(0, contW - padding);
-      const availH = Math.max(0, contH - padding);
-
-      if (fitMode === 'width') {
-        setZoom(availW / baseW);
-      } else {
-        const scaleW = availW / baseW;
-        const scaleH = availH / baseH;
-        setZoom(Math.min(scaleW, scaleH));
-      }
-    };
-
-    const observer = new ResizeObserver(updateZoom);
-    observer.observe(containerRef.current);
-    updateZoom();
-    return () => observer.disconnect();
-  }, [fitMode, activeSlideId]);
-
-  // --- Helpers ---
-  const activeSlide = slides.find(s => s.id === activeSlideId) || null;
-  
-  const handleSlideSelect = (id: string, event?: React.MouseEvent) => {
-      setActiveSlideId(id);
-      if (event?.shiftKey || event?.metaKey || event?.ctrlKey) {
-          setSelectedSlideIds(prev => {
-              const next = new Set(prev);
-              if (next.has(id)) next.delete(id);
-              else next.add(id);
-              return next;
-          });
-      } else if (!selectedSlideIds.has(id)) {
-          // If simply clicking, don't change selection unless multi-select keys are used
-          // or we can allow simple click to select single.
-          // Let's keep selection separate from viewing.
-      }
-  };
-
-  // Delete Slide Logic: Removes from the export list
-  const handleRemoveSlide = (id: string) => {
-      setSlides(prev => prev.filter(s => s.id !== id));
-      setSelectedSlideIds(prev => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-      });
-      if (activeSlideId === id) {
-          setActiveSlideId(null);
-      }
-  };
-
-  const selectAll = () => setSelectedSlideIds(new Set(slides.map(s => s.id)));
-  const deselectAll = () => setSelectedSlideIds(new Set());
-
-  // --- Render ---
+        <div className="space-y-2">
+            <label className="text-[10px] font-bold text-charcoal-400 dark:text-charcoal-500 uppercase tracking-widest font-mono pl-1">Orientation</label>
+            <div className="flex bg-slate-100 dark:bg-charcoal-800 p-1 rounded-xl relative isolate border border-slate-200 dark:border-charcoal-700">
+                {(['landscape', 'portrait'] as const).map(ori => {
+                    const isActive = config.orientation === ori;
+                    return (
+                        <button 
+                            key={ori}
+                            onClick={() => setConfig({...config, orientation: ori})} 
+                            className={`flex-1 relative py-2 rounded-lg text-xs font-bold font-mono transition-colors z-10 capitalize ${isActive ? 'text-charcoal-900 dark:text-white' : 'text-charcoal-500 hover:text-charcoal-700 dark:text-slate-400'}`}
+                        >
+                            {ori}
+                            {isActive && <motion.div layoutId="ori-bg" className="absolute inset-0 bg-white dark:bg-charcoal-700 shadow-sm rounded-lg -z-10" transition={{ type: "spring", bounce: 0.2, duration: 0.6 }} />}
+                        </button>
+                    )
+                })}
+            </div>
+        </div>
+    </div>
+  );
 
   if (!file) {
     return (
       <ToolLandingLayout
-        title="PPTX to PDF"
-        description="Convert PowerPoint presentations to PDF. Review slides and customize layout before exporting."
-        icon={<Presentation />}
-        onDrop={(files, rejections) => onDrop(files, rejections)}
-        accept={{ 'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'] }}
-        multiple={false}
-        isProcessing={isProcessing}
-        accentColor="text-orange-500"
-        specs={[
-          { label: "Input", value: "PPTX", icon: <Presentation /> },
-          { label: "Engine", value: "Hybrid", icon: <Cpu /> },
-          { label: "Privacy", value: "Local", icon: <Lock /> },
-          { label: "Layout", value: "Custom", icon: <Settings /> },
-        ]}
-        tip="You can choose to export specific slides and adjust page margins for handouts."
+          title="PPTX to PDF"
+          description="Convert PowerPoint presentations to PDF documents. Slides are rendered as high-fidelity pages."
+          icon={<Presentation />}
+          onDrop={(files, rejections) => onDrop(files, rejections)}
+          accept={{ 'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'] }}
+          multiple={false}
+          isProcessing={isProcessingFiles}
+          accentColor="text-orange-500"
+          specs={[
+            { label: "Format", value: "PPTX", icon: <Presentation /> },
+            { label: "Privacy", value: "Client-Side", icon: <Lock /> },
+            { label: "Engine", value: "JSZip/PDF", icon: <Cpu /> },
+            { label: "Output", value: "PDF", icon: <Zap /> },
+          ]}
+          tip="Animations and transitions are not preserved. Each slide becomes a static PDF page."
       />
     );
   }
 
-  // Mobile Layout
+  // MOBILE: Vertical
   if (isMobile) {
       return (
-        <div className="flex flex-col h-full bg-slate-100 dark:bg-charcoal-950 overflow-hidden">
+        <div className="flex flex-col h-full bg-slate-50 dark:bg-charcoal-900 font-sans" {...getRootProps()}>
             <PageReadyTracker />
-            
-            {/* Header */}
-            <div className="shrink-0 h-14 bg-white dark:bg-charcoal-900 border-b border-slate-200 dark:border-charcoal-800 flex items-center justify-between px-4 z-20 shadow-sm">
-                <div className="flex items-center gap-2 overflow-hidden">
-                    <div className="p-1.5 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-orange-600 dark:text-orange-400 shrink-0">
-                        <Presentation size={18} />
-                    </div>
-                    <span className="font-mono font-bold text-sm text-charcoal-800 dark:text-white truncate">
-                        {file.name}
-                    </span>
-                </div>
-                <motion.button 
-                    whileTap={buttonTap} 
-                    onClick={handleReset} 
-                    className="p-2 text-charcoal-400 hover:text-charcoal-600 dark:text-charcoal-500 dark:hover:text-charcoal-300 transition-colors"
-                >
-                    <RefreshCw size={18} />
-                </motion.button>
+            <input ref={fileInputRef} type="file" className="hidden" accept=".pptx" onChange={handleFileChange} />
+            <div className="shrink-0 h-14 border-b border-slate-200 dark:border-charcoal-800 px-4 flex items-center justify-between bg-white dark:bg-charcoal-900">
+               <span className="font-bold text-charcoal-900 dark:text-white">Convert PPTX</span>
+               <button onClick={handleReset}><RefreshCw size={18} /></button>
             </div>
-
-            {/* Preview */}
-            <div className="flex-1 relative overflow-hidden bg-slate-100/50 dark:bg-black/20 flex items-center justify-center p-4">
-                <Preview 
-                    image={activeSlide} 
-                    config={{...config, pageSize: 'auto'}} 
-                    onReplace={()=>{}} 
-                    onDropRejected={()=>{}}
-                    scale={1}
-                />
+            <div className="flex-1 flex flex-col items-center justify-center p-8 overflow-y-auto">
+               <div className="text-center mb-8">
+                  <div className="w-20 h-20 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center mx-auto mb-4 text-orange-600"><Presentation size={40} /></div>
+                  <h3 className="font-bold text-lg">{file.name}</h3>
+                  <p className="text-sm text-charcoal-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+               </div>
+               <div className="w-full max-w-xs">
+                   <ConfigPanel />
+               </div>
             </div>
-
-            {/* Bottom Actions */}
-            <div className="shrink-0 h-16 bg-white dark:bg-charcoal-900 border-t border-slate-200 dark:border-charcoal-800 px-4 flex items-center justify-between z-30 pb-[env(safe-area-inset-bottom)]">
-                <motion.button
-                    whileTap={buttonTap}
-                    onClick={() => setIsFilmstripOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-charcoal-800 rounded-xl text-charcoal-700 dark:text-slate-300 font-bold text-xs"
-                >
-                    <Layers size={16} /> Slides ({slides.length})
-                </motion.button>
-
-                <motion.button
-                    whileTap={buttonTap}
-                    onClick={handleExport}
-                    disabled={isGenerating || selectedSlideIds.size === 0}
-                    className="flex items-center gap-2 px-6 py-3 bg-charcoal-900 dark:bg-white text-white dark:text-charcoal-900 rounded-xl font-bold text-xs uppercase tracking-wide shadow-lg shadow-brand-purple/20 disabled:opacity-50"
-                >
-                    {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-                    <span>Export PDF</span>
-                </motion.button>
+            <div className="p-4 bg-white dark:bg-charcoal-900 border-t border-slate-200 dark:border-charcoal-700">
+               <button onClick={handleConvert} disabled={isGenerating} className="w-full h-12 bg-orange-600 text-white rounded-xl font-bold flex items-center justify-center gap-2">
+                  {isGenerating ? <Loader2 className="animate-spin" /> : <ArrowRight />} Convert
+               </button>
             </div>
-
-            <FilmstripModal
-                isOpen={isFilmstripOpen}
-                onClose={() => setIsFilmstripOpen(false)}
-                title={`Slides (${slides.length})`}
-            >
-                <Filmstrip 
-                    images={slides}
-                    activeImageId={activeSlideId}
-                    selectedImageIds={selectedSlideIds}
-                    onSelect={(id) => { handleSlideSelect(id); setIsFilmstripOpen(false); }}
-                    onReorder={()=>{}} onRemove={handleRemoveSlide} onRotate={()=>{}}
-                    isMobile={true} direction="vertical" size="md" isReorderable={false} showRemoveButton={true} showRotateButton={false}
-                />
-            </FilmstripModal>
         </div>
       );
   }
 
-  // Desktop 3-Panel Layout
+  // DESKTOP: 2-Pane
   return (
-    <div className="flex w-full h-full bg-slate-100 dark:bg-charcoal-950 font-sans overflow-hidden">
+    <div className="flex w-full h-full bg-slate-100 dark:bg-charcoal-950 font-sans overflow-hidden relative" {...getRootProps()}>
       <PageReadyTracker />
-      
-      {/* 1. LEFT PANE: Filmstrip */}
-      <div className="w-72 bg-white dark:bg-charcoal-900 border-r border-slate-200 dark:border-charcoal-800 flex flex-col shrink-0 z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
-          <div className="h-14 border-b border-slate-100 dark:border-charcoal-800 flex items-center justify-between px-4 shrink-0 bg-slate-50/50 dark:bg-charcoal-850/50">
-              <div className="flex items-center gap-2">
-                  <Layers size={16} className="text-charcoal-400" />
-                  <span className="font-mono text-xs font-bold uppercase tracking-widest text-charcoal-600 dark:text-charcoal-300">Slides ({slides.length})</span>
-              </div>
-              <div className="flex gap-1">
-                 <button onClick={selectAll} className="p-1.5 text-charcoal-400 hover:text-charcoal-600 hover:bg-slate-100 dark:hover:bg-charcoal-700 rounded transition-colors" title="Select All"><CheckSquare size={14} /></button>
-                 <button onClick={deselectAll} className="p-1.5 text-charcoal-400 hover:text-charcoal-600 hover:bg-slate-100 dark:hover:bg-charcoal-700 rounded transition-colors" title="Deselect All"><XSquare size={14} /></button>
-              </div>
+      <input ref={fileInputRef} type="file" className="hidden" accept=".pptx" onChange={handleFileChange} />
+      <DragDropOverlay isDragActive={isDragActive} message="Drop to Replace File" variant="pptOrange" />
+
+      {/* 1. Main Content: File Info */}
+      <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-charcoal-900 border-r border-slate-200 dark:border-charcoal-800 relative z-10">
+          <div className="h-16 border-b border-slate-200 dark:border-charcoal-800 px-6 flex items-center justify-between shrink-0">
+             <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-orange-600 dark:text-orange-400">
+                   <Presentation size={20} />
+                </div>
+                <div>
+                   <h3 className="text-sm font-bold text-charcoal-900 dark:text-white uppercase tracking-wider font-mono">PPTX Converter</h3>
+                   <p className="text-[10px] text-charcoal-500 dark:text-charcoal-400 font-mono">Ready to process</p>
+                </div>
+             </div>
+             <motion.button whileTap={buttonTap} onClick={handleAddFilesClick} className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-charcoal-800 hover:bg-slate-200 dark:hover:bg-charcoal-700 text-charcoal-700 dark:text-slate-200 rounded-lg text-xs font-bold transition-colors">
+                <FilePlus size={14} /> Replace
+             </motion.button>
           </div>
-          
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-3 bg-slate-50/30 dark:bg-charcoal-900">
-              <Filmstrip 
-                  images={slides}
-                  activeImageId={activeSlideId}
-                  selectedImageIds={selectedSlideIds}
-                  onSelect={handleSlideSelect}
-                  onReorder={()=>{}} onRemove={handleRemoveSlide} onRotate={()=>{}}
-                  isMobile={false} direction="vertical" size="md" isReorderable={false} showRemoveButton={true} showRotateButton={false}
-              />
-          </div>
-          
-          <div className="p-2 border-t border-slate-100 dark:border-charcoal-800 text-[10px] text-center font-mono text-charcoal-400 bg-white dark:bg-charcoal-900">
-             {selectedSlideIds.size} slides selected for export
+
+          <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-50/50 dark:bg-charcoal-900">
+              <div className="max-w-md w-full bg-white dark:bg-charcoal-800 rounded-2xl shadow-sm border border-slate-200 dark:border-charcoal-700 p-8 text-center">
+                  <div className="w-24 h-24 bg-orange-50 dark:bg-orange-900/10 rounded-full flex items-center justify-center mx-auto mb-6 text-orange-600 dark:text-orange-400 ring-1 ring-orange-100 dark:ring-orange-900/20">
+                      <Presentation size={48} strokeWidth={1.5} />
+                  </div>
+                  <h2 className="text-xl font-bold text-charcoal-900 dark:text-white mb-2 truncate" title={file.name}>{file.name}</h2>
+                  <div className="flex items-center justify-center gap-2 text-charcoal-500 dark:text-charcoal-400 mb-8">
+                      <HardDrive size={14} />
+                      <span className="text-sm font-mono">{(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                  </div>
+                  
+                  <div className="text-xs text-charcoal-400 dark:text-charcoal-500 bg-slate-50 dark:bg-charcoal-900/50 p-4 rounded-xl border border-slate-100 dark:border-charcoal-700/50">
+                      Files are processed locally. Large presentations with many images may take a moment to render.
+                  </div>
+              </div>
           </div>
       </div>
 
-      {/* 2. CENTER PANE: Preview */}
-      <div className="flex-1 flex flex-col min-w-0 relative z-10 bg-slate-100/50 dark:bg-black/20">
-          <div className="h-14 border-b border-slate-200 dark:border-charcoal-800 bg-white dark:bg-charcoal-900 flex items-center justify-between px-4 shrink-0 shadow-sm z-20">
-              <div className="flex items-center gap-4 text-xs font-mono text-charcoal-500 dark:text-charcoal-400">
-                  <span className="font-bold text-charcoal-700 dark:text-charcoal-200 truncate max-w-[200px]">{file.name}</span>
-              </div>
-
-              <div className="flex items-center gap-1 bg-slate-100 dark:bg-charcoal-800 p-1 rounded-lg border border-slate-200 dark:border-charcoal-700">
-                  <button onClick={() => setZoom(z => Math.max(0.1, z - 0.1))} className="p-1.5 hover:bg-white dark:hover:bg-charcoal-700 rounded text-charcoal-500 transition-colors"><ZoomOut size={14} /></button>
-                  <span className="min-w-[3rem] text-center text-xs font-mono font-bold text-charcoal-600 dark:text-charcoal-300 select-none">{Math.round(zoom * 100)}%</span>
-                  <button onClick={() => setZoom(z => Math.min(3, z + 0.1))} className="p-1.5 hover:bg-white dark:hover:bg-charcoal-700 rounded text-charcoal-500 transition-colors"><ZoomIn size={14} /></button>
-                  <div className="w-px h-4 bg-slate-300 dark:bg-charcoal-600 mx-1" />
-                  <button onClick={() => setFitMode(fitMode === 'fit' ? 'width' : 'fit')} className="p-1.5 hover:bg-white dark:hover:bg-charcoal-700 rounded text-charcoal-500 transition-colors" title="Toggle Fit">{fitMode === 'fit' ? <Maximize size={14} /> : <Minimize size={14} />}</button>
-              </div>
+      {/* 2. Sidebar: Actions */}
+      <div className="w-80 bg-slate-50 dark:bg-charcoal-950 flex flex-col shrink-0 z-20">
+          <div className="h-16 px-6 border-b border-slate-200 dark:border-charcoal-800 flex items-center shrink-0">
+              <span className="font-mono text-xs font-bold uppercase tracking-widest text-charcoal-600 dark:text-charcoal-300 flex items-center gap-2">
+                  <Settings size={14} /> Config
+              </span>
           </div>
 
-          <div ref={containerRef} className="flex-1 overflow-auto relative grid place-items-center p-8 custom-scrollbar">
-              <div className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05]" 
-                   style={{ backgroundImage: 'linear-gradient(#94a3b8 1px, transparent 1px), linear-gradient(to right, #94a3b8 1px, transparent 1px)', backgroundSize: '20px 20px' }} 
-              />
-              
-              {activeSlide ? (
-                 <Preview 
-                    image={activeSlide}
-                    config={config} // Use current config to preview layout!
-                    onReplace={()=>{}} 
-                    onDropRejected={()=>{}}
-                    scale={zoom}
-                    baseDimensionsRef={baseDimensionsRef}
-                 />
-              ) : (
-                 <div className="text-charcoal-400 font-mono text-sm uppercase tracking-widest flex flex-col items-center gap-2">
-                    <Presentation size={24} className="opacity-50" />
-                    <span>No Slide Selected</span>
-                 </div>
-              )}
-          </div>
-      </div>
-
-      {/* 3. RIGHT PANE: Configuration */}
-      <div className="w-80 bg-white dark:bg-charcoal-900 border-l border-slate-200 dark:border-charcoal-800 flex flex-col shrink-0 z-20 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
-          <div className="h-14 border-b border-slate-100 dark:border-charcoal-800 flex items-center px-6 shrink-0 bg-slate-50 dark:bg-charcoal-850/50">
-              <Settings size={16} className="text-charcoal-400 mr-2" />
-              <span className="font-mono text-xs font-bold uppercase tracking-widest text-charcoal-600 dark:text-charcoal-300">Export Settings</span>
+          <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+              <ConfigPanel />
           </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
-              {/* Reuse Sidebar for consistent form fields */}
-              <Sidebar 
-                  mode="image-to-pdf" // Reuse logic
-                  config={config}
-                  exportConfig={{ format: 'jpeg', quality: 1, scale: 1 }}
-                  onConfigChange={setConfig}
-                  onExportConfigChange={()=>{}}
-                  isOpen={true}
-                  isMobile={false}
-                  variant="embedded"
-              />
-          </div>
-
-          <div className="p-4 border-t border-slate-200 dark:border-charcoal-800 bg-slate-50 dark:bg-charcoal-900 shrink-0 space-y-3">
+          <div className="p-4 border-t border-slate-200 dark:border-charcoal-800 bg-white dark:bg-charcoal-900 shrink-0 space-y-3">
               <motion.button 
-                  onClick={handleExport} 
-                  disabled={isGenerating || selectedSlideIds.size === 0} 
+                  onClick={handleConvert} 
+                  disabled={isGenerating} 
                   whileTap={buttonTap} 
-                  className="
-                      relative overflow-hidden w-full h-12
-                      bg-charcoal-900 dark:bg-white text-white dark:text-charcoal-900
-                      font-bold font-mono text-xs tracking-wider uppercase
-                      rounded-xl shadow-lg hover:shadow-xl hover:bg-brand-purple dark:hover:bg-slate-200
-                      transition-all disabled:opacity-50 disabled:shadow-none
-                      flex items-center justify-center gap-2 group
-                  "
+                  className="w-full h-12 bg-charcoal-900 dark:bg-white text-white dark:text-charcoal-900 font-bold font-mono text-xs uppercase tracking-wide rounded-xl shadow-lg hover:shadow-xl hover:bg-orange-600 dark:hover:bg-amber-100 transition-all disabled:opacity-50 disabled:shadow-none flex items-center justify-center gap-2 relative overflow-hidden"
               >
                   {isGenerating && (
                       <motion.div 
@@ -420,17 +272,13 @@ export const PptxToPdfPage: React.FC = () => {
                       />
                   )}
                   <div className="relative flex items-center justify-center gap-2 z-10">
-                      {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-                      <span>{isGenerating ? status || 'EXPORTING...' : 'EXPORT PDF'}</span>
+                      {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
+                      <span>{isGenerating ? status || 'CONVERTING...' : 'CONVERT TO PDF'}</span>
                   </div>
               </motion.button>
               
-              <motion.button 
-                  whileTap={buttonTap} 
-                  onClick={handleReset} 
-                  className="w-full flex items-center justify-center gap-2 py-2 text-[10px] font-bold uppercase tracking-wide text-charcoal-400 hover:text-charcoal-600 dark:text-charcoal-500 dark:hover:text-charcoal-300 transition-colors"
-              >
-                  <RefreshCw size={12} /> Reset Project
+              <motion.button whileTap={buttonTap} onClick={handleReset} className="w-full py-2 text-[10px] font-bold uppercase tracking-wide text-charcoal-400 hover:text-charcoal-600 dark:hover:text-charcoal-300 transition-colors flex items-center justify-center gap-2">
+                  <RefreshCw size={12} /> Start Over
               </motion.button>
           </div>
       </div>

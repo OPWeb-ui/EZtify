@@ -15,8 +15,9 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { buttonTap, techEase, modalContentVariants } from '../utils/animations';
 import { ToolLandingLayout } from '../components/ToolLandingLayout';
-import { FileRejection } from 'react-dropzone';
+import { useDropzone, FileRejection } from 'react-dropzone';
 import { Preview } from '../components/Preview';
+import { DragDropOverlay } from '../components/DragDropOverlay';
 
 const FONTS = [
   { label: 'Helvetica', value: 'Helvetica' },
@@ -99,6 +100,14 @@ export const AddPageNumbersPage: React.FC = () => {
     }
   }, [addToast]);
 
+  const { getRootProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { 'application/pdf': ['.pdf'] },
+    noClick: true,
+    noKeyboard: true,
+    disabled: isProcessingFiles || isGenerating
+  });
+
   const handleReset = () => {
     setFile(null);
     setPages([]);
@@ -149,7 +158,9 @@ export const AddPageNumbersPage: React.FC = () => {
   useEffect(() => {
     if (!containerRef.current || !activePage) return;
     const updateZoom = () => {
-      const { width: contW, height: contH } = containerRef.current!.getBoundingClientRect();
+      // FIX: Check if ref exists before accessing
+      if (!containerRef.current) return;
+      const { width: contW, height: contH } = containerRef.current.getBoundingClientRect();
       const padding = isMobile ? 32 : 64; 
       const availW = Math.max(0, contW - padding);
       const availH = Math.max(0, contH - padding);
@@ -168,7 +179,7 @@ export const AddPageNumbersPage: React.FC = () => {
     const observer = new ResizeObserver(updateZoom);
     observer.observe(containerRef.current);
     return () => observer.disconnect();
-  }, [activePage, fitMode, isMobile]);
+  }, [activePage, fitMode, isMobile, isSettingsOpen]); // Depend on isSettingsOpen to re-calc when panel opens
 
   // --- Preview Overlay Calculation ---
   // Calculates the CSS style for the page number preview to match PDF coordinates
@@ -403,11 +414,12 @@ export const AddPageNumbersPage: React.FC = () => {
   // --- MOBILE LAYOUT ---
   if (isMobile) {
     return (
-      <div className="flex flex-col h-full bg-slate-100 dark:bg-charcoal-950 overflow-hidden font-sans">
+      <div className="flex flex-col h-full bg-slate-100 dark:bg-charcoal-950 overflow-hidden font-sans relative" {...getRootProps()}>
         <PageReadyTracker />
+        <DragDropOverlay isDragActive={isDragActive} message="Drop to Replace PDF" variant="indigo" />
         
         {/* Header */}
-        <div className="shrink-0 h-14 bg-white dark:bg-charcoal-900 border-b border-slate-200 dark:border-charcoal-800 flex items-center justify-between px-4 z-20 shadow-sm">
+        <div className="shrink-0 h-14 bg-white dark:bg-charcoal-900 border-b border-slate-200 dark:border-charcoal-800 flex items-center justify-between px-4 z-20 shadow-sm relative">
             <div className="flex items-center gap-2 overflow-hidden">
                 <div className="p-1.5 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg text-indigo-600 dark:text-indigo-400 shrink-0">
                     <Hash size={18} />
@@ -425,8 +437,8 @@ export const AddPageNumbersPage: React.FC = () => {
             </motion.button>
         </div>
 
-        {/* Preview Canvas */}
-        <div ref={containerRef} className="flex-1 overflow-auto relative grid place-items-center p-4 bg-slate-100 dark:bg-black/20">
+        {/* Preview Canvas - Resizes when settings open */}
+        <div ref={containerRef} className="flex-1 overflow-auto relative grid place-items-center p-4 bg-slate-100 dark:bg-black/20 min-h-0">
             {activePage && activePage.width && activePage.height ? (
                 <div 
                     className="relative bg-white shadow-xl ring-1 ring-black/5"
@@ -451,8 +463,31 @@ export const AddPageNumbersPage: React.FC = () => {
             )}
         </div>
 
+        {/* Inline Settings Panel (Pushes content up) */}
+        <AnimatePresence>
+            {isSettingsOpen && (
+                <motion.div 
+                    initial={{ height: 0 }}
+                    animate={{ height: 'auto' }}
+                    exit={{ height: 0 }}
+                    transition={techEase}
+                    className="shrink-0 bg-white dark:bg-charcoal-900 border-t border-slate-200 dark:border-charcoal-800 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-20 overflow-hidden"
+                >
+                    <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100 dark:border-charcoal-800 bg-slate-50 dark:bg-charcoal-850">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-charcoal-500 dark:text-charcoal-400 flex items-center gap-2">
+                            <Settings size={12} /> Configuration
+                        </span>
+                        <button onClick={() => setIsSettingsOpen(false)} className="p-1 text-charcoal-400 hover:text-charcoal-600 dark:hover:text-white"><X size={16} /></button>
+                    </div>
+                    <div className="p-4 max-h-[40vh] overflow-y-auto custom-scrollbar">
+                        <ConfigPanel />
+                    </div>
+                </motion.div>
+            )}
+        </AnimatePresence>
+
         {/* Bottom Bar */}
-        <div className="shrink-0 h-16 bg-white dark:bg-charcoal-900 border-t border-slate-200 dark:border-charcoal-800 px-4 flex items-center justify-between z-30 pb-[env(safe-area-inset-bottom)]">
+        <div className="shrink-0 h-16 bg-white dark:bg-charcoal-900 border-t border-slate-200 dark:border-charcoal-800 px-4 flex items-center justify-between z-30 pb-[env(safe-area-inset-bottom)] relative shadow-lg">
             <motion.button
                 whileTap={buttonTap}
                 onClick={() => setIsFilmstripOpen(true)}
@@ -464,8 +499,8 @@ export const AddPageNumbersPage: React.FC = () => {
             <div className="flex items-center gap-2">
                 <motion.button
                     whileTap={buttonTap}
-                    onClick={() => setIsSettingsOpen(true)}
-                    className="p-3 bg-slate-100 dark:bg-charcoal-800 rounded-xl text-charcoal-600 dark:text-slate-300 transition-colors"
+                    onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                    className={`p-3 rounded-xl transition-colors ${isSettingsOpen ? 'bg-brand-purple text-white shadow-md' : 'bg-slate-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-slate-300'}`}
                 >
                     <Settings size={18} />
                 </motion.button>
@@ -491,31 +526,15 @@ export const AddPageNumbersPage: React.FC = () => {
                 onReorder={()=>{}} onRemove={()=>{}} onRotate={()=>{}} isMobile={true} direction="vertical" 
             />
         </FilmstripModal>
-
-        <AnimatePresence>
-            {isSettingsOpen && (
-                <div className="fixed inset-0 z-[100] flex flex-col justify-end pointer-events-none">
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsSettingsOpen(false)} className="absolute inset-0 bg-charcoal-900/40 backdrop-blur-sm pointer-events-auto" />
-                    <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 300, damping: 30 }} className="relative w-full bg-white dark:bg-charcoal-900 rounded-t-2xl shadow-2xl pointer-events-auto pb-[env(safe-area-inset-bottom)] max-h-[70vh] flex flex-col">
-                        <div className="px-6 py-4 border-b border-slate-100 dark:border-charcoal-800 flex justify-between items-center">
-                            <h3 className="text-sm font-bold uppercase tracking-widest text-charcoal-900 dark:text-white font-mono">Configuration</h3>
-                            <button onClick={() => setIsSettingsOpen(false)} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-charcoal-800"><X size={18} className="text-charcoal-500" /></button>
-                        </div>
-                        <div className="p-6 overflow-y-auto custom-scrollbar">
-                            <ConfigPanel />
-                        </div>
-                    </motion.div>
-                </div>
-            )}
-        </AnimatePresence>
       </div>
     );
   }
 
   // --- DESKTOP LAYOUT ---
   return (
-    <div className="flex w-full h-full bg-slate-100 dark:bg-charcoal-950 font-sans overflow-hidden">
+    <div className="flex w-full h-full bg-slate-100 dark:bg-charcoal-950 font-sans overflow-hidden relative" {...getRootProps()}>
         <PageReadyTracker />
+        <DragDropOverlay isDragActive={isDragActive} message="Drop to Replace PDF" variant="indigo" />
         
         {/* 1. LEFT PANE: Filmstrip */}
         <div className="w-72 bg-white dark:bg-charcoal-900 border-r border-slate-200 dark:border-charcoal-800 flex flex-col shrink-0 z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
@@ -532,7 +551,7 @@ export const AddPageNumbersPage: React.FC = () => {
                     activeImageId={activePageId}
                     onSelect={(id) => setActivePageId(id)}
                     onReorder={()=>{}} onRemove={()=>{}} onRotate={()=>{}}
-                    isMobile={false} direction="vertical" size="md" isReorderable={false} showRemoveButton={false} showRotateButton={false}
+                    isMobile={false} direction="vertical" isReorderable={false} showRemoveButton={false} showRotateButton={false}
                 />
             </div>
         </div>
@@ -562,7 +581,7 @@ export const AddPageNumbersPage: React.FC = () => {
                     <motion.div 
                         initial={{ opacity: 0, scale: 0.98 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        transition={techEase}
+                        transition={{ ease: techEase, duration: 0.3 }}
                         className="relative bg-white shadow-2xl ring-1 ring-black/5"
                         style={{ width: activePage.width * zoom, height: activePage.height * zoom }}
                     >

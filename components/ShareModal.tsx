@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { X, Copy, Check, Mail } from 'lucide-react';
 import { modalOverlayVariants, modalContentVariants } from '../utils/animations';
 
@@ -63,7 +63,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, url }) 
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 h-[100dvh] w-screen pointer-events-none">
           {/* Backdrop */}
           <motion.div
-            variants={modalOverlayVariants}
+            variants={modalOverlayVariants as Variants}
             initial="hidden"
             animate="visible"
             exit="exit"
@@ -76,7 +76,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, url }) 
           <motion.div
             role="dialog"
             aria-modal="true"
-            variants={modalContentVariants}
+            variants={modalContentVariants as Variants}
             initial="hidden"
             animate="visible"
             exit="exit"

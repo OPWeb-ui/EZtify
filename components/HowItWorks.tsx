@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Upload, Layers, Download, Settings, FileImage, MousePointerClick, Zap, Sliders, CheckCircle, GripVertical, Scissors, FileOutput, Archive, FilePlus, FileText, RotateCw, Trash2, FileKey, FileLock, Lock, ShieldCheck, Hash, Eraser, Palette, Code, PenTool, Presentation } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -120,7 +119,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ mode }) => {
             className="flex flex-col items-center text-center p-3 rounded-2xl bg-white dark:bg-charcoal-800 border border-slate-100 dark:border-charcoal-700 shadow-sm"
           >
             <div className="mb-2 p-2.5 rounded-xl bg-slate-50 dark:bg-charcoal-700 text-charcoal-700 dark:text-slate-200">
-              {React.cloneElement(step.icon as React.ReactElement, { size: 20 })}
+              {React.cloneElement(step.icon as React.ReactElement<any>, { size: 20 })}
             </div>
             <h3 className="text-xs font-bold text-charcoal-800 dark:text-slate-200 mb-0.5">{step.title}</h3>
             <p className="text-[10px] text-charcoal-500 dark:text-slate-400 font-medium leading-tight">{step.desc}</p>

@@ -6,20 +6,25 @@ import { PdfPage } from '../types';
 import { loadPdfPages } from '../services/pdfSplitter';
 import { savePdfWithEditorChanges } from '../services/pdfEditor';
 import { SplitPageGrid } from '../components/SplitPageGrid';
-import { RotateCw, Lock, Cpu, Zap, RefreshCcw, RefreshCw, Loader2, Download } from 'lucide-react';
+import { RotateCw, Lock, Cpu, Zap, RefreshCcw, RefreshCw, Loader2, Download, FilePlus, ChevronUp, ChevronDown } from 'lucide-react';
 import { ToolLandingLayout } from '../components/ToolLandingLayout';
-import { FileRejection } from 'react-dropzone';
-import { motion } from 'framer-motion';
+import { useDropzone, FileRejection } from 'react-dropzone';
+import { motion, AnimatePresence } from 'framer-motion';
 import { buttonTap } from '../utils/animations';
+import { DragDropOverlay } from '../components/DragDropOverlay';
+import { IconBox } from '../components/IconBox';
 
 export const RotatePdfPage: React.FC = () => {
-  const { addToast } = useLayoutContext();
+  const { addToast, isMobile } = useLayoutContext();
   const [file, setFile] = useState<File | null>(null);
   const [pages, setPages] = useState<PdfPage[]>([]);
   const [isProcessingFiles, setIsProcessingFiles] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('');
+  
+  // Mobile UI
+  const [isMobileInspectorOpen, setMobileInspectorOpen] = useState(false);
 
   const onDrop = useCallback(async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
     if (fileRejections.length > 0) {
@@ -31,8 +36,10 @@ export const RotatePdfPage: React.FC = () => {
     
     setIsProcessingFiles(true);
     setStatus('Loading pages...');
+    
     try {
       const loadedPages = await loadPdfPages(f, setProgress, setStatus);
+      
       if (loadedPages.length > 0) {
         setFile(f);
         setPages(loadedPages);
@@ -45,6 +52,14 @@ export const RotatePdfPage: React.FC = () => {
       setStatus('');
     }
   }, [addToast]);
+
+  const { getRootProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { 'application/pdf': ['.pdf'] },
+    noClick: true,
+    noKeyboard: true,
+    disabled: isProcessingFiles || isGenerating
+  });
 
   const handleRotate = (id: string) => {
     setPages(prev => prev.map(p => {
@@ -60,7 +75,6 @@ export const RotatePdfPage: React.FC = () => {
       const delta = dir === 'left' ? -90 : 90;
       setPages(prev => prev.map(p => {
           const current = p.rotation || 0;
-          // Ensure positive modulo
           return { ...p, rotation: (current + delta + 360) % 360 };
       }));
   };
@@ -118,80 +132,153 @@ export const RotatePdfPage: React.FC = () => {
     );
   }
 
+  // --- Mobile Layout ---
+  if (isMobile) {
+      return (
+        <div className="flex flex-col h-full bg-slate-100 dark:bg-charcoal-900 relative" {...getRootProps()}>
+            <PageReadyTracker />
+            
+            {/* Header */}
+            <div className="shrink-0 h-14 border-b border-slate-200 dark:border-charcoal-800 px-4 flex items-center justify-between bg-white dark:bg-charcoal-900 z-20 shadow-sm">
+                <div className="flex items-center gap-2">
+                   <IconBox icon={<RotateCw />} size="sm" toolAccentColor="#D71921" active />
+                   <span className="font-bold text-sm text-charcoal-900 dark:text-white">Rotate</span>
+                </div>
+                <button onClick={handleReset} className="p-2 text-charcoal-400 hover:text-charcoal-600"><RefreshCw size={18} /></button>
+            </div>
+
+            {/* Grid */}
+            <div className="flex-1 overflow-y-auto p-4 pb-32">
+                <SplitPageGrid pages={pages} onTogglePage={handleRotate} onReorder={()=>{}} isReorderDisabled={true} useVisualIndexing isMobile={true} />
+            </div>
+
+            {/* Floating Inspector */}
+            <motion.div 
+              className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-charcoal-900 border-t border-slate-200 dark:border-charcoal-800 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] rounded-t-2xl flex flex-col overflow-hidden"
+              initial={false}
+              animate={{ height: isMobileInspectorOpen ? 'auto' : '80px' }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            >
+               {/* Handle */}
+               <div className="flex items-center justify-between px-6 h-20 shrink-0 relative" onClick={() => setMobileInspectorOpen(!isMobileInspectorOpen)}>
+                  <div className="flex flex-col justify-center">
+                     <span className="text-[10px] font-bold uppercase tracking-widest text-charcoal-400 dark:text-charcoal-500">Pages</span>
+                     <span className="text-sm font-bold text-charcoal-900 dark:text-white font-mono">{pages.length} Loaded</span>
+                  </div>
+
+                  <div className="absolute left-1/2 top-3 -translate-x-1/2 w-10 h-1 bg-slate-200 dark:bg-charcoal-700 rounded-full" />
+                  
+                  <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                     <button 
+                        onClick={() => setMobileInspectorOpen(!isMobileInspectorOpen)} 
+                        className="p-3 bg-slate-50 dark:bg-charcoal-800 rounded-xl text-charcoal-600 dark:text-slate-300"
+                     >
+                        {isMobileInspectorOpen ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+                     </button>
+                     <motion.button
+                        whileTap={buttonTap}
+                        onClick={handleGenerate}
+                        disabled={isGenerating}
+                        className="h-12 px-6 bg-brand-purple text-white font-bold text-xs uppercase tracking-wide rounded-xl shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
+                     >
+                        {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                        <span>Save</span>
+                     </motion.button>
+                  </div>
+               </div>
+
+               {/* Expanded Content */}
+               <div className="bg-slate-50 dark:bg-charcoal-850 border-t border-slate-100 dark:border-charcoal-800 p-6">
+                  <div className="space-y-4">
+                      <label className="text-[10px] font-bold text-charcoal-400 dark:text-charcoal-500 uppercase tracking-widest font-mono">
+                          Quick Actions
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                          <button onClick={() => rotateAll('left')} className="flex flex-col items-center justify-center gap-2 p-4 bg-white dark:bg-charcoal-800 rounded-xl border border-slate-200 dark:border-charcoal-700 shadow-sm text-charcoal-600 dark:text-slate-300">
+                              <RefreshCcw size={20} />
+                              <span className="text-xs font-bold">Left 90°</span>
+                          </button>
+                          <button onClick={() => rotateAll('right')} className="flex flex-col items-center justify-center gap-2 p-4 bg-white dark:bg-charcoal-800 rounded-xl border border-slate-200 dark:border-charcoal-700 shadow-sm text-charcoal-600 dark:text-slate-300">
+                              <RotateCw size={20} />
+                              <span className="text-xs font-bold">Right 90°</span>
+                          </button>
+                      </div>
+                  </div>
+               </div>
+            </motion.div>
+        </div>
+      );
+  }
+
+  // DESKTOP: 2-Pane
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-charcoal-900">
+    <div className="flex w-full h-full overflow-hidden bg-slate-50 dark:bg-charcoal-950 font-sans relative" {...getRootProps()}>
       <PageReadyTracker />
+      <DragDropOverlay isDragActive={isDragActive} message="Drop to Replace PDF" variant="purple" />
       
-      {/* 1. Header */}
-      <div className="shrink-0 h-16 bg-white dark:bg-charcoal-850 border-b border-slate-200 dark:border-charcoal-700 px-4 md:px-6 flex items-center justify-between z-20 shadow-sm">
-         <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-purple-600 dark:text-purple-400">
-               <RotateCw size={20} />
-            </div>
-            <div className="hidden sm:block">
-               <h3 className="text-sm font-bold text-charcoal-900 dark:text-white uppercase tracking-wider font-mono">Rotate Pages</h3>
-               <p className="text-[10px] text-charcoal-500 dark:text-charcoal-400 font-mono">Click thumbnails to rotate</p>
-            </div>
+      {/* 1. Workspace */}
+      <div className="flex-1 flex flex-col min-w-0 bg-slate-100 dark:bg-black/20 relative z-10">
+         <div className="shrink-0 h-16 bg-white dark:bg-charcoal-900 border-b border-slate-200 dark:border-charcoal-800 px-6 flex items-center justify-between shadow-sm z-20">
+             <div className="flex items-center gap-3">
+                <IconBox icon={<RotateCw />} size="sm" toolAccentColor="#D71921" active />
+                <div>
+                   <h3 className="text-sm font-bold text-charcoal-900 dark:text-white uppercase tracking-wider font-mono">Rotate Pages</h3>
+                   <p className="text-[10px] text-charcoal-500 dark:text-charcoal-400 font-mono">Click thumbnails to rotate</p>
+                </div>
+             </div>
+             <motion.button whileTap={buttonTap} onClick={handleReset} className="p-2 text-charcoal-400 hover:text-charcoal-600 transition-colors" title="Reset"><RefreshCw size={18} /></motion.button>
          </div>
-         
-         <div className="flex items-center gap-2">
-            <motion.button whileTap={buttonTap} onClick={() => rotateAll('left')} className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-charcoal-800 hover:bg-slate-200 dark:hover:bg-charcoal-700 text-charcoal-700 dark:text-slate-200 rounded-lg text-xs font-bold transition-colors border border-transparent">
-               <RefreshCcw size={14} /> <span className="hidden sm:inline">Rotate Left</span>
-            </motion.button>
-            <motion.button whileTap={buttonTap} onClick={() => rotateAll('right')} className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-charcoal-800 hover:bg-slate-200 dark:hover:bg-charcoal-700 text-charcoal-700 dark:text-slate-200 rounded-lg text-xs font-bold transition-colors border border-transparent">
-               <RotateCw size={14} /> <span className="hidden sm:inline">Rotate Right</span>
-            </motion.button>
-            <div className="w-px h-6 bg-slate-200 dark:bg-charcoal-700 mx-1" />
-            <motion.button whileTap={buttonTap} onClick={handleReset} className="p-2 text-charcoal-400 hover:text-charcoal-600 dark:text-charcoal-500 dark:hover:text-charcoal-300 transition-colors" title="Reset">
-               <RefreshCw size={18} />
-            </motion.button>
+
+         <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
+             <div className="max-w-6xl mx-auto">
+                <SplitPageGrid 
+                   pages={pages}
+                   onTogglePage={handleRotate} 
+                   onReorder={() => {}}
+                   isReorderDisabled={true}
+                   useVisualIndexing
+                />
+             </div>
          </div>
       </div>
 
-      {/* 2. Workspace */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 bg-slate-100 dark:bg-black/20">
-         <div className="max-w-6xl mx-auto">
-            <SplitPageGrid 
-               pages={pages}
-               onTogglePage={handleRotate} // Use onTogglePage to trigger rotation logic
-               onReorder={() => {}}
-               isReorderDisabled={true}
-               useVisualIndexing
-               // No delete/select actions
-            />
-         </div>
-      </div>
-
-      {/* 3. Command Bar */}
-      <div className="shrink-0 h-20 bg-white dark:bg-charcoal-850 border-t border-slate-200 dark:border-charcoal-700 px-6 flex items-center justify-between z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-          <div className="hidden sm:flex flex-col">
-             <span className="text-[10px] font-bold text-charcoal-400 dark:text-charcoal-500 uppercase tracking-widest">Document</span>
-             <span className="text-xs font-mono font-bold text-charcoal-800 dark:text-white">
-                {pages.length} Pages
-             </span>
+      {/* 2. Sidebar */}
+      <div className="w-80 bg-white dark:bg-charcoal-900 border-l border-slate-200 dark:border-charcoal-800 flex flex-col shrink-0 z-20 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
+          <div className="h-16 px-6 border-b border-slate-200 dark:border-charcoal-800 flex items-center shrink-0">
+              <span className="font-mono text-xs font-bold uppercase tracking-widest text-charcoal-600 dark:text-charcoal-300 flex items-center gap-2">
+                  <RefreshCcw size={14} /> Tools
+              </span>
           </div>
 
-          <motion.button
-              onClick={handleGenerate}
-              disabled={isGenerating}
-              whileTap={buttonTap}
-              className="flex-1 sm:flex-none sm:min-w-[200px] relative overflow-hidden h-12 bg-charcoal-900 dark:bg-white text-white dark:text-charcoal-900 font-mono font-bold text-xs uppercase tracking-wide rounded-xl shadow-lg shadow-brand-purple/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none transition-all hover:bg-brand-purple dark:hover:bg-slate-200"
-          >
-              {isGenerating && (
-                  <motion.div 
-                      className="absolute inset-y-0 left-0 bg-white/20 dark:bg-black/10"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${progress}%` }}
-                      transition={{ duration: 0.3 }}
-                  />
-              )}
-              <div className="relative flex items-center justify-center gap-2 z-10">
-                  {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-                  <span>
-                      {isGenerating ? (status || 'PROCESSING...') : 'SAVE ROTATION'}
-                  </span>
+          <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+              <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-charcoal-400 dark:text-charcoal-500 uppercase tracking-widest font-mono pl-1">
+                      Quick Rotate
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                      <button onClick={() => rotateAll('left')} className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-slate-200 dark:border-charcoal-700 hover:bg-slate-50 dark:hover:bg-charcoal-800 transition-colors group">
+                          <RefreshCcw size={20} className="text-charcoal-500 group-hover:text-purple-600" />
+                          <span className="text-xs font-bold">Left 90°</span>
+                      </button>
+                      <button onClick={() => rotateAll('right')} className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-slate-200 dark:border-charcoal-700 hover:bg-slate-50 dark:hover:bg-charcoal-800 transition-colors group">
+                          <RotateCw size={20} className="text-charcoal-500 group-hover:text-purple-600" />
+                          <span className="text-xs font-bold">Right 90°</span>
+                      </button>
+                  </div>
               </div>
-          </motion.button>
+          </div>
+
+          <div className="p-4 border-t border-slate-200 dark:border-charcoal-800 bg-white dark:bg-charcoal-900 shrink-0 space-y-3">
+              <motion.button
+                  onClick={handleGenerate}
+                  disabled={isGenerating}
+                  whileTap={buttonTap}
+                  className="w-full h-12 bg-charcoal-900 dark:bg-white text-white dark:text-charcoal-900 rounded-xl font-bold font-mono text-xs uppercase tracking-wide shadow-lg hover:shadow-xl hover:bg-purple-600 dark:hover:bg-slate-200 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                  {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                  <span>{isGenerating ? (status || 'PROCESSING...') : 'SAVE ROTATION'}</span>
+              </motion.button>
+          </div>
       </div>
     </div>
   );

@@ -1,8 +1,9 @@
 
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, X, CheckCircle2, Info, XCircle, Terminal } from 'lucide-react';
+import { AlertTriangle, XCircle, X, ArrowRight, Undo2 } from 'lucide-react';
 import { ToastMessage } from '../types';
+import { toastVariants } from '../utils/animations';
 
 interface ToastProps {
   toast: ToastMessage;
@@ -10,103 +11,81 @@ interface ToastProps {
 }
 
 const ToastItem: React.FC<ToastProps> = ({ toast, onDismiss }) => {
-  useEffect(() => {
-    // If duration is Infinity, do not set a timer
-    if (toast.duration === Infinity) return;
-
-    const duration = toast.duration ?? 3000;
-    const timer = setTimeout(() => {
-      onDismiss(toast.id);
-    }, duration);
-    return () => clearTimeout(timer);
-  }, [toast.id, onDismiss, toast.duration]);
-
+  // Auto-dismiss logic only for Warnings (and Undo which is treated as actionable warning)
+  // Errors do NOT auto-dismiss (require acknowledgement) unless explicit duration provided (legacy support)
   const isError = toast.type === 'error';
-  const isSuccess = toast.type === 'success';
-  const isWarning = toast.type === 'warning';
+  const shouldAutoDismiss = !isError || (toast.duration && toast.duration !== Infinity);
 
-  let Icon = Info;
-  // Visual config based on type
-  let iconColor = "text-blue-500";
-  let bgIcon = "bg-blue-50 dark:bg-blue-900/20";
-  
-  if (isError) { 
-    Icon = XCircle; 
-    iconColor = "text-rose-500"; 
-    bgIcon = "bg-rose-50 dark:bg-rose-900/20";
-  } else if (isSuccess) { 
-    Icon = CheckCircle2; 
-    iconColor = "text-emerald-500"; 
-    bgIcon = "bg-emerald-50 dark:bg-emerald-900/20";
-  } else if (isWarning) { 
-    Icon = AlertTriangle; 
-    iconColor = "text-amber-500"; 
-    bgIcon = "bg-amber-50 dark:bg-amber-900/20";
+  useEffect(() => {
+    if (!shouldAutoDismiss) return;
+    
+    // Warnings linger a bit to be read (e.g. 4s), Errors if timed (rare) maybe longer.
+    const duration = toast.duration || 4000;
+    const timer = setTimeout(() => onDismiss(toast.id), duration);
+    return () => clearTimeout(timer);
+  }, [toast.id, onDismiss, toast.duration, shouldAutoDismiss]);
+
+  // Icon & Style Selection
+  let Icon = AlertTriangle;
+  let containerClass = "bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100";
+  let iconClass = "text-amber-500 dark:text-amber-400";
+
+  if (toast.type === 'error') {
+    Icon = XCircle;
+    containerClass = "bg-white dark:bg-charcoal-800 border-rose-100 dark:border-rose-900/50 text-rose-900 dark:text-rose-100 shadow-xl shadow-rose-900/5";
+    iconClass = "text-rose-500 dark:text-rose-400";
+  } else if (toast.type === 'undo') {
+    Icon = Undo2;
+    // Undo is a form of warning/action
+    containerClass = "bg-white dark:bg-charcoal-800 border-charcoal-200 dark:border-charcoal-700 text-charcoal-900 dark:text-white";
+    iconClass = "text-charcoal-500 dark:text-charcoal-400";
   }
-
-  // Animation variants: Slide up slightly + Fade
-  const variants = {
-    initial: { opacity: 0, y: 8, scale: 0.95 },
-    animate: { 
-      opacity: 1, 
-      y: 0, 
-      scale: 1, 
-      transition: { duration: 0.15, ease: "easeOut" } 
-    },
-    exit: { 
-      opacity: 0, 
-      scale: 0.98, 
-      transition: { duration: 0.15, ease: "easeIn" } 
-    }
-  };
 
   return (
     <motion.div
       layout
-      variants={variants}
+      variants={toastVariants}
       initial="initial"
       animate="animate"
       exit="exit"
-      className="
-        pointer-events-auto relative
-        w-full max-w-[380px]
-        bg-white dark:bg-charcoal-900 
-        border border-slate-200 dark:border-charcoal-700
-        shadow-xl shadow-black/5 dark:shadow-black/20
-        rounded-xl overflow-hidden
-        flex flex-row items-start gap-3 p-4
-        backdrop-blur-sm
-      "
+      className={`
+        pointer-events-auto
+        w-full max-w-[340px]
+        border rounded-xl
+        flex items-start gap-3 p-4
+        shadow-sm backdrop-blur-sm
+        select-none
+        ${containerClass}
+      `}
     >
-      {/* Icon Area */}
-      <div className={`shrink-0 p-2 rounded-lg ${bgIcon} ${iconColor}`}>
-         <Icon size={20} strokeWidth={2} />
+      <div className={`shrink-0 mt-0.5 ${iconClass}`}>
+        <Icon size={18} strokeWidth={2} />
       </div>
 
-      {/* Content Area */}
-      <div className="flex-1 min-w-0 pt-0.5">
-        <h4 className="text-xs font-bold font-mono text-charcoal-900 dark:text-white leading-tight uppercase tracking-wide">
+      <div className="flex-1 min-w-0">
+        <h4 className="text-sm font-bold leading-tight mb-0.5">
           {toast.title}
         </h4>
-        <p className="mt-1 text-xs text-charcoal-500 dark:text-slate-400 leading-relaxed font-medium">
-          {toast.message}
-        </p>
-
+        {toast.message && (
+          <p className="text-xs opacity-90 leading-relaxed font-medium">
+            {toast.message}
+          </p>
+        )}
+        
+        {/* Action Button */}
         {toast.action && (
           <button 
-            onClick={(e) => { e.stopPropagation(); toast.action?.onClick(); }}
-            className="mt-2.5 text-[10px] font-bold uppercase tracking-wide bg-slate-100 dark:bg-charcoal-800 px-3 py-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-charcoal-700 transition-colors flex items-center gap-2 w-fit border border-slate-200 dark:border-charcoal-600 text-charcoal-700 dark:text-slate-200"
+            onClick={(e) => { e.stopPropagation(); toast.action?.onClick(); onDismiss(toast.id); }}
+            className="mt-2 text-xs font-bold uppercase tracking-wide flex items-center gap-1.5 hover:opacity-70 transition-opacity"
           >
-            <Terminal size={10} /> {toast.action.label}
+            {toast.action.label} <ArrowRight size={12} />
           </button>
         )}
       </div>
 
-      {/* Close Button */}
       <button 
         onClick={() => onDismiss(toast.id)}
-        className="shrink-0 p-1.5 rounded-md text-charcoal-400 hover:text-charcoal-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-charcoal-700 transition-colors -mr-1 -mt-1"
-        aria-label="Dismiss"
+        className="shrink-0 -mr-1 -mt-1 p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors opacity-50 hover:opacity-100"
       >
         <X size={14} />
       </button>
@@ -124,11 +103,12 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onDismis
   return (
     <div 
       className={`
-        fixed z-[2000] pointer-events-none 
-        left-0 right-0 flex flex-col items-center justify-end gap-3
-        px-4 pb-4 md:pb-6
+        fixed z-[2000] pointer-events-none flex flex-col gap-2
+        ${isMobile 
+          ? 'bottom-4 left-4 right-4 items-center' 
+          : 'bottom-8 right-8 items-end'
+        }
       `}
-      style={{ bottom: 'env(safe-area-inset-bottom)' }}
     >
       <AnimatePresence mode="popLayout">
         {toasts.map((toast) => (

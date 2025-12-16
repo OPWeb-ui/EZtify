@@ -11,12 +11,13 @@ import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { 
   Crop, Lock, Cpu, Settings, Layers, Download, Undo2, Loader2, 
   ZoomIn, ZoomOut, Copy, X, LayoutGrid, Check, Maximize, 
-  MousePointer2, Move, ArrowRight, RefreshCw, Wand2 
+  Minimize, MousePointer2, Move, ArrowRight, RefreshCw, Wand2 
 } from 'lucide-react';
 import { buttonTap, techEase } from '../utils/animations';
 import { FilmstripModal } from '../components/FilmstripModal';
 import { Tooltip } from '../components/Tooltip';
-import { FileRejection } from 'react-dropzone';
+import { useDropzone, FileRejection } from 'react-dropzone';
+import { DragDropOverlay } from '../components/DragDropOverlay';
 
 // --- CONSTANTS ---
 const MIN_CROP_SIZE = 5; // Minimum 5%
@@ -275,6 +276,28 @@ export const CropPdfPage: React.FC = () => {
         }
     }, [addToast]);
 
+    // --- MOBILE HINT ---
+    useEffect(() => {
+        if (isMobile && pages.length > 0) {
+            const hasSeenHint = localStorage.getItem('eztify-desktop-hint-toast');
+            if (!hasSeenHint) {
+                const timer = setTimeout(() => {
+                    addToast("Desktop Optimized", "For complex workflows, desktop offers more control.", "info");
+                    localStorage.setItem('eztify-desktop-hint-toast', 'true');
+                }, 2000);
+                return () => clearTimeout(timer);
+            }
+        }
+    }, [isMobile, pages.length, addToast]);
+
+    const { getRootProps, isDragActive } = useDropzone({
+        onDrop,
+        accept: { 'application/pdf': ['.pdf'] },
+        noClick: true,
+        noKeyboard: true,
+        disabled: isProcessing || isGenerating
+    });
+
     // Canvas Resize Observer
     useEffect(() => {
         if (!canvasContainerRef.current) return;
@@ -305,8 +328,9 @@ export const CropPdfPage: React.FC = () => {
         setPages(prev => prev.map(p => p.id === activePageId ? { ...p, crop: newCrop } : p));
     };
 
-    const handleSelect = (id: string, multi: boolean) => {
+    const handleSelect = (id: string, event?: React.MouseEvent) => {
         setActivePageId(id);
+        const multi = event?.shiftKey || event?.metaKey || event?.ctrlKey;
         setSelectedPageIds(prev => {
             const next = new Set(multi ? prev : []);
             if (multi && next.has(id)) next.delete(id);
@@ -428,11 +452,12 @@ export const CropPdfPage: React.FC = () => {
         );
     }
 
-    // --- MOBILE LAYOUT (Unchanged logic, just re-wired state) ---
+    // --- MOBILE LAYOUT ---
     if (isMobile) {
         return (
-            <div className="flex flex-col flex-1 min-h-0 bg-slate-100 dark:bg-charcoal-950 overflow-hidden">
+            <div className="flex flex-col flex-1 min-h-0 bg-slate-100 dark:bg-charcoal-950 overflow-hidden relative" {...getRootProps()}>
                 <PageReadyTracker />
+                <DragDropOverlay isDragActive={isDragActive} message="Drop to Replace PDF" variant="green" />
                 <div ref={canvasContainerRef} className="flex-1 min-h-0 grid place-items-center relative p-4">
                     {activePage && activePage.width && activePage.height && (
                         <div 
@@ -467,8 +492,9 @@ export const CropPdfPage: React.FC = () => {
 
     // --- DESKTOP LAYOUT (3-Pane) ---
     return (
-        <div className="flex w-full h-full bg-slate-100 dark:bg-charcoal-950 font-sans overflow-hidden">
+        <div className="flex w-full h-full bg-slate-100 dark:bg-charcoal-950 font-sans overflow-hidden relative" {...getRootProps()}>
             <PageReadyTracker />
+            <DragDropOverlay isDragActive={isDragActive} message="Drop to Replace PDF" variant="green" />
             
             {/* 1. LEFT: Filmstrip */}
             <div className="w-72 bg-white dark:bg-charcoal-900 border-r border-slate-200 dark:border-charcoal-800 flex flex-col shrink-0 z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
@@ -506,9 +532,9 @@ export const CropPdfPage: React.FC = () => {
                         <span>Zoom: {Math.round(zoom * 100)}%</span>
                     </div>
                     <div className="flex items-center gap-1 bg-slate-100 dark:bg-charcoal-800 p-1 rounded-lg border border-slate-200 dark:border-charcoal-700">
-                        <button onClick={() => setZoom(z => Math.max(0.1, z - 0.1))} className="p-1.5 hover:bg-white dark:hover:bg-charcoal-700 rounded transition-colors"><ZoomOut size={14} /></button>
+                        <button onClick={() => setZoom(z => Math.max(0.1, z - 0.1))} className="p-1.5 hover:bg-white dark:hover:bg-charcoal-700 rounded text-charcoal-500 transition-colors"><ZoomOut size={14} /></button>
                         <button onClick={() => setZoom(1)} className="px-2 text-xs font-mono font-bold text-charcoal-600 dark:text-charcoal-300 hover:text-brand-purple">1:1</button>
-                        <button onClick={() => setZoom(z => Math.min(4, z + 0.1))} className="p-1.5 hover:bg-white dark:hover:bg-charcoal-700 rounded transition-colors"><ZoomIn size={14} /></button>
+                        <button onClick={() => setZoom(z => Math.min(4, z + 0.1))} className="p-1.5 hover:bg-white dark:hover:bg-charcoal-700 rounded text-charcoal-500 transition-colors"><ZoomIn size={14} /></button>
                     </div>
                 </div>
 

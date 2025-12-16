@@ -10,14 +10,14 @@
     <!-- LCP Optimization -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Developer Dream UI Typography: Inter (Sans) + JetBrains Mono (Tech/Code) -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <!-- Typography: Inter (UI) + JetBrains Mono (Data/Tech) - LOCKED -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#6D28D9" />
+    <meta name="theme-color" content="#000000" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     
     <!-- Tailwind CSS (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -27,77 +27,97 @@
         theme: {
           extend: {
             colors: {
-              pastel: {
-                bg: '#F6F6F9', 
-                card: '#FFFFFF',
-                border: 'rgba(0,0,0,0.06)',
-              },
-              charcoal: {
-                950: '#09090b', /* Darker, deeper black for OLED/Dev vibes */
-                900: '#141416', 
-                850: '#1A1C1F', 
-                800: '#27272a',
-                700: '#3f3f46',
-                600: '#52525b',
-                500: '#71717a',
-                400: '#a1a1aa',
-                300: '#d4d4d8',
-                200: '#e4e4e7',
+              // Linear-Inspired Zinc Palette
+              zinc: {
+                50: '#fafafa',
                 100: '#f4f4f5',
+                200: '#e4e4e7',
+                300: '#d4d4d8',
+                400: '#a1a1aa',
+                500: '#71717a',
+                600: '#52525b',
+                700: '#3f3f46',
+                800: '#27272a',
+                900: '#18181b',
+                950: '#09090b',
+              },
+              // Semantic Mappings
+              nd: {
+                base: 'var(--bg-base)',
+                surface: 'var(--bg-surface)',
+                subtle: 'var(--bg-subtle)',
+                border: 'var(--border-color)',
+                primary: 'var(--text-primary)',
+                secondary: 'var(--text-secondary)',
+                muted: 'var(--text-muted)',
+              },
+              // Tool Accent (Dynamic)
+              tool: {
+                DEFAULT: 'var(--tool-accent)',
+                dim: 'var(--tool-accent-dim)',
+              },
+              // Legacy Compatibility
+              charcoal: {
+                50: '#fafafa', 100: '#f4f4f5', 200: '#e4e4e7', 300: '#d4d4d8', 
+                400: '#a1a1aa', 500: '#71717a', 600: '#52525b', 700: '#3f3f46', 
+                800: '#27272a', 850: '#18181b', 900: '#09090b', 950: '#000000'
               },
               brand: {
-                purple: '#7C3AED', 
-                purpleDark: '#6D28D9',
-                accentStart: '#9E76FF',
-                accentEnd: '#6E79FF',
-                green: '#22C55E', 
-                blue: '#3B82F6', 
-                mint: '#10B981', 
-                violet: '#8B5CF6',
-                orange: '#F59E0B',
+                purple: 'var(--tool-accent)',
+                purpleDark: 'var(--tool-accent)',
+                blue: '#3B82F6',
+                mint: '#10B981',
               }
             },
             fontFamily: {
               sans: ['Inter', 'sans-serif'],
-              // Replace Poppins with JetBrains Mono for that "Technical Dashboard" look on headings
-              heading: ['JetBrains Mono', 'monospace'],
               mono: ['JetBrains Mono', 'monospace'],
+              heading: ['Inter', 'sans-serif'],
             },
             boxShadow: {
-              'layer-1': '0 1px 2px rgba(0,0,0,0.05)',
-              'layer-2': '0 4px 12px rgba(0,0,0,0.08)',
-              'layer-3': '0 12px 32px rgba(0,0,0,0.12)',
-              'layer-dark-1': '0 1px 2px rgba(0,0,0,0.3)',
-              'layer-dark-2': '0 4px 12px rgba(0,0,0,0.4)',
-              'layer-dark-3': '0 12px 32px rgba(0,0,0,0.5)',
+              'sm': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+              'DEFAULT': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)',
+              'md': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
+              'lg': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)',
+              'subtle': '0 0 0 1px var(--border-color), 0 1px 3px 0 rgba(0,0,0,0.04)',
             },
-            transitionTimingFunction: {
-              'native': 'cubic-bezier(0.16, 1, 0.3, 1)',
-            },
-            animation: {
-              'float': 'float 6s ease-in-out infinite',
-              'shimmer': 'shimmer 4s infinite',
-            },
-            keyframes: {
-              float: {
-                '0%, 100%': { transform: 'translateY(0)' },
-                '50%': { transform: 'translateY(-10px)' },
-              },
-              shimmer: {
-                '0%': { transform: 'translateX(-100%)' },
-                '100%': { transform: 'translateX(100%)' }
-              }
+            borderRadius: {
+              'xl': '0.75rem',
+              '2xl': '1rem',
             }
           },
         },
       }
     </script>
 
-    <!-- Global Styles -->
+    <!-- Design System Variables -->
     <style>
       :root {
-        --font-mono: 'JetBrains Mono', monospace;
-        --font-sans: 'Inter', sans-serif;
+        /* Light Mode (Formerly Colorful Mode): Warm, Premium, Expressive */
+        --bg-base: #FFFCF9; /* Very subtle warm tint */
+        --bg-surface: #F9F5F1;
+        --bg-subtle: #F2EBE5;
+        --border-color: #E7E0DA; 
+        --text-primary: #292524; /* Stone 800 */
+        --text-secondary: #57534E; /* Stone 600 */
+        --text-muted: #A8A29E; /* Stone 400 */
+        
+        --tool-accent: #C026D3; /* Fuchsia 600 - Confident */
+        --tool-accent-dim: rgba(192, 38, 211, 0.1);
+      }
+
+      /* Dark Mode: Deep, High Contrast */
+      .dark {
+        --bg-base: #09090B; /* Zinc 950 */
+        --bg-surface: #121214;
+        --bg-subtle: #18181B; /* Zinc 900 */
+        --border-color: #27272A; /* Zinc 800 */
+        --text-primary: #F4F4F5; /* Zinc 100 */
+        --text-secondary: #A1A1AA; /* Zinc 400 */
+        --text-muted: #52525B; /* Zinc 600 */
+        
+        --tool-accent: #FFFFFF;
+        --tool-accent-dim: rgba(255, 255, 255, 0.1);
       }
 
       html {
@@ -106,38 +126,30 @@
       }
       
       body {
-        background-color: #F6F6F9;
-        transition: background-color 0.3s cubic-bezier(0.16, 1, 0.3, 1), color 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        /* Tighter tracking for a more precision feel */
-        letter-spacing: -0.015em;
-        /* Safe Area Padding for body background */
+        background-color: var(--bg-base);
+        color: var(--text-primary);
+        font-family: 'Inter', sans-serif;
+        -webkit-font-smoothing: antialiased;
         padding-top: env(safe-area-inset-top);
         padding-bottom: env(safe-area-inset-bottom);
         padding-left: env(safe-area-inset-left);
         padding-right: env(safe-area-inset-right);
+        transition: background-color 0.3s ease, color 0.3s ease;
       }
 
-      /* --- Developer Dream UI Typography Overrides --- */
+      /* Typography Discipline */
+      h1, h2, h3, h4, .font-heading {
+        letter-spacing: -0.025em;
+        font-weight: 600;
+      }
       
-      /* Force headings to use the technical font */
-      h1, h2, h3, h4, h5, h6, .font-heading {
-        font-family: var(--font-mono) !important;
-        letter-spacing: -0.03em;
+      /* Selection */
+      ::selection {
+        background-color: var(--tool-accent);
+        color: var(--bg-base);
       }
 
-      /* Make all interactive elements and data technical */
-      button, input, select, textarea, label {
-        font-family: var(--font-mono) !important;
-        letter-spacing: -0.01em;
-      }
-
-      /* Force small text to be mono for that "specs/data" look */
-      .text-xs, .text-\[10px\], .text-\[11px\] {
-        font-family: var(--font-mono) !important;
-        letter-spacing: 0.02em; /* Slight spacing for readability in small mono */
-      }
-
-      /* Custom Scrollbar for a cleaner look */
+      /* Custom Scrollbar (Minimal) */
       ::-webkit-scrollbar {
         width: 6px;
         height: 6px;
@@ -146,41 +158,25 @@
         background: transparent;
       }
       ::-webkit-scrollbar-thumb {
-        background: rgba(156, 163, 175, 0.3);
-        border-radius: 3px;
+        background: var(--border-color);
+        border-radius: 99px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: rgba(156, 163, 175, 0.5);
-      }
-      .dark ::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.15);
-      }
-      .dark ::-webkit-scrollbar-thumb:hover {
-        background: rgba(255, 255, 255, 0.25);
+        background: var(--text-muted);
       }
 
-      /* --- GLOBAL FOCUS STYLES --- */
+      /* Focus Styles */
       :focus-visible {
-        outline: 2px solid #7C3AED;
+        outline: 2px solid var(--tool-accent);
         outline-offset: 2px;
-        border-radius: 6px;
-        box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.15);
-        z-index: 50; /* Ensure focus ring is on top */
+        border-radius: 4px;
       }
-      
-      /* Hide default focus for mouse users, show custom only for keyboard */
       :focus:not(:focus-visible) {
         outline: none;
       }
-
-      /* Dark mode adjustment */
-      .dark :focus-visible {
-        outline-color: #A78BFA;
-        box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.15);
-      }
     </style>
 
-    <!-- Import Map -->
+    <!-- Import Map (UNCHANGED) -->
     <script type="importmap">
 {
   "imports": {

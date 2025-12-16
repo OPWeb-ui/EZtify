@@ -4,6 +4,7 @@ import { UploadedImage, PdfConfig } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDropzone, FileRejection } from 'react-dropzone';
 import { RefreshCw, X, Plus, FilePlus } from 'lucide-react';
+import { DragDropOverlay } from './DragDropOverlay';
 
 interface PreviewProps {
   image: UploadedImage | null;
@@ -95,39 +96,26 @@ export const Preview: React.FC<PreviewProps> = ({
   // Determine the "Base" dimensions of the document (Paper or Image)
   const baseDims = useMemo(() => {
     if (config.pageSize === 'auto' && image) {
-      // For "Auto", use the image's actual pixel dimensions
-      // If rotated sideways, swap w/h
       return isRotated 
         ? { width: image.height, height: image.width }
         : { width: image.width, height: image.height };
     }
 
-    // For fixed sizes (A4/Letter), get standard PT sizes
     const std = SIZES_PT[config.pageSize] || SIZES_PT['a4'];
     
-    // Adjust for orientation
     if (config.orientation === 'landscape') {
       return { width: std.height, height: std.width };
     }
     return std;
   }, [config.pageSize, config.orientation, image, isRotated]);
 
-  // Expose base dimensions to parent for "Fit" calculations
   if (baseDimensionsRef) {
     baseDimensionsRef.current = baseDims;
   }
 
-  // Calculate the "Canvas" size based on current Zoom Scale
   const canvasWidth = baseDims.width * scale;
   const canvasHeight = baseDims.height * scale;
 
-  // Image Aspect Ratio for inner scaling
-  const imgAspectRatio = useMemo(() => {
-    if (!image) return 1;
-    return isRotated ? image.height / image.width : image.width / image.height;
-  }, [image, isRotated]);
-
-  // --- Image Styling inside the "Paper" ---
   const imageStyles = useMemo(() => {
     const objectFit = config.fitMode === 'fill' ? 'fill' : config.fitMode === 'cover' ? 'cover' : 'contain';
     
@@ -143,21 +131,22 @@ export const Preview: React.FC<PreviewProps> = ({
   }, [config.fitMode, config.pageSize, image?.rotation, isRotated]);
 
   if (!image) return (
-    <div {...getRootProps()} className="w-full h-full flex items-center justify-center p-8 outline-none">
+    <div {...getRootProps()} className="w-full h-full flex items-center justify-center p-8 outline-none relative">
       <input {...getInputProps()} />
+      <DragDropOverlay 
+        isDragActive={isDragActive} 
+        message="ADD_SOURCE_IMAGES" 
+        subMessage="DROP_TO_INITIALIZE"
+        icon={<Plus size={64} />}
+        variant="purple"
+      />
       <div className={`
         text-center p-12 border-2 border-dashed rounded-3xl 
         flex flex-col items-center justify-center gap-4 transition-colors duration-300
-        ${isDragActive 
-          ? 'border-brand-purple bg-brand-purple/5' 
-          : 'border-slate-300 dark:border-charcoal-700 bg-slate-50/50 dark:bg-charcoal-900/50 hover:border-slate-400 dark:hover:border-charcoal-600'
-        }
+        border-slate-300 dark:border-charcoal-700 bg-slate-50/50 dark:bg-charcoal-900/50 hover:border-slate-400 dark:hover:border-charcoal-600
       `}>
-        <div className={`
-          w-16 h-16 rounded-full flex items-center justify-center mb-2 transition-transform duration-300
-          ${isDragActive ? 'scale-110 bg-brand-purple/10 text-brand-purple' : 'bg-slate-200 dark:bg-charcoal-700 text-charcoal-400'}
-        `}>
-           {isDragActive ? <FilePlus size={32} /> : <Plus size={32} />}
+        <div className="w-16 h-16 rounded-full flex items-center justify-center mb-2 transition-transform duration-300 bg-slate-200 dark:bg-charcoal-700 text-charcoal-400">
+           <Plus size={32} />
         </div>
         <div>
           <p className="font-bold text-charcoal-700 dark:text-slate-200 text-sm">No Selection Active</p>
@@ -173,23 +162,23 @@ export const Preview: React.FC<PreviewProps> = ({
     <div 
       {...getRootProps()} 
       ref={containerRef}
-      tabIndex={0} // Make focusable
+      tabIndex={0} 
       className="relative outline-none w-full h-full overflow-auto flex flex-col items-center bg-slate-100/50 dark:bg-black/20 custom-scrollbar focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-purple/30"
       onKeyDown={handleKeyDown}
-      onClick={(e) => { e.stopPropagation(); containerRef.current?.focus(); }} // Focus on click
+      onClick={(e) => { e.stopPropagation(); containerRef.current?.focus(); }}
     >
       <input {...getInputProps()} />
+      <DragDropOverlay 
+        isDragActive={isDragActive} 
+        message={onAddFiles ? "ADD_MORE_FILES" : "REPLACE_SOURCE"} 
+        subMessage="DROP_TO_UPDATE"
+        icon={onAddFiles ? <FilePlus size={64} /> : <RefreshCw size={64} />}
+        variant="purple"
+      />
 
-      {/* 
-        Scroll Spacer
-        We use min-h-full to ensure centering when zoomed out, 
-        and flex layout to center the canvas.
-      */}
       <div className="min-w-full min-h-full flex items-center justify-center p-8 md:p-16">
-        
-        {/* The Fixed Canvas (Paper) */}
         <motion.div
-          layout={false} // Disable framer layout thrashing, we handle size explicitly
+          layout={false} 
           animate={{ width: canvasWidth, height: canvasHeight }}
           transition={{ duration: 0.2, ease: "easeOut" }}
           className="
@@ -208,7 +197,7 @@ export const Preview: React.FC<PreviewProps> = ({
           {/* Content Area */}
           <div 
             className="w-full h-full relative overflow-hidden flex items-center justify-center bg-white" 
-            style={{ padding: config.pageSize === 'auto' ? 0 : `${config.margin}px` }} // No margin for auto/raw
+            style={{ padding: config.pageSize === 'auto' ? 0 : `${config.margin}px` }} 
           >
             <motion.img
               key={image.id}
@@ -222,22 +211,7 @@ export const Preview: React.FC<PreviewProps> = ({
             />
           </div>
 
-          {/* Hover Overlay */}
-          <AnimatePresence>
-            {isDragActive && (
-              <motion.div 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 z-50 bg-brand-purple/90 backdrop-blur-sm flex flex-col items-center justify-center text-white"
-              >
-                 {onAddFiles ? <Plus className="w-10 h-10 mb-3 animate-bounce" /> : <RefreshCw className="w-10 h-10 mb-3 animate-spin" />}
-                 <p className="font-mono font-bold text-sm uppercase tracking-widest">{onAddFiles ? "ADD_FILES" : "REPLACE_SOURCE"}</p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Info Badge (Desktop Only visual cue) */}
+          {/* Info Badge */}
           <div className="absolute bottom-2 right-2 opacity-50 hover:opacity-100 transition-opacity pointer-events-none z-10">
              <span className="text-[8px] font-mono font-bold text-charcoal-400 uppercase bg-white/80 backdrop-blur px-1.5 py-0.5 rounded border border-charcoal-100">
                 {config.pageSize === 'auto' ? `${Math.round(baseDims.width)}x${Math.round(baseDims.height)} PX` : config.pageSize.toUpperCase()}

@@ -6,14 +6,15 @@ import { extractImagesFromPdf } from '../services/pdfExtractor';
 import { generateZip } from '../services/zipGenerator';
 import { UploadedImage, ExportConfig, ImageFormat } from '../types';
 import { Filmstrip } from '../components/Filmstrip';
-import { StickyBar } from '../components/StickyBar';
 import { Preview } from '../components/Preview';
 import { Sidebar } from '../components/Sidebar';
 import { FileRejection } from 'react-dropzone';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Image as ImageIcon, Cpu, Settings, Lock, Sliders, LayoutGrid, X, Minimize, Maximize, ZoomOut, ZoomIn, Download, Loader2, List, CheckSquare, Square, MousePointer2 } from 'lucide-react';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
+import { Image as ImageIcon, Cpu, Settings, Lock, Sliders, LayoutGrid, X, Minimize, Maximize, ZoomOut, ZoomIn, Download, Loader2, List, CheckSquare, Square, MousePointer2, ChevronUp, ChevronDown } from 'lucide-react';
 import { ToolLandingLayout } from '../components/ToolLandingLayout';
 import { techEase, modalContentVariants, buttonTap } from '../utils/animations';
+import { DragDropOverlay } from '../components/DragDropOverlay';
+import { IconBox } from '../components/IconBox';
 
 type FitMode = 'fit' | 'width' | 'actual';
 type ExportMode = 'all' | 'selected' | 'current';
@@ -26,8 +27,8 @@ export const PdfToImagePage: React.FC = () => {
   const [isProcessingFiles, setIsProcessingFiles] = useState(false);
   
   // Mobile UI state
-  const [showSettings, setShowSettings] = useState(false);
-  const [isFilmstripVisible, setIsFilmstripVisible] = useState(false);
+  const [isMobileInspectorOpen, setMobileInspectorOpen] = useState(false);
+  const [mobileTab, setMobileTab] = useState<'pages' | 'settings'>('settings');
   
   // Config
   const [exportConfig, setExportConfig] = useState<ExportConfig>({
@@ -47,6 +48,7 @@ export const PdfToImagePage: React.FC = () => {
   const [zoom, setZoom] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
   const baseDimensionsRef = useRef<{ width: number; height: number } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Responsive Zoom Calculation
   useEffect(() => {
@@ -57,7 +59,9 @@ export const PdfToImagePage: React.FC = () => {
       const { width: contW, height: contH } = containerRef.current.getBoundingClientRect();
       const { width: baseW, height: baseH } = baseDimensionsRef.current;
       
-      const padding = 64; 
+      // On mobile, the containerRef is already inside the padded area, so we need less internal padding.
+      // On desktop, we want more breathing room.
+      const padding = isMobile ? 16 : 64; 
       const availW = Math.max(0, contW - padding);
       const availH = Math.max(0, contH - padding);
 
@@ -74,7 +78,7 @@ export const PdfToImagePage: React.FC = () => {
     observer.observe(containerRef.current);
     updateZoom();
     return () => observer.disconnect();
-  }, [fitMode, activeImageId]);
+  }, [fitMode, activeImageId, isMobile]);
 
   const handleZoomIn = () => {
     setFitMode('actual');
@@ -86,6 +90,11 @@ export const PdfToImagePage: React.FC = () => {
     setZoom(prev => Math.max(prev / 1.2, 0.1));
   };
 
+  const handleSetZoom = (newZoom: number) => {
+      setFitMode('actual');
+      setZoom(newZoom);
+  };
+
   const onDrop = useCallback(async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
     if (fileRejections.length > 0) {
       addToast("Error", "Please select a valid PDF file.", "error");
@@ -94,16 +103,17 @@ export const PdfToImagePage: React.FC = () => {
     if (acceptedFiles.length === 0) return;
 
     setIsProcessingFiles(true);
-    setStatus('Parsing PDF structure...');
     const startTime = Date.now();
+    setStatus('Parsing PDF structure...');
     
     try {
       const file = acceptedFiles[0];
       const extracted = await extractImagesFromPdf(file, setProgress, setStatus);
       
-      const elapsedTime = Date.now() - startTime;
-      if (elapsedTime < 800) {
-          await new Promise(resolve => setTimeout(resolve, 800 - elapsedTime));
+      // Enforce 1s minimum loading time
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 1000) {
+          await new Promise(resolve => setTimeout(resolve, 1000 - elapsed));
       }
 
       if (extracted.length > 0) {
@@ -123,6 +133,13 @@ export const PdfToImagePage: React.FC = () => {
       setStatus('');
     }
   }, [addToast]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+        onDrop(Array.from(e.target.files), []);
+    }
+    if (e.target) e.target.value = '';
+  };
 
   const handlePageSelect = useCallback((id: string, event?: React.MouseEvent) => {
     setActiveImageId(id);
@@ -161,9 +178,6 @@ export const PdfToImagePage: React.FC = () => {
     }
     
     // Simple click: If not holding modifiers, we usually just activate. 
-    // In many file managers, simple click also clears selection unless it was already selected?
-    // Let's adopt a "Click to activate, use checkboxes or modifiers to multi-select" approach for better UX clarity if visual checkboxes existed.
-    // Since Filmstrip doesn't have checkboxes, simple click clears selection.
     if (!event?.shiftKey && !event?.metaKey && !event?.ctrlKey) {
        setSelectedPageIds(new Set([id]));
     }
@@ -237,52 +251,128 @@ export const PdfToImagePage: React.FC = () => {
     return (
       <div className="relative w-full h-full bg-slate-100 dark:bg-charcoal-950 overflow-hidden">
         <PageReadyTracker />
-        <div className="absolute inset-0 z-0 flex flex-col justify-center items-center px-4 pt-20 pb-28">
-           <Preview 
-              image={activeImage} 
-              config={{ pageSize: 'auto', orientation: 'portrait', fitMode: 'contain', margin: 0, quality: 1 }}
-              onReplace={() => {}} 
-              onDropRejected={() => {}}
-              scale={1}
-           />
-        </div>
-        <StickyBar 
-           mode="pdf-to-image"
-           imageCount={images.length}
-           totalSize={0}
-           onGenerate={handleDownload}
-           isGenerating={isGenerating}
-           progress={progress}
-           status={status}
-           showFilmstripToggle
-           isFilmstripVisible={isFilmstripVisible}
-           onToggleFilmstrip={() => setIsFilmstripVisible(!isFilmstripVisible)}
-           onSecondaryAction={() => setShowSettings(!showSettings)}
-           secondaryLabel={showSettings ? "Hide" : "Settings"}
-           secondaryIcon={showSettings ? <Settings className="text-brand-purple" /> : <Sliders />}
+        <input 
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            accept="application/pdf"
+            onChange={handleFileChange}
         />
-        {/* Mobile Modals */}
-        <AnimatePresence>
-          {showSettings && (
-            <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4">
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowSettings(false)} />
-              <motion.div initial={{ y: 50, opacity: 0, scale: 0.95 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: 50, opacity: 0, scale: 0.95 }} transition={{ type: "spring", stiffness: 350, damping: 25 }} className="relative w-full max-w-sm bg-white dark:bg-charcoal-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-charcoal-800 flex flex-col max-h-[75vh] overflow-hidden">
-                <Sidebar mode="pdf-to-image" config={{ pageSize: 'auto', orientation: 'portrait', fitMode: 'contain', margin: 0, quality: 1 }} exportConfig={exportConfig} onConfigChange={() => {}} onExportConfigChange={setExportConfig} isOpen={true} isMobile={true} mobileMode="bottom-sheet" variant="embedded" onClose={() => setShowSettings(false)} />
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
-        <AnimatePresence>
-          {isFilmstripVisible && (
-            <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4">
-               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsFilmstripVisible(false)} />
-               <motion.div variants={modalContentVariants} initial="hidden" animate="visible" exit="exit" className="relative w-full max-w-sm bg-white dark:bg-charcoal-900 rounded-2xl shadow-2xl flex flex-col max-h-[60vh] overflow-hidden border border-slate-200 dark:border-charcoal-800">
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-charcoal-800 bg-slate-50 dark:bg-charcoal-850"><div className="flex items-center gap-2"><LayoutGrid size={16} className="text-brand-purple" /><span className="text-xs font-bold font-mono uppercase tracking-widest text-charcoal-700 dark:text-slate-200">Pages ({images.length})</span></div><button onClick={() => setIsFilmstripVisible(false)} className="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-charcoal-700 transition-colors"><X size={18} className="text-charcoal-500 dark:text-slate-400" /></button></div>
-                  <div className="flex-1 overflow-y-auto p-2 bg-slate-100 dark:bg-black/20 custom-scrollbar"><Filmstrip images={images} activeImageId={activeImageId} onSelect={(id) => setActiveImageId(id)} onReorder={setImages} onRemove={(id) => { setImages(prev => { const next = prev.filter(i => i.id !== id); if (activeImageId === id) setActiveImageId(next.length ? next[0].id : null); return next; }); }} onRotate={() => {}} isMobile={true} direction="vertical" /></div>
-               </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
+        
+        {/* Header */}
+        <div className="shrink-0 h-14 bg-white dark:bg-charcoal-900 border-b border-slate-200 dark:border-charcoal-800 px-4 flex items-center justify-between z-20 shadow-sm relative">
+           <div className="flex items-center gap-2">
+              <IconBox icon={<ImageIcon />} size="sm" toolAccentColor="#EAB308" active />
+              <span className="font-mono font-bold text-sm text-charcoal-900 dark:text-white uppercase tracking-tight">Extractor</span>
+           </div>
+           <div className="flex items-center gap-2">
+              <button onClick={() => { setImages([]); setProgress(0); }} className="p-2 text-charcoal-400 hover:text-charcoal-600 dark:hover:text-slate-300"><X size={18} /></button>
+           </div>
+        </div>
+
+        {/* Main Canvas - Wrapper for measurement */}
+        <div className="absolute inset-0 z-0 flex flex-col justify-center items-center px-4 pt-20 pb-28 bg-slate-100/50 dark:bg-black/20">
+           <div ref={containerRef} className="w-full h-full flex items-center justify-center relative">
+              <Preview 
+                  image={activeImage} 
+                  config={{ pageSize: 'auto', orientation: 'portrait', fitMode: 'contain', margin: 0, quality: 1 }}
+                  onReplace={(file) => onDrop([file], [])} 
+                  onDropRejected={() => {}}
+                  scale={zoom}
+                  baseDimensionsRef={baseDimensionsRef}
+                  onAddFiles={undefined}
+              />
+           </div>
+        </div>
+
+        {/* Floating Inspector (Floaty File Manager Style) */}
+        <motion.div 
+          className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-charcoal-900 border-t border-slate-200 dark:border-charcoal-800 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] rounded-t-2xl flex flex-col overflow-hidden"
+          initial={false}
+          animate={{ height: isMobileInspectorOpen ? 'auto' : '68px' }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          style={{ maxHeight: '75vh' }}
+        >
+           {/* Handle */}
+           <div 
+              className="flex items-center justify-between px-6 h-[68px] shrink-0 relative bg-white dark:bg-charcoal-900 z-20 cursor-pointer" 
+              onClick={() => setMobileInspectorOpen(!isMobileInspectorOpen)}
+           >
+              <div className="flex flex-col justify-center">
+                 <span className="text-[10px] font-bold uppercase tracking-widest text-charcoal-400 dark:text-charcoal-500">Selected</span>
+                 <span className="text-sm font-bold text-charcoal-900 dark:text-white font-mono">{selectedPageIds.size > 0 ? selectedPageIds.size : 'All'} Pages</span>
+              </div>
+
+              <div className="absolute left-1/2 top-3 -translate-x-1/2 w-12 h-1 bg-slate-200 dark:bg-charcoal-700 rounded-full" />
+              
+              <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                 <button 
+                    onClick={() => setMobileInspectorOpen(!isMobileInspectorOpen)} 
+                    className="p-2.5 bg-slate-50 dark:bg-charcoal-800 rounded-xl text-charcoal-500 dark:text-slate-400 hover:text-charcoal-900 dark:hover:text-white transition-colors"
+                 >
+                    {isMobileInspectorOpen ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+                 </button>
+                 <motion.button
+                    whileTap={buttonTap}
+                    onClick={handleDownload}
+                    disabled={isGenerating}
+                    className="h-10 px-5 bg-brand-purple text-white font-bold text-xs uppercase tracking-wide rounded-xl shadow-lg shadow-brand-purple/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                 >
+                    {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                    <span>Save</span>
+                 </motion.button>
+              </div>
+           </div>
+
+           {/* Expanded Content */}
+           <div className="flex flex-col flex-1 bg-slate-50 dark:bg-charcoal-950/50 overflow-hidden">
+              <div className="px-6 pt-2 pb-4 bg-white dark:bg-charcoal-900 border-b border-slate-100 dark:border-charcoal-800 flex gap-2">
+                  <button 
+                    onClick={() => setMobileTab('settings')} 
+                    className={`flex-1 py-2 rounded-lg text-xs font-bold font-mono transition-all ${
+                      mobileTab === 'settings' 
+                        ? 'bg-slate-100 dark:bg-charcoal-800 text-brand-purple ring-1 ring-black/5 dark:ring-white/5' 
+                        : 'text-charcoal-500 dark:text-charcoal-400 hover:bg-slate-50 dark:hover:bg-charcoal-800/50'
+                    }`}
+                  >
+                    Export Options
+                  </button>
+                  <button 
+                    onClick={() => setMobileTab('pages')} 
+                    className={`flex-1 py-2 rounded-lg text-xs font-bold font-mono transition-all ${
+                      mobileTab === 'pages' 
+                        ? 'bg-slate-100 dark:bg-charcoal-800 text-brand-purple ring-1 ring-black/5 dark:ring-white/5' 
+                        : 'text-charcoal-500 dark:text-charcoal-400 hover:bg-slate-50 dark:hover:bg-charcoal-800/50'
+                    }`}
+                  >
+                    Select Pages
+                  </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 custom-scrollbar pb-8">
+                  {mobileTab === 'settings' ? (
+                      <Sidebar mode="pdf-to-image" config={{ pageSize: 'auto', orientation: 'portrait', fitMode: 'contain', margin: 0, quality: 1 }} exportConfig={exportConfig} onConfigChange={() => {}} onExportConfigChange={setExportConfig} isOpen={true} isMobile={true} variant="embedded" />
+                  ) : (
+                      <div className="bg-white/50 dark:bg-charcoal-900/50 rounded-2xl p-2 border border-slate-100 dark:border-charcoal-800/50">
+                        <Filmstrip 
+                          images={images} 
+                          activeImageId={activeImageId} 
+                          selectedImageIds={selectedPageIds}
+                          onSelect={(id, e) => handlePageSelect(id, e)} 
+                          onReorder={setImages} 
+                          onRemove={() => {}} 
+                          onRotate={() => {}} 
+                          isMobile={true} 
+                          direction="vertical" 
+                          isReorderable={false}
+                          showRemoveButton={false} 
+                          showRotateButton={false}
+                        />
+                      </div>
+                  )}
+              </div>
+           </div>
+        </motion.div>
       </div>
     );
   }
@@ -299,6 +389,13 @@ export const PdfToImagePage: React.FC = () => {
   return (
     <div className="flex w-full h-full overflow-hidden bg-slate-100 dark:bg-charcoal-950 font-sans">
       <PageReadyTracker />
+      <input 
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          accept="application/pdf"
+          onChange={handleFileChange}
+      />
       
       {/* LEFT PANE: Filmstrip / Pages */}
       <div className="w-72 bg-white dark:bg-charcoal-900 border-r border-slate-200 dark:border-charcoal-800 flex flex-col shrink-0 z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
@@ -332,7 +429,6 @@ export const PdfToImagePage: React.FC = () => {
                   onRotate={() => {}}
                   isMobile={false}
                   direction="vertical"
-                  size="md"
                   isReorderable={true}
                   showRemoveButton={true}
                   showRotateButton={false}
@@ -401,17 +497,18 @@ export const PdfToImagePage: React.FC = () => {
               <Preview 
                  image={activeImage} 
                  config={{ pageSize: 'auto', orientation: 'portrait', fitMode: 'contain', margin: 0, quality: 1 }} 
-                 onReplace={() => {}} 
+                 onReplace={(file) => onDrop([file], [])} 
                  onDropRejected={() => {}}
                  scale={zoom}
+                 setScale={handleSetZoom}
                  baseDimensionsRef={baseDimensionsRef}
+                 onAddFiles={undefined} // Single file mode in editor
               />
           </div>
       </div>
 
       {/* RIGHT PANE: Configuration */}
       <div className="w-80 bg-white dark:bg-charcoal-900 border-l border-slate-200 dark:border-charcoal-800 flex flex-col shrink-0 z-20 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
-          {/* Header */}
           <div className="h-12 border-b border-slate-100 dark:border-charcoal-800 flex items-center px-6 shrink-0 bg-slate-50/50 dark:bg-charcoal-850/50">
               <Sliders size={16} className="text-charcoal-400 mr-2" />
               <span className="font-mono text-xs font-bold uppercase tracking-widest text-charcoal-600 dark:text-charcoal-300">Settings</span>

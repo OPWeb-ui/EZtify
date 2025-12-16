@@ -23,7 +23,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PdfPage, PageNumberConfig } from '../types';
-import { Trash2, RotateCw, Check, X } from 'lucide-react';
+import { Trash2, RotateCw, Check } from 'lucide-react';
 import { standardLayoutTransition, buttonTap } from '../utils/animations';
 
 interface SplitPageGridProps {
@@ -59,11 +59,7 @@ interface PageCardProps {
 
 const dropAnimation: DropAnimation = {
   sideEffects: defaultDropAnimationSideEffects({
-    styles: {
-      active: {
-        opacity: '0.5',
-      },
-    },
+    styles: { active: { opacity: '0.5' } },
   }),
 };
 
@@ -80,7 +76,6 @@ const PageCard: React.FC<PageCardProps> = ({
   showBadges = true,
   isMobile
 }) => {
-  // Numbering Preview
   const getNumberPreviewStyle = () => {
     if (!numberingConfig) return null;
     let styles: React.CSSProperties = { position: 'absolute', transform: '' };
@@ -107,7 +102,7 @@ const PageCard: React.FC<PageCardProps> = ({
   return (
     <div 
       className={`
-        relative aspect-[3/4] rounded-lg overflow-hidden bg-white dark:bg-charcoal-800 transition-all duration-200 group
+        relative aspect-[3/4] rounded-2xl overflow-hidden bg-white dark:bg-charcoal-800 transition-all duration-200 group
         border 
         ${isOverlay ? 'shadow-2xl border-brand-purple z-50 cursor-grabbing' : ''}
         ${isDragging ? 'opacity-30 grayscale border-dashed border-slate-400' : ''}
@@ -119,44 +114,40 @@ const PageCard: React.FC<PageCardProps> = ({
     >
       {/* Selection Marker */}
       {page.selected && !isOverlay && !numberingConfig && (
-         <motion.div 
-            initial={{ scale: 0 }} 
-            animate={{ scale: 1 }} 
-            className="absolute top-0 right-0 w-0 h-0 border-t-[32px] border-l-[32px] border-t-brand-purple border-l-transparent z-20 pointer-events-none"
-         >
-            <Check size={12} className="absolute -top-7 -left-3.5 text-white" strokeWidth={3} />
-         </motion.div>
+         <div className="absolute top-2 right-2 w-6 h-6 bg-brand-purple text-white rounded-lg flex items-center justify-center shadow-sm z-20 pointer-events-none">
+            <Check size={14} strokeWidth={3} />
+         </div>
       )}
 
-      {/* Delete Button (Top Right) - Standardized */}
+      {/* Delete Button (Strict IconBox Style) */}
       {onRemove && !isOverlay && !numberingConfig && !isDragging && (
         <motion.button 
             whileTap={buttonTap}
             onClick={(e) => { e.stopPropagation(); onRemove(page.id); }}
             className={`
-              absolute top-1.5 right-1.5 z-30 
+              absolute top-2 left-2 z-30 
               flex items-center justify-center 
-              w-7 h-7 rounded-full 
+              w-8 h-8 rounded-lg
               bg-white/90 dark:bg-charcoal-800/90 backdrop-blur-sm 
               text-charcoal-400 dark:text-slate-400 
               border border-slate-200 dark:border-charcoal-600 
               shadow-sm
               hover:text-rose-500 hover:border-rose-200 dark:hover:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-900/20
               transition-all duration-200
-              ${isMobile ? (page.selected ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none') : 'opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100 group-focus-within:opacity-100 group-focus-within:scale-100'}
+              ${isMobile ? (page.selected ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none') : 'opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100'}
             `}
             title="Delete Page"
         >
-            <Trash2 size={14} strokeWidth={2} />
+            <Trash2 size={14} strokeWidth={1.5} />
         </motion.button>
       )}
 
-      {/* Controls Overlay (Rotate Only now, Delete moved up) */}
+      {/* Rotate Control (Strict Bar Style) */}
       {!isOverlay && !numberingConfig && !isDragging && onRotate && (
-        <div className={`absolute bottom-0 left-0 right-0 bg-white/90 dark:bg-charcoal-800/90 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 flex items-center justify-center p-1.5 border-t border-slate-200 dark:border-charcoal-700`}>
+        <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-30">
             <button
                 onClick={(e) => { e.stopPropagation(); onRotate(page.id); }}
-                className="p-1 rounded-md text-charcoal-600 dark:text-slate-300 hover:text-brand-purple hover:bg-brand-purple/10 transition-colors flex items-center gap-1 text-[10px] font-bold font-mono uppercase"
+                className="w-full py-1.5 rounded-lg bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-sm text-charcoal-600 dark:text-slate-300 hover:text-brand-purple border border-slate-200 dark:border-charcoal-600 shadow-sm flex items-center justify-center gap-1.5 text-[10px] font-bold font-mono uppercase transition-colors"
                 title="Rotate 90°"
             >
                 <RotateCw size={12} /> Rotate
@@ -179,20 +170,19 @@ const PageCard: React.FC<PageCardProps> = ({
           draggable={false}
         />
         
-        {/* Numbering Preview */}
         {numberingConfig && showBadges && (
           <div 
             style={getNumberPreviewStyle() || {}} 
-            className="z-20 font-bold bg-white/90 text-black shadow-sm border border-black/10 px-1.5 py-0.5 rounded-[2px] pointer-events-none min-w-[16px] text-center"
+            className="z-20 font-bold bg-white/90 text-black shadow-sm border border-black/10 px-1.5 py-0.5 rounded-[4px] pointer-events-none min-w-[16px] text-center"
           >
             {numberingConfig.startFrom + index}
           </div>
         )}
       </div>
 
-      {/* Tech Index Badge */}
+      {/* Index Badge */}
       {!numberingConfig && showBadges && (
-        <div className="absolute bottom-0 left-0 bg-slate-100 dark:bg-charcoal-700 px-2 py-0.5 text-[9px] font-mono font-bold text-charcoal-500 dark:text-slate-400 border-t border-r border-slate-200 dark:border-charcoal-600 rounded-tr-md z-10 pointer-events-none">
+        <div className="absolute bottom-2 left-2 bg-charcoal-900/80 backdrop-blur-sm px-2 py-0.5 text-[9px] font-mono font-bold text-white rounded-md z-10 pointer-events-none">
            {String(useVisualIndexing ? index + 1 : (page.pageIndex + 1)).padStart(2, '0')}
         </div>
       )}
@@ -204,12 +194,7 @@ interface SortablePageProps extends PageCardProps {}
 
 const SortablePage: React.FC<SortablePageProps> = (props) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.page.id });
-  
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 50 : 'auto',
-  };
+  const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 50 : 'auto' };
 
   return (
     <motion.div
@@ -256,28 +241,25 @@ export const SplitPageGrid: React.FC<SplitPageGridProps> = (props) => {
 
   return (
     <div className="w-full">
-      {/* Controls Bar - Selection Actions */}
       {!props.numberingConfig && (props.onSelectAll || props.onRemoveSelected) && (
-        <div className="flex flex-col gap-4 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="text-xs font-bold font-mono text-charcoal-500 dark:text-slate-400 uppercase tracking-wider">
-              {pages.length} PAGES LOADED
-              {pages.filter(p => p.selected).length > 0 && <span className="text-brand-purple ml-2">// {pages.filter(p => p.selected).length} SELECTED</span>}
+        <div className="flex items-center justify-between mb-6">
+            <div className="text-xs font-bold font-mono text-charcoal-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+              {pages.length} PAGES
+              {pages.filter(p => p.selected).length > 0 && (
+                 <span className="bg-brand-purple/10 text-brand-purple px-2 py-0.5 rounded-md">
+                    {pages.filter(p => p.selected).length} SELECTED
+                 </span>
+              )}
             </div>
             
             {props.onRemoveSelected && pages.some(p => p.selected) && (
-               <motion.button onClick={props.onRemoveSelected} className="flex items-center gap-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 px-3 py-1.5 rounded-md text-xs font-mono border border-transparent hover:border-rose-200 transition-all">
-                 <Trash2 size={12} /> DELETE_SELECTED
+               <motion.button 
+                 onClick={props.onRemoveSelected} 
+                 className="flex items-center gap-2 bg-rose-50 dark:bg-rose-900/10 text-rose-600 dark:text-rose-400 px-3 py-2 rounded-xl text-xs font-bold border border-rose-100 dark:border-rose-900/30 transition-all hover:bg-rose-100 dark:hover:bg-rose-900/30"
+               >
+                 <Trash2 size={14} /> DELETE SELECTED
                </motion.button>
             )}
-          </div>
-          {props.onSelectAll && (
-            <div className="flex flex-wrap gap-2 text-[10px] font-mono font-bold uppercase">
-              <button onClick={props.onSelectAll} className="px-3 py-1.5 bg-slate-100 dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 rounded hover:border-brand-purple/50 transition-colors">Select_All</button>
-              {props.onDeselectAll && <button onClick={props.onDeselectAll} className="px-3 py-1.5 bg-slate-100 dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 rounded hover:border-brand-purple/50 transition-colors">Select_None</button>}
-              {props.onInvertSelection && <button onClick={props.onInvertSelection} className="px-3 py-1.5 bg-slate-100 dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 rounded hover:border-brand-purple/50 transition-colors">Invert</button>}
-            </div>
-          )}
         </div>
       )}
 
@@ -303,7 +285,7 @@ export const SplitPageGrid: React.FC<SplitPageGridProps> = (props) => {
           </div>
         </SortableContext>
         <DragOverlay dropAnimation={dropAnimation}>
-          {activePage && <PageCard page={activePage} index={pages.indexOf(activePage)} useVisualIndexing={true} isOverlay numberingConfig={props.numberingConfig} showBadges={showBadges} onRotate={onRotate} isMobile={isMobile} />}
+          {activePage && <PageCard page={activePage} index={pages.indexOf(activePage)} useVisualIndexing={true} isOverlay numberingConfig={props.numberingConfig} showBadges={showBadges} onRotate={onRotate} isMobile={isMobile} isSelected={activePage.selected} />}
         </DragOverlay>
       </DndContext>
     </div>

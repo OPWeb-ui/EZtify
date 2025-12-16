@@ -1,56 +1,72 @@
-import { PDFDocument } from 'pdf-lib';
-import { PdfFile } from '../types';
 
-export const mergePdfs = async (
-  files: PdfFile[],
+import { PDFDocument } from 'pdf-lib';
+import { ExtendedPdfPage } from '../types';
+
+export const combinePdfPages = async (
+  pages: ExtendedPdfPage[],
+  sourceFiles: Map<string, File>,
   onProgress?: (percent: number) => void,
   onStatusUpdate?: (status: string) => void,
 ): Promise<Blob> => {
-  if (files.length === 0) throw new Error("No files to merge");
+  if (pages.length === 0) throw new Error("No pages to combine");
 
-  onStatusUpdate?.('Preparing to merge...');
-  const mergedPdf = await PDFDocument.create();
+  onStatusUpdate?.('Initializing PDF engine...');
+  const newPdf = await PDFDocument.create();
 
   // Set standardized metadata
-  mergedPdf.setTitle('files_EZtify');
-  mergedPdf.setAuthor('EZtify');
-  mergedPdf.setProducer('EZtify');
-  mergedPdf.setSubject('Generated with EZtify');
-  mergedPdf.setCreator('EZtify – Merge PDF');
-  mergedPdf.setCreationDate(new Date());
-  mergedPdf.setModificationDate(new Date());
+  newPdf.setTitle('files_EZtify');
+  newPdf.setAuthor('EZtify');
+  newPdf.setProducer('EZtify');
+  newPdf.setSubject('Combined Document');
+  newPdf.setCreator('EZtify – Combine PDF');
+  newPdf.setCreationDate(new Date());
+  newPdf.setModificationDate(new Date());
 
-  for (let i = 0; i < files.length; i++) {
-    onStatusUpdate?.(`Merging file ${i + 1} of ${files.length}...`);
-    if (onProgress) {
-      onProgress(Math.round((i / files.length) * 100));
-    }
+  // Cache loaded source documents to avoid re-parsing the same file multiple times
+  const loadedDocs = new Map<string, PDFDocument>();
+
+  const total = pages.length;
+
+  for (let i = 0; i < total; i++) {
+    const pageData = pages[i];
+    const fileId = pageData.sourceFileId;
     
-    // Yield to main thread
+    if (onProgress) onProgress(Math.round((i / total) * 90));
+    onStatusUpdate?.(`Processing page ${i + 1} of ${total}...`);
+
+    // Yield to main thread to keep UI responsive
     await new Promise(resolve => setTimeout(resolve, 0));
 
     try {
-      const fileBytes = await files[i].file.arrayBuffer();
-      const pdf = await PDFDocument.load(fileBytes);
-      
-      const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-      
-      copiedPages.forEach((page) => {
-        mergedPdf.addPage(page);
-      });
+      let srcPdf = loadedDocs.get(fileId);
+
+      // Load source PDF if not already in cache
+      if (!srcPdf) {
+        const sourceFile = sourceFiles.get(fileId);
+        if (!sourceFile) {
+            console.warn(`Source file not found for page ${i}`);
+            continue;
+        }
+        const fileBytes = await sourceFile.arrayBuffer();
+        srcPdf = await PDFDocument.load(fileBytes);
+        loadedDocs.set(fileId, srcPdf);
+      }
+
+      // Copy the specific page
+      const [copiedPage] = await newPdf.copyPages(srcPdf, [pageData.pageIndex]);
+      newPdf.addPage(copiedPage);
+
     } catch (e) {
-      console.error(`Failed to merge file ${files[i].file.name}`, e);
-      // Continue merging other files or throw? 
-      // For now, we continue, maybe the file was corrupt
+      console.error(`Failed to process page ${i}`, e);
     }
   }
 
-  onStatusUpdate?.('Finalizing merged PDF...');
+  onStatusUpdate?.('Finalizing document...');
   if (onProgress) onProgress(95);
 
-  const mergedPdfBytes = await mergedPdf.save();
+  const pdfBytes = await newPdf.save();
   
   if (onProgress) onProgress(100);
 
-  return new Blob([mergedPdfBytes], { type: 'application/pdf' });
+  return new Blob([pdfBytes], { type: 'application/pdf' });
 };

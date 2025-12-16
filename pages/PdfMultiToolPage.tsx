@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useLayoutContext } from '../components/Layout';
 import { PageReadyTracker } from '../components/PageReadyTracker';
@@ -11,12 +10,11 @@ import { ToolLandingLayout } from '../components/ToolLandingLayout';
 import { 
   Wand2, Cpu, Lock, Settings, Layers, Upload, Undo2, Redo, RefreshCw, 
   CheckSquare, XSquare, RotateCcw, RotateCw, Copy, Trash2, Download, 
-  FileArchive, Loader2, MousePointer2, Plus, FilePlus, ChevronUp, ChevronDown,
-  Menu
+  FileArchive, Loader2, MousePointer2, GripHorizontal, Plus, FilePlus
 } from 'lucide-react';
 import {
-  DndContext, DragEndEvent, useSensor, useSensors, KeyboardSensor,
-  DragOverlay, defaultDropAnimationSideEffects, closestCenter,
+  DndContext, DragEndEvent, useSensor, useSensors, PointerSensor, KeyboardSensor,
+  DragOverlay, DropAnimation, defaultDropAnimationSideEffects, closestCenter,
   TouchSensor, MouseSensor
 } from '@dnd-kit/core';
 import { 
@@ -142,9 +140,9 @@ const PageCard = ({
          )}
       </div>
 
-      {/* Hover Actions (Desktop Only) */}
+      {/* Hover Actions (Desktop) */}
       {!isOverlay && !isDragging && (
-        <div className="absolute bottom-0 left-0 right-0 p-2 bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-sm border-t border-slate-200 dark:border-charcoal-700 hidden md:flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity z-20">
+        <div className="absolute bottom-0 left-0 right-0 p-2 bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-sm border-t border-slate-200 dark:border-charcoal-700 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity z-20">
            <button 
              onClick={(e) => { e.stopPropagation(); onRotate?.(page.id, 'left'); }}
              className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-charcoal-800 text-charcoal-500 hover:text-brand-purple transition-colors"
@@ -219,7 +217,7 @@ const SortablePage: React.FC<SortablePageProps> = ({ page, index, isSelected, on
 // --- MAIN COMPONENT ---
 
 export const PdfMultiToolPage: React.FC = () => {
-  const { addToast, isMobile } = useLayoutContext();
+  const { addToast } = useLayoutContext();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // --- STATE ---
@@ -237,29 +235,14 @@ export const PdfMultiToolPage: React.FC = () => {
   const [progress, setProgress] = useState(0);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
 
-  // Mobile State
-  const [isMobileInspectorOpen, setMobileInspectorOpen] = useState(false);
-
-  // --- MOBILE HINT ---
-  useEffect(() => {
-    if (isMobile && pages.length > 0) {
-      const hasSeenHint = localStorage.getItem('eztify-desktop-hint-toast');
-      if (!hasSeenHint) {
-        const timer = setTimeout(() => {
-          addToast("Desktop Optimized", "For complex workflows, desktop offers more control.", "info");
-          localStorage.setItem('eztify-desktop-hint-toast', 'true');
-        }, 2000);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [isMobile, pages.length, addToast]);
-
   // --- HISTORY MANAGER ---
   
+  // Push new state to history
   const pushHistory = useCallback((newPages: MultiToolPage[], newSelection: Set<string>) => {
     setHistory(prev => {
       const newHistory = prev.slice(0, historyIndex + 1);
       newHistory.push({ pages: newPages, selection: newSelection });
+      // Limit history depth
       if (newHistory.length > 20) newHistory.shift();
       return newHistory;
     });
@@ -268,6 +251,7 @@ export const PdfMultiToolPage: React.FC = () => {
     setSelection(newSelection);
   }, [historyIndex]);
 
+  // Initial history push on load
   const initHistory = (initialPages: MultiToolPage[]) => {
     setHistory([{ pages: initialPages, selection: new Set() }]);
     setHistoryIndex(0);
@@ -295,20 +279,11 @@ export const PdfMultiToolPage: React.FC = () => {
 
   // --- ACTIONS ---
 
-  const handleUpload = useCallback(async (files: File[], shouldReplace = false) => {
+  const handleUpload = useCallback(async (files: File[]) => {
     if (isProcessing) return;
     setIsProcessing(true);
 
-    if (shouldReplace) {
-        setPages([]);
-        setSelection(new Set());
-        setSourceFiles(new Map());
-        setHistory([]);
-        setHistoryIndex(-1);
-        clearPdfCache();
-    }
-
-    const newSourceFiles = new Map(shouldReplace ? new Map() : sourceFiles);
+    const newSourceFiles = new Map(sourceFiles);
     const newPagesToAdd: MultiToolPage[] = [];
 
     for (const file of files) {
@@ -335,6 +310,7 @@ export const PdfMultiToolPage: React.FC = () => {
 
     setSourceFiles(newSourceFiles);
     
+    // If first load, init history. If appending, push history.
     if (pages.length === 0) {
       initHistory(newPagesToAdd);
     } else {
@@ -375,6 +351,7 @@ export const PdfMultiToolPage: React.FC = () => {
       newSelection.add(id);
     }
     setSelection(newSelection);
+    // Note: Selection changes do not push to history stack to avoid clutter
   };
 
   const handleSelectAll = () => setSelection(new Set(pages.map(p => p.id)));
@@ -511,140 +488,6 @@ export const PdfMultiToolPage: React.FC = () => {
 
   const activeDragPage = activeDragId ? pages.find(p => p.id === activeDragId) : null;
 
-  // --- MOBILE RENDER ---
-  if (isMobile) {
-    return (
-      <div className="flex flex-col h-full bg-slate-100 dark:bg-charcoal-950 overflow-hidden relative" {...getRootProps()}>
-        <PageReadyTracker />
-        <DragDropOverlay isDragActive={isDragActive} message="ADD_TO_WORKSPACE" subMessage="DROP_PDF_TO_APPEND" variant="indigo" icon={<FilePlus size={64} />} />
-        <input ref={fileInputRef} type="file" multiple accept=".pdf" className="hidden" onChange={(e) => e.target.files && handleUpload(Array.from(e.target.files), false)} />
-
-        {/* Mobile Header */}
-        <div className="shrink-0 h-14 bg-white dark:bg-charcoal-900 border-b border-slate-200 dark:border-charcoal-800 px-4 flex items-center justify-between z-20 shadow-sm relative">
-           <div className="flex items-center gap-2">
-              <Wand2 size={18} className="text-brand-purple" />
-              <div className="flex flex-col">
-                 <span className="text-xs font-bold font-mono text-charcoal-900 dark:text-white uppercase tracking-tight">PDF Studio</span>
-                 <span className="text-[9px] text-charcoal-500 dark:text-charcoal-400 font-mono">{pages.length} Pages</span>
-              </div>
-           </div>
-           
-           <div className="flex items-center gap-1">
-              <button onClick={undo} disabled={historyIndex <= 0} className="p-2 text-charcoal-500 dark:text-slate-400 disabled:opacity-30"><Undo2 size={18} /></button>
-              <button onClick={redo} disabled={historyIndex >= history.length - 1} className="p-2 text-charcoal-500 dark:text-slate-400 disabled:opacity-30"><Redo size={18} /></button>
-              <div className="w-px h-4 bg-slate-300 dark:bg-charcoal-700 mx-1" />
-              <button onClick={() => fileInputRef.current?.click()} className="p-2 text-brand-purple"><Plus size={20} /></button>
-           </div>
-        </div>
-
-        {/* Mobile Grid */}
-        <div className="flex-1 overflow-y-auto bg-slate-100 dark:bg-black/20 p-4 pb-32" onClick={() => setSelection(new Set())}>
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-              <SortableContext items={pages.map(p => p.id)} strategy={rectSortingStrategy}>
-                  <div className="grid grid-cols-2 gap-3">
-                    <AnimatePresence mode="popLayout">
-                        {pages.map((page, index) => (
-                          <SortablePage 
-                              key={page.id} 
-                              page={page} 
-                              index={index} 
-                              isSelected={selection.has(page.id)}
-                              onSelect={handleSelect}
-                              onRotate={handleSingleRotate}
-                              onDelete={handleSingleDelete}
-                          />
-                        ))}
-                    </AnimatePresence>
-                  </div>
-              </SortableContext>
-              <DragOverlay dropAnimation={{ sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: '0.4' } } }) }}>
-                  {activeDragPage ? (
-                    <PageCard page={activeDragPage} isSelected={selection.has(activeDragPage.id)} isOverlay />
-                  ) : null}
-              </DragOverlay>
-            </DndContext>
-        </div>
-
-        {/* Floating Mobile Inspector */}
-        <motion.div 
-          className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-charcoal-900 border-t border-slate-200 dark:border-charcoal-800 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] rounded-t-2xl flex flex-col overflow-hidden"
-          initial={false}
-          animate={{ height: isMobileInspectorOpen ? 'auto' : '80px' }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        >
-           {/* Handle / Header */}
-           <div className="flex items-center justify-between px-6 h-20 shrink-0 relative" onClick={() => setMobileInspectorOpen(!isMobileInspectorOpen)}>
-              <div className="flex flex-col justify-center">
-                 <span className="text-[10px] font-bold uppercase tracking-widest text-charcoal-400 dark:text-charcoal-500">Selection</span>
-                 <span className="text-sm font-bold text-charcoal-900 dark:text-white font-mono">{selection.size > 0 ? `${selection.size} Selected` : 'None'}</span>
-              </div>
-
-              {/* Expansion Toggle */}
-              <div className="absolute left-1/2 top-3 -translate-x-1/2 w-10 h-1 bg-slate-200 dark:bg-charcoal-700 rounded-full" />
-              
-              <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
-                 <button 
-                    onClick={() => setMobileInspectorOpen(!isMobileInspectorOpen)} 
-                    className="p-3 bg-slate-50 dark:bg-charcoal-800 rounded-xl text-charcoal-600 dark:text-slate-300"
-                 >
-                    {isMobileInspectorOpen ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
-                 </button>
-                 <motion.button
-                    whileTap={buttonTap}
-                    onClick={() => handleDownload('merge')}
-                    disabled={isGenerating}
-                    className="h-12 px-6 bg-brand-purple text-white font-bold text-xs uppercase tracking-wide rounded-xl shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
-                 >
-                    {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-                    <span>Save</span>
-                 </motion.button>
-              </div>
-           </div>
-           
-           {/* Expanded Tools */}
-           <div className="px-6 pb-8 pt-2 space-y-6 border-t border-slate-100 dark:border-charcoal-800 bg-slate-50/50 dark:bg-charcoal-850/50">
-              
-              {/* Edit Actions */}
-              <div className="grid grid-cols-4 gap-2">
-                  <button onClick={() => handleRotate('left')} className="flex flex-col items-center justify-center gap-1 p-3 bg-white dark:bg-charcoal-800 rounded-xl border border-slate-200 dark:border-charcoal-700 shadow-sm text-charcoal-600 dark:text-slate-300">
-                      <RotateCcw size={18} />
-                      <span className="text-[10px] font-bold">Left</span>
-                  </button>
-                  <button onClick={() => handleRotate('right')} className="flex flex-col items-center justify-center gap-1 p-3 bg-white dark:bg-charcoal-800 rounded-xl border border-slate-200 dark:border-charcoal-700 shadow-sm text-charcoal-600 dark:text-slate-300">
-                      <RotateCw size={18} />
-                      <span className="text-[10px] font-bold">Right</span>
-                  </button>
-                  <button onClick={handleDuplicate} className="flex flex-col items-center justify-center gap-1 p-3 bg-white dark:bg-charcoal-800 rounded-xl border border-slate-200 dark:border-charcoal-700 shadow-sm text-charcoal-600 dark:text-slate-300">
-                      <Copy size={18} />
-                      <span className="text-[10px] font-bold">Clone</span>
-                  </button>
-                  <button onClick={handleDelete} className="flex flex-col items-center justify-center gap-1 p-3 bg-white dark:bg-charcoal-800 rounded-xl border border-slate-200 dark:border-charcoal-700 shadow-sm text-rose-500">
-                      <Trash2 size={18} />
-                      <span className="text-[10px] font-bold">Delete</span>
-                  </button>
-              </div>
-
-              {/* General Actions */}
-              <div className="grid grid-cols-2 gap-3">
-                  <button onClick={handleSelectAll} className="h-10 flex items-center justify-center gap-2 bg-white dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 rounded-lg text-xs font-bold text-charcoal-600 dark:text-slate-300">
-                      <CheckSquare size={14} /> Select All
-                  </button>
-                  <button onClick={handleDeselectAll} className="h-10 flex items-center justify-center gap-2 bg-white dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 rounded-lg text-xs font-bold text-charcoal-600 dark:text-slate-300">
-                      <XSquare size={14} /> Deselect
-                  </button>
-              </div>
-
-              {/* Secondary Export */}
-              <button onClick={() => handleDownload('zip')} className="w-full h-12 bg-charcoal-900 dark:bg-white text-white dark:text-charcoal-900 font-bold font-mono text-xs uppercase tracking-wide rounded-xl flex items-center justify-center gap-2">
-                  <FileArchive size={16} /> Extract as ZIP
-              </button>
-           </div>
-        </motion.div>
-      </div>
-    );
-  }
-
-  // --- DESKTOP LAYOUT ---
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-charcoal-900 overflow-hidden relative" {...getRootProps()}>
       <PageReadyTracker />
@@ -695,10 +538,10 @@ export const PdfMultiToolPage: React.FC = () => {
               icon={<FilePlus size={40} />}
             />
          ) : (
-            <div className="max-w-7xl mx-auto min-h-full pb-20" onClick={(e) => e.stopPropagation()}>
+            <div className="max-w-6xl mx-auto min-h-full pb-20" onClick={(e) => e.stopPropagation()}>
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
                   <SortableContext items={pages.map(p => p.id)} strategy={rectSortingStrategy}>
-                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
+                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
                         <AnimatePresence mode="popLayout">
                             {pages.map((page, index) => (
                               <SortablePage 

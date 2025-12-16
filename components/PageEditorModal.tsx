@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { PdfPage, Annotation } from '../types';
 import { X, Type, Highlighter, Square, Eraser, Check, PenTool, Image as ImageIcon, Save, CheckSquare, ChevronLeft, ChevronRight, Palette, Undo2 } from 'lucide-react';
 import { nanoid } from 'nanoid';
@@ -327,7 +327,7 @@ export const PageEditorModal: React.FC<PageEditorModalProps> = ({
           
           {/* Modal Container */}
           <motion.div 
-            variants={modalContentVariants}
+            variants={modalContentVariants as Variants}
             initial="hidden" 
             animate="visible" 
             exit="exit"

@@ -1,183 +1,141 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import { 
-  Terminal, Cpu, Shield, ArrowRight, 
-  Maximize2, MessageSquare, ExternalLink, Zap, Lock, HelpCircle
-} from 'lucide-react';
-import { AdSlot } from '../components/AdSlot';
-import { FeatureRequestModal } from '../components/FeatureRequestModal';
-import { buttonTap, staggerContainer, fadeInUp, cardHover, standardLayoutTransition } from '../utils/animations';
+import { toolCategories } from '../utils/tool-list';
 import { PageReadyTracker } from '../components/PageReadyTracker';
-import { toolCategories, Tool } from '../utils/tool-list';
+import { ToolLink } from '../components/ToolLink';
+import { ArrowRight, Cpu, ShieldCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { IconBox } from '../components/IconBox';
 
-// --- Components ---
+const itemVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } }
+};
 
-const ToolEntry: React.FC<{ tool: Tool }> = ({ tool }) => (
-  <Link to={tool.path} className="block w-full outline-none group">
-    <motion.div
-      layout
-      whileHover={{ y: -4, scale: 1.01 }}
-      whileTap={{ scale: 0.98 }}
-      className="
-        flex items-start gap-4 p-5 h-full
-        bg-white dark:bg-charcoal-850 
-        border border-slate-200 dark:border-charcoal-700
-        rounded-2xl transition-all duration-200
-        hover:border-brand-purple/50 dark:hover:border-brand-purple/50
-        hover:shadow-xl hover:shadow-brand-purple/5
-      "
-    >
-      <div className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${tool.color} ring-1 ring-inset ring-black/5 dark:ring-white/5`}>
-        {React.cloneElement(tool.icon, { size: 24, strokeWidth: 1.5 })}
-      </div>
-      
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-1.5">
-          <h3 className="font-heading font-bold text-base text-charcoal-900 dark:text-white group-hover:text-brand-purple transition-colors truncate">
-            {tool.title}
-          </h3>
-          <ArrowRight size={16} className="text-charcoal-300 dark:text-charcoal-600 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
-        </div>
-        <p className="text-xs text-charcoal-500 dark:text-charcoal-400 leading-relaxed line-clamp-2 font-medium">
-          {tool.desc}
-        </p>
-      </div>
-    </motion.div>
-  </Link>
-);
+const subtextVariants = {
+  hidden: { opacity: 0, y: 5 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3, delay: 0.2, ease: "easeOut" } }
+};
 
 export const Home: React.FC = () => {
-  const [isFeatureModalOpen, setIsFeatureModalOpen] = useState(false);
-
-  const totalTools = toolCategories.reduce((acc, cat) => acc + cat.tools.length, 0);
-
   return (
-    <div className="flex-1 w-full overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-charcoal-950 flex flex-col">
+    <div className="flex-1 w-full overflow-y-auto bg-nd-base flex flex-col pt-24 pb-20 px-6 font-sans">
       <PageReadyTracker />
       
-      {/* Hero Section */}
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-20 md:pt-32 pb-12">
+      <div className="max-w-3xl mx-auto w-full">
+        
+        {/* 1. Hero */}
         <motion.div 
-          variants={fadeInUp}
           initial="hidden"
-          animate="show"
-          className="flex flex-col items-center max-w-3xl mx-auto text-center"
+          animate="visible"
+          variants={itemVariants}
+          className="mb-24 md:mb-32"
         >
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-purple/10 text-brand-purple text-xs font-bold font-mono mb-6 border border-brand-purple/20">
-             <Shield size={12} /> 100% CLIENT-SIDE • PRIVACY FIRST
-          </div>
-          
-          <h1 className="text-4xl md:text-6xl font-heading font-extrabold text-charcoal-900 dark:text-white tracking-tight mb-6 leading-tight">
-             Private File Tools<span className="text-brand-purple">.</span>
+          <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-nd-primary mb-6 leading-[1.1]">
+            Engineered for <br className="hidden md:block" />
+            private file processing.
           </h1>
           
-          <p className="text-lg text-charcoal-500 dark:text-charcoal-400 leading-relaxed mb-10 max-w-2xl mx-auto">
-             A suite of fast utilities running entirely in your browser. <br className="hidden md:inline"/>
-             Convert, edit, and manage files without ever uploading them to a server.
-          </p>
-        </motion.div>
-      </div>
+          <div className="max-w-xl">
+            <p className="text-lg text-nd-secondary leading-relaxed mb-6">
+              A precision suite of local-first utilities. 
+              Process PDFs, images, and archives directly in your browser.
+            </p>
 
-      {/* Main Workspace Area */}
-      <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 pb-20">
-        <motion.div
-          variants={staggerContainer}
-          initial="hidden"
-          animate="show"
-          className="space-y-12"
-        >
-          {toolCategories.map((cat) => (
-            <motion.div key={cat.category} variants={fadeInUp} className="space-y-5">
-              <div className="flex items-center gap-3 pb-2 border-b border-slate-200 dark:border-charcoal-800/50">
-                <div className="p-1.5 rounded-md bg-slate-100 dark:bg-charcoal-800 text-charcoal-500 dark:text-charcoal-400">
-                  <Terminal size={14} />
-                </div>
-                <h2 className="text-xs font-bold font-mono uppercase tracking-widest text-charcoal-500 dark:text-charcoal-400">
-                  {cat.category}
-                </h2>
-                <span className="ml-auto text-[10px] font-mono text-charcoal-400 dark:text-charcoal-600 bg-slate-100 dark:bg-charcoal-800 px-1.5 py-0.5 rounded">
-                  {cat.tools.length}
-                </span>
+            <motion.div 
+              variants={subtextVariants}
+              className="flex items-center gap-2.5 text-sm font-mono text-nd-muted"
+            >
+              <div className="flex items-center justify-center w-2 h-2 relative">
+                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
               </div>
+              <span>Runs locally. No servers. No uploads.</span>
+            </motion.div>
+          </div>
+        </motion.div>
+
+        {/* Capability Bridge */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="mb-10 text-[10px] font-mono font-medium text-nd-muted uppercase tracking-widest flex items-center gap-4 opacity-60 pl-1"
+        >
+           <span>Convert</span>
+           <span className="w-px h-2 bg-current opacity-30"></span>
+           <span>Edit</span>
+           <span className="w-px h-2 bg-current opacity-30"></span>
+           <span>Organize</span>
+           <span className="w-px h-2 bg-current opacity-30"></span>
+           <span>Secure</span>
+        </motion.div>
+
+        {/* 2. Tools Directory */}
+        <div className="space-y-20">
+          {toolCategories.map((cat) => (
+            <motion.section 
+              key={cat.category}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-50px" }}
+              variants={itemVariants}
+            >
+              <h3 className="text-xs font-semibold text-nd-muted uppercase tracking-wider mb-6 pl-1">
+                {cat.category}
+              </h3>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                 {cat.tools.map((tool) => (
-                  <ToolEntry key={tool.id} tool={tool} />
+                  <ToolLink key={tool.id} tool={tool} />
                 ))}
               </div>
-            </motion.div>
+            </motion.section>
           ))}
-        </motion.div>
-
-        {/* Footer / Actions */}
-        <motion.div 
-          variants={fadeInUp}
-          className="mt-20 pt-10 border-t border-slate-200 dark:border-charcoal-800 grid grid-cols-1 md:grid-cols-3 gap-6"
-        >
-          {/* Ad / System Notice */}
-          <div className="md:col-span-2">
-             <div className="bg-white dark:bg-charcoal-900 rounded-2xl p-6 border border-slate-200 dark:border-charcoal-800 flex flex-col sm:flex-row items-start gap-5 shadow-sm">
-                <div className="p-3 bg-brand-purple/10 rounded-xl text-brand-purple shrink-0">
-                   <Zap size={24} />
-                </div>
-                <div>
-                   <h4 className="text-sm font-bold font-heading text-charcoal-900 dark:text-white mb-2">Performance Note</h4>
-                   <p className="text-xs text-charcoal-600 dark:text-charcoal-400 leading-relaxed max-w-lg">
-                      EZtify operates entirely within your browser's allocated memory. 
-                      Processing speed depends on your device's CPU. 
-                      Large files (>500MB) may require additional time but remain private.
-                   </p>
-                </div>
-             </div>
-          </div>
-
-          {/* Functional Links */}
-          <div className="flex flex-col gap-3">
-             <button 
-               onClick={() => setIsFeatureModalOpen(true)}
-               className="flex items-center justify-between p-4 bg-white dark:bg-charcoal-900 border border-slate-200 dark:border-charcoal-800 rounded-2xl hover:border-brand-purple/50 hover:shadow-md transition-all group text-left"
-             >
-                <div className="flex items-center gap-3">
-                   <MessageSquare size={18} className="text-charcoal-400 group-hover:text-brand-purple transition-colors" />
-                   <span className="text-xs font-bold font-mono text-charcoal-700 dark:text-slate-300">Submit Feature Request</span>
-                </div>
-                <ArrowRight size={16} className="text-charcoal-300" />
-             </button>
-             
-             <Link 
-               to="/faq"
-               className="flex items-center justify-between p-4 bg-white dark:bg-charcoal-900 border border-slate-200 dark:border-charcoal-800 rounded-2xl hover:border-brand-purple/50 hover:shadow-md transition-all group"
-             >
-                <div className="flex items-center gap-3">
-                   <HelpCircle size={18} className="text-charcoal-400 group-hover:text-brand-purple transition-colors" />
-                   <span className="text-xs font-bold font-mono text-charcoal-700 dark:text-slate-300">FAQ & Troubleshooting</span>
-                </div>
-                <ArrowRight size={16} className="text-charcoal-300" />
-             </Link>
-
-             <Link 
-               to="/about"
-               className="flex items-center justify-between p-4 bg-white dark:bg-charcoal-900 border border-slate-200 dark:border-charcoal-800 rounded-2xl hover:border-brand-purple/50 hover:shadow-md transition-all group"
-             >
-                <div className="flex items-center gap-3">
-                   <Cpu size={18} className="text-charcoal-400 group-hover:text-brand-purple transition-colors" />
-                   <span className="text-xs font-bold font-mono text-charcoal-700 dark:text-slate-300">System Documentation</span>
-                </div>
-                <ArrowRight size={16} className="text-charcoal-300" />
-             </Link>
-          </div>
-        </motion.div>
-        
-        <div className="mt-12 text-center">
-           <span className="text-[10px] font-mono text-charcoal-400 dark:text-charcoal-600 uppercase tracking-widest">
-              Total Modules: {totalTools} // Build v1.0.0
-           </span>
         </div>
-      </div>
 
-      <FeatureRequestModal isOpen={isFeatureModalOpen} onClose={() => setIsFeatureModalOpen(false)} />
+        {/* 3. Architecture */}
+        <motion.div 
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={itemVariants}
+          className="mt-32 border-t border-nd-border pt-20"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-12">
+            <h3 className="text-sm font-medium text-nd-primary">System Architecture</h3>
+            <div className="space-y-8">
+              <p className="text-base text-nd-secondary leading-relaxed">
+                EZtify is built on a <strong className="text-nd-primary font-medium">local-first</strong> architecture. 
+                Unlike traditional web tools that upload files to a remote server, EZtify processes everything directly within your browser using WebAssembly.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-4">
+                 <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2 text-nd-primary">
+                       <IconBox icon={<ShieldCheck />} size="sm" variant="success" />
+                       <span className="text-sm font-bold">Zero Knowledge</span>
+                    </div>
+                    <p className="text-xs text-nd-muted leading-relaxed pl-1">Files never leave your device. Memory is cleared on tab close.</p>
+                 </div>
+                 <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2 text-nd-primary">
+                       <IconBox icon={<Cpu />} size="sm" variant="brand" />
+                       <span className="text-sm font-bold">Native Performance</span>
+                    </div>
+                    <p className="text-xs text-nd-muted leading-relaxed pl-1">Leverages multi-core processing for instant operations.</p>
+                 </div>
+              </div>
+              <div className="pt-4">
+                <Link to="/about" className="text-sm font-medium text-nd-primary hover:text-zinc-500 inline-flex items-center gap-1 transition-colors group">
+                  System specifications <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+      </div>
     </div>
   );
 };

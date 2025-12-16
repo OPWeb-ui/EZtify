@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { motion } from 'framer-motion';
 
@@ -18,7 +17,7 @@ export const PageLoader: React.FC = () => {
            <span>BOOT_SEQUENCE_INIT</span>
            <motion.span
              animate={{ opacity: [0, 1, 0] }}
-             transition={{ repeat: Infinity, duration: 0.8, ease: "steps(2)" }}
+             transition={{ repeat: Infinity, duration: 0.8, ease: "linear" }}
              className="w-2 h-4 bg-brand-purple block"
            />
         </div>

@@ -1,5 +1,5 @@
 
-export type AppMode = 'home' | 'image-to-pdf' | 'pdf-to-image' | 'compress-pdf' | 'merge-pdf' | 'split-pdf' | 'zip-files' | 'word-to-pdf' | 'reorder-pdf' | 'pdf-to-word' | 'pdf-to-pptx' | 'rotate-pdf' | 'delete-pdf-pages' | 'unlock-pdf' | 'add-page-numbers' | 'redact-pdf' | 'grayscale-pdf' | 'code-editor';
+export type AppMode = 'home' | 'image-to-pdf' | 'pdf-to-image' | 'compress-pdf' | 'merge-pdf' | 'split-pdf' | 'zip-files' | 'word-to-pdf' | 'reorder-pdf' | 'pdf-to-word' | 'pdf-to-pptx' | 'rotate-pdf' | 'delete-pdf-pages' | 'unlock-pdf' | 'add-page-numbers' | 'redact-pdf' | 'grayscale-pdf' | 'code-editor' | 'pdf-multi-tool' | 'crop-pdf';
 
 export interface UploadedImage {
   id: string;
@@ -8,6 +8,7 @@ export interface UploadedImage {
   width: number;
   height: number;
   rotation: number; // 0, 90, 180, 270
+  appliedCrop?: CropData;
 }
 
 export type PageSize = 'a4' | 'letter' | 'auto';
@@ -48,7 +49,7 @@ export interface ToastMessage {
   id: string;
   title: string;
   message: string;
-  type: 'warning' | 'error' | 'undo' | 'success';
+  type: 'warning' | 'error' | 'undo' | 'success' | 'info';
   duration?: number;
   action?: ToastAction;
 }
@@ -86,6 +87,13 @@ export interface Annotation {
   imageData?: string;
 }
 
+export interface CropData {
+  x: number;      // percentage
+  y: number;      // percentage
+  width: number;  // percentage
+  height: number; // percentage
+}
+
 export interface PdfPage {
   id: string;
   pageIndex: number; // 0-based index from original file
@@ -96,6 +104,15 @@ export interface PdfPage {
   annotations?: Annotation[];
   width?: number;
   height?: number;
+  crop?: CropData;
+  appliedCrop?: CropData;
+  previousAppliedCrop?: CropData;
+  originalPreviewUrl?: string; // The unmodified original page image
+  previousPreviewUrl?: string; // The preview image before the last crop action (for Undo)
+}
+
+export interface ExtendedPdfPage extends PdfPage {
+  sourceFileId: string; // To track which file this page belongs to
 }
 
 export interface ZipFile {
@@ -114,4 +131,17 @@ export interface PageNumberConfig {
   fontFamily: string;
   offsetX: number;
   offsetY: number;
+}
+
+// --- NEW FOR PDF MULTI-TOOL ---
+export interface MultiToolPage {
+  id: string; // Unique ID for React key/DND
+  sourceFileId: string; // ID of the original file, or 'blank'
+  sourcePageIndex: number; // Original 0-based index. -1 for blank pages.
+  previewUrl: string; // data:url for the thumbnail
+  rotation: 0 | 90 | 180 | 270;
+  type: 'original' | 'blank';
+  width: number;
+  height: number;
+  selected: boolean;
 }

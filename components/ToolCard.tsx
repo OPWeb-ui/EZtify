@@ -1,25 +1,19 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
-import { cardHover, standardLayoutTransition } from '../utils/animations'; 
-
-export interface ToolData {
-  id: string;
-  title: string;
-  desc: string;
-  icon: React.ReactNode;
-  path: string;
-  color: string;
-}
+import { motion, Variants } from 'framer-motion';
+import { ArrowRight, Activity } from 'lucide-react';
+import { cardHover } from '../utils/animations'; 
+import { Tool } from '../utils/tool-list'; 
+import { IconBox } from './IconBox';
+import { getToolUsage, formatUsageCount } from '../services/usageTracker';
 
 interface ToolCardProps {
-  tool: ToolData;
+  tool: Tool; 
   className?: string;
 }
 
-const localItemVariants = {
+const localItemVariants: Variants = {
   hidden: { opacity: 0, scale: 0.95 },
   visible: { 
     opacity: 1, 
@@ -29,51 +23,77 @@ const localItemVariants = {
 };
 
 export const ToolCard: React.FC<ToolCardProps> = ({ tool, className }) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const [usageCount, setUsageCount] = useState(0);
+
+  // Load usage stats on mount
+  useEffect(() => {
+    setUsageCount(getToolUsage(tool.id));
+  }, [tool.id]);
+
+  // Determine accent color safely
+  const accentColor = (tool as any).accentColor || '#71717a';
+
   return (
     <motion.div
       variants={localItemVariants}
       className={`relative group ${className || "w-full"}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       <Link to={tool.path} className="block w-full h-full outline-none">
         <motion.div
           className="
-            bg-white dark:bg-charcoal-900 rounded-xl border border-slate-200 dark:border-charcoal-700 
+            bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 
             relative overflow-hidden aspect-square flex flex-col justify-between p-5
-            transition-colors duration-200 ease-linear
+            transition-colors duration-200
           "
           whileHover={cardHover}
           whileTap={{ scale: 0.98 }}
+          style={{ borderColor: isHovered ? accentColor : '' }}
         >
-          {/* Tech Corner Markers (Decor) */}
-          <div className="absolute top-0 left-0 w-2 h-2 border-l-2 border-t-2 border-transparent group-hover:border-brand-purple transition-colors duration-200" />
-          <div className="absolute top-0 right-0 w-2 h-2 border-r-2 border-t-2 border-transparent group-hover:border-brand-purple transition-colors duration-200" />
-          <div className="absolute bottom-0 left-0 w-2 h-2 border-l-2 border-b-2 border-transparent group-hover:border-brand-purple transition-colors duration-200" />
-          <div className="absolute bottom-0 right-0 w-2 h-2 border-r-2 border-b-2 border-transparent group-hover:border-brand-purple transition-colors duration-200" />
-
           {/* Header */}
           <div className="flex justify-between items-start">
-             <div className={`w-10 h-10 rounded-lg ${tool.color} flex items-center justify-center border border-black/5 dark:border-white/10`}>
-                  {React.isValidElement(tool.icon) 
-                      ? React.cloneElement(tool.icon as React.ReactElement, { size: 20, strokeWidth: 1.5 }) 
-                      : tool.icon}
-              </div>
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 -mr-2 -mt-2">
-                 <ArrowRight className="text-brand-purple -rotate-45 group-hover:rotate-0 transition-transform duration-300" size={20} strokeWidth={1.5} />
-              </div>
+             <IconBox 
+                icon={tool.icon} 
+                size="md" 
+                active={isHovered} 
+                toolAccentColor={accentColor}
+             />
+             
+             <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 -mr-2 -mt-2">
+                 <ArrowRight 
+                    className="-rotate-45 group-hover:rotate-0 transition-transform duration-300" 
+                    size={20} 
+                    strokeWidth={1.5} 
+                    style={{ color: accentColor }}
+                 />
+             </div>
           </div>
 
           {/* Body */}
-          <div className="mt-4">
-              <h3 className="font-mono font-bold text-sm text-charcoal-900 dark:text-white mb-2 group-hover:text-brand-purple transition-colors">
+          <div className="mt-4 relative z-10 flex-1">
+              <h3 className="font-medium text-sm text-zinc-900 dark:text-white mb-2 transition-colors">
                   {tool.title}
               </h3>
-              <p className="text-[10px] text-charcoal-500 dark:text-charcoal-400 leading-relaxed line-clamp-3 font-mono">
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed line-clamp-3">
                    {tool.desc}
               </p>
           </div>
+
+          {/* Usage Stat (Subtle Footer) */}
+          {usageCount > 0 && (
+            <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center gap-1.5 text-[10px] font-mono text-zinc-400 dark:text-zinc-500">
+                <Activity size={10} />
+                <span>{formatUsageCount(usageCount)} runs</span>
+            </div>
+          )}
           
-          {/* Background Scanline (Subtle) */}
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-brand-purple/5 to-transparent -translate-y-full group-hover:translate-y-full transition-transform duration-700 ease-linear pointer-events-none" />
+          {/* Subtle Background Tint on Hover */}
+          <div 
+            className="absolute inset-0 opacity-0 group-hover:opacity-[0.03] transition-opacity duration-300 pointer-events-none"
+            style={{ backgroundColor: accentColor }}
+          />
         </motion.div>
       </Link>
     </motion.div>

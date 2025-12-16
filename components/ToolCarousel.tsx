@@ -2,11 +2,12 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { ToolCard, ToolData } from './ToolCard';
+import { ToolCard } from './ToolCard';
+import { Tool } from '../utils/tool-list';
 
 interface ToolCarouselProps {
   title: string;
-  tools: ToolData[];
+  tools: Tool[];
 }
 
 export const ToolCarousel: React.FC<ToolCarouselProps> = ({ title, tools }) => {
