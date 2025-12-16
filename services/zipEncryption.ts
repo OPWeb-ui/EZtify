@@ -7,9 +7,11 @@ const loadZipLib = async () => {
   if (zipLib) return zipLib;
 
   try {
-    // Try full ESM build first (includes workers)
+    // Use a variable and vite-ignore to prevent Vite from bundling this deep import,
+    // which fails due to package export restrictions. The browser will resolve it via import map.
+    const fullBuildPath = '@zip.js/zip.js/dist/zip-full.esm.min.js';
     // @ts-ignore
-    zipLib = await import('@zip.js/zip.js/dist/zip-full.esm.min.js');
+    zipLib = await import(/* @vite-ignore */ fullBuildPath);
   } catch (e) {
     console.warn("Failed to load full zip build, falling back to standard import", e);
     try {

@@ -2,7 +2,8 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useLayoutContext } from '../components/Layout';
 import { PageReadyTracker } from '../components/PageReadyTracker';
-import { convertPptxToPdf, PptxConfig } from '../services/pdfToPptxConverter';
+// Fix: Correctly import `convertPdfToPptx` instead of `convertPptxToPdf`.
+import { convertPdfToPptx, PptxConfig } from '../services/pdfToPptxConverter';
 import { loadPdfPages } from '../services/pdfSplitter';
 import { FileRejection, useDropzone } from 'react-dropzone';
 import { 
@@ -58,7 +59,6 @@ export const PdfToPptxPage: React.FC = () => {
     if (acceptedFiles.length === 0) return;
     const f = acceptedFiles[0];
     
-    // Fix: Corrected function name from setIsProcessingFiles to setIsProcessing.
     setIsProcessing(true);
     setStatus('Parsing PDF...');
     
@@ -134,6 +134,7 @@ export const PdfToPptxPage: React.FC = () => {
               return acc;
           }, [] as number[]);
 
+          // Fix: Correct function call from `convertPptxToPdf` to `convertPdfToPptx`.
           const blob = await convertPdfToPptx(file, indices, config, setProgress, setStatus);
           
           const url = URL.createObjectURL(blob);
