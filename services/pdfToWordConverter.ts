@@ -1,3 +1,4 @@
+
 import { loadPdfJs } from './pdfProvider';
 import JSZip from 'jszip';
 
@@ -18,6 +19,10 @@ const documentXMLTemplate = `<?xml version="1.0" encoding="UTF-8" standalone="ye
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
     <w:body>
         __CONTENT__
+        <w:sectPr>
+            __PAGE_SIZE__
+            <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/>
+        </w:sectPr>
     </w:body>
 </w:document>`;
 
@@ -48,11 +53,17 @@ const escapeHtml = (text: string) => {
     });
 };
 
+interface PdfMetadata {
+    orientation: 'portrait' | 'landscape';
+    widthTwips: number;
+    heightTwips: number;
+}
+
 export const extractHtmlFromPdf = async (
   file: File,
   onProgress?: (percent: number) => void,
   onStatusUpdate?: (status: string) => void
-): Promise<string> => {
+): Promise<{ html: string, metadata: PdfMetadata }> => {
     onStatusUpdate?.('Reading PDF...');
     if (onProgress) onProgress(10);
 
@@ -66,6 +77,29 @@ export const extractHtmlFromPdf = async (
     });
     const pdf = await loadingTask.promise;
     
+    // Detect dimensions from page 1
+    // PDF unit is points (1/72 inch). Word unit is Twips (1/1440 inch).
+    // Factor: 20 twips per point.
+    let metadata: PdfMetadata = { 
+        orientation: 'portrait',
+        widthTwips: 11906, // A4 default
+        heightTwips: 16838 
+    };
+
+    if (pdf.numPages > 0) {
+        const page1 = await pdf.getPage(1);
+        const { width, height } = page1.getViewport({ scale: 1.0 });
+        
+        const wTwips = Math.round(width * 20);
+        const hTwips = Math.round(height * 20);
+        
+        metadata = {
+            orientation: width > height ? 'landscape' : 'portrait',
+            widthTwips: wTwips,
+            heightTwips: hTwips
+        };
+    }
+
     if (onProgress) onProgress(20);
     onStatusUpdate?.('Extracting text content...');
     
@@ -100,11 +134,12 @@ export const extractHtmlFromPdf = async (
         if (onProgress) onProgress(20 + Math.round((i / pdf.numPages) * 50));
     }
     
-    return htmlOutput;
+    return { html: htmlOutput, metadata };
 };
 
 export const generateDocxFromHtml = async (
   htmlContent: string,
+  metadata: PdfMetadata,
   onProgress?: (percent: number) => void,
   onStatusUpdate?: (status: string) => void
 ): Promise<Blob> => {
@@ -114,14 +149,22 @@ export const generateDocxFromHtml = async (
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlContent, 'text/html');
     
-    // Extract text from paragraphs we generated
     const paragraphs = Array.from(doc.querySelectorAll('p')).map(p => p.textContent || '');
     
     const contentXML = paragraphs.map(p => 
         `<w:p><w:r><w:t>${escapeXml(p)}</w:t></w:r></w:p>`
     ).join('');
     
-    const documentXML = documentXMLTemplate.replace('__CONTENT__', contentXML);
+    // Construct Page Size XML dynamically
+    let pageSizeXML = `<w:pgSz w:w="${metadata.widthTwips}" w:h="${metadata.heightTwips}"`;
+    if (metadata.orientation === 'landscape') {
+        pageSizeXML += ` w:orient="landscape"`;
+    }
+    pageSizeXML += `/>`;
+
+    const documentXML = documentXMLTemplate
+        .replace('__CONTENT__', contentXML)
+        .replace('__PAGE_SIZE__', pageSizeXML);
 
     const zip = new JSZip();
     zip.file('[Content_Types].xml', contentTypesXML.trim());
@@ -148,11 +191,11 @@ export const convertPdfToWord = async (
   onProgress?: (percent: number) => void,
   onStatusUpdate?: (status: string) => void
 ): Promise<Blob> => {
-    const html = await extractHtmlFromPdf(file, (p) => {
+    const { html, metadata } = await extractHtmlFromPdf(file, (p) => {
         if (onProgress) onProgress(p * 0.7);
     }, onStatusUpdate);
     
-    return generateDocxFromHtml(html, (p) => {
+    return generateDocxFromHtml(html, metadata, (p) => {
         if (onProgress) onProgress(70 + (p - 80) * 1.5);
     }, onStatusUpdate);
 };

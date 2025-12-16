@@ -3,7 +3,7 @@ import { loadPdfJs } from './pdfProvider';
 import PptxGenJS from 'pptxgenjs';
 
 export interface PptxConfig {
-  layout: '16x9' | '16x10' | '4x3' | 'wide';
+  layout: 'auto' | '16x9' | '16x10' | '4x3' | 'wide'; // 'auto' is smart detect
   backgroundColor?: string;
 }
 
@@ -32,21 +32,36 @@ export const convertPdfToPptx = async (
     
     const pptx = new PptxGenJS();
     
-    // Map layout string to PptxGenJS layout
-    const layoutMap: Record<string, string> = {
-      '16x9': 'LAYOUT_16x9',
-      '16x10': 'LAYOUT_16x10',
-      '4x3': 'LAYOUT_4x3',
-      'wide': 'LAYOUT_WIDE'
-    };
-    pptx.layout = layoutMap[config.layout] || 'LAYOUT_16x9';
+    // --- SMART LAYOUT DETECTION ---
+    if (config.layout === 'auto') {
+        onStatusUpdate?.('Detecting page layout...');
+        // Read page 1 dimensions
+        const page1 = await pdf.getPage(1);
+        const { width, height } = page1.getViewport({ scale: 1.0 });
+        
+        // Define Custom Layout based on PDF point dimensions (72 dpi) -> Inches
+        // PptxGenJS uses inches. 1 inch = 72 pt.
+        const widthIn = width / 72;
+        const heightIn = height / 72;
+        
+        pptx.defineLayout({ name: 'CUSTOM_PDF_MATCH', width: widthIn, height: heightIn });
+        pptx.layout = 'CUSTOM_PDF_MATCH';
+    } else {
+        // Map legacy string to PptxGenJS layout
+        const layoutMap: Record<string, string> = {
+          '16x9': 'LAYOUT_16x9',
+          '16x10': 'LAYOUT_16x10',
+          '4x3': 'LAYOUT_4x3',
+          'wide': 'LAYOUT_WIDE'
+        };
+        pptx.layout = layoutMap[config.layout] || 'LAYOUT_16x9';
+    }
 
     // Determine pages to process
     let pagesToProcess: number[] = [];
     if (pageIndices === 'all') {
       pagesToProcess = Array.from({ length: pdf.numPages }, (_, i) => i + 1);
     } else {
-      // PDF.js uses 1-based indexing
       pagesToProcess = pageIndices.map(i => i + 1);
     }
 
@@ -58,7 +73,7 @@ export const convertPdfToPptx = async (
         
         try {
           const page = await pdf.getPage(pageNum);
-          // 2.0 scale is roughly 144dpi, good for 1080p screens
+          // 2.0 scale is roughly 144dpi, good balance for slide quality
           const viewport = page.getViewport({ scale: 2.0 }); 
 
           const canvas = document.createElement('canvas');
@@ -68,11 +83,9 @@ export const convertPdfToPptx = async (
           canvas.height = viewport.height;
           canvas.width = viewport.width;
 
-          // Fill background if specified
-          if (config.backgroundColor) {
-             context.fillStyle = config.backgroundColor;
-             context.fillRect(0, 0, canvas.width, canvas.height);
-          }
+          // Fill background if specified (or white default for PDF content)
+          context.fillStyle = config.backgroundColor || '#FFFFFF';
+          context.fillRect(0, 0, canvas.width, canvas.height);
 
           const renderContext = {
               canvasContext: context,
@@ -80,7 +93,7 @@ export const convertPdfToPptx = async (
           };
           await page.render(renderContext).promise;
 
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.85); // JPEG is faster and smaller for photos/slides
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
 
           const slide = pptx.addSlide();
           
@@ -89,6 +102,7 @@ export const convertPdfToPptx = async (
           }
 
           // Add the rendered page as a full-slide image
+          // x:0, y:0, w:'100%', h:'100%' forces it to cover the slide
           slide.addImage({
               data: dataUrl,
               x: 0,
