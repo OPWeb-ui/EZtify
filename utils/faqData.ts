@@ -12,7 +12,8 @@ export const faqData: FAQSection[] = [
     items: [
       { q: "Is EZtify free to use?", a: "Yes. EZtify is completely free. There are no paywalls, hidden fees, or subscriptions." },
       { q: "Do I need to create an account?", a: "No. All tools are accessible immediately without sign-up or login." },
-      { q: "Does it work offline?", a: "Yes. Once the app is loaded, it works entirely offline. You can install it as a PWA (Progressive Web App) for easy access." }
+      { q: "Does it work offline?", a: "Yes. Once the app is loaded, it works entirely offline. You can install it as a PWA (Progressive Web App) for easy access." },
+      { q: "Why does EZtify feel more powerful on desktop?", a: "Desktop environments provide expanded screen real estate and precise input control (mouse/trackpad), unlocking advanced editor workflows and granular settings not available on touch devices." }
     ]
   },
   {

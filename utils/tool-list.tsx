@@ -12,7 +12,7 @@ export interface Tool {
     desc: string;
     icon: React.ReactElement;
     path: string;
-    color: string;
+    accentColor: string; // Specific HEX color for this tool
 }
 
 export interface ToolCategory {
@@ -20,66 +20,75 @@ export interface ToolCategory {
     tools: Tool[];
 }
 
+// Nothing OS Inspired Palette
+const ND_RED = '#D71921';
+const ND_ORANGE = '#F57C00';
+const ND_YELLOW = '#FBC02D';
+const ND_GREEN = '#388E3C';
+const ND_BLUE = '#1976D2';
+const ND_PURPLE = '#7B1FA2';
+const ND_MONO = '#737373'; // Neutral Grey for specific utilities
+
 // Single source of truth for all implemented tools
 export const toolCategories: ToolCategory[] = [
   {
     category: 'Power Tools',
     tools: [
-      { id: 'pdf-multi-tool', title: 'PDF Multi-Tool', desc: 'Merge, split, rotate, and organize PDF pages in one unified interface.', icon: <Wrench />, path: '/pdf-multi-tool', color: 'text-indigo-500 bg-indigo-100 dark:bg-indigo-900/30' },
+      { id: 'pdf-multi-tool', title: 'PDF Multi-Tool', desc: 'Merge, split, rotate, and organize PDF pages in one unified interface.', icon: <Wrench />, path: '/pdf-multi-tool', accentColor: ND_RED },
     ]
   },
   {
     category: 'Convert to PDF',
     tools: [
-      { id: 'image-to-pdf', title: 'Images to PDF', desc: 'Compile raster graphics into a single document.', icon: <FileStack />, path: '/images-to-pdf', color: 'text-yellow-500 bg-yellow-100 dark:bg-yellow-900/30' },
-      { id: 'word-to-pdf', title: 'Word to PDF', desc: 'Render DOCX buffers to portable document format.', icon: <FileText />, path: '/word-to-pdf', color: 'text-blue-500 bg-blue-100 dark:bg-blue-900/30' },
-      { id: 'pptx-to-pdf', title: 'PPTX to PDF', desc: 'Serialize slides to static PDF pages.', icon: <Presentation />, path: '/pptx-to-pdf', color: 'text-orange-500 bg-orange-100 dark:bg-orange-900/30' },
+      { id: 'image-to-pdf', title: 'Images to PDF', desc: 'Compile raster graphics into a single document.', icon: <FileStack />, path: '/images-to-pdf', accentColor: ND_YELLOW },
+      { id: 'word-to-pdf', title: 'Word to PDF', desc: 'Render DOCX buffers to portable document format.', icon: <FileText />, path: '/word-to-pdf', accentColor: ND_BLUE },
+      { id: 'pptx-to-pdf', title: 'PPTX to PDF', desc: 'Serialize slides to static PDF pages.', icon: <Presentation />, path: '/pptx-to-pdf', accentColor: ND_ORANGE },
     ]
   },
   {
     category: 'Convert from PDF',
     tools: [
-      { id: 'pdf-to-image', title: 'PDF to Images', desc: 'Rasterize pages to high-res JPG/PNG.', icon: <Image />, path: '/pdf-to-images', color: 'text-yellow-500 bg-yellow-100 dark:bg-yellow-900/30' },
-      { id: 'pdf-to-word', title: 'PDF to Word', desc: 'Extract text streams to DOCX format.', icon: <FileType2 />, path: '/pdf-to-word', color: 'text-blue-500 bg-blue-100 dark:bg-blue-900/30' },
-      { id: 'pdf-to-pptx', title: 'PDF to PPTX', desc: 'Convert document pages to presentation slides.', icon: <Presentation />, path: '/pdf-to-pptx', color: 'text-orange-500 bg-orange-100 dark:bg-orange-900/30' },
+      { id: 'pdf-to-image', title: 'PDF to Images', desc: 'Rasterize pages to high-res JPG/PNG.', icon: <Image />, path: '/pdf-to-images', accentColor: ND_YELLOW },
+      { id: 'pdf-to-word', title: 'PDF to Word', desc: 'Extract text streams to DOCX format.', icon: <FileType2 />, path: '/pdf-to-word', accentColor: ND_BLUE },
+      { id: 'pdf-to-pptx', title: 'PDF to PPTX', desc: 'Convert document pages to presentation slides.', icon: <Presentation />, path: '/pdf-to-pptx', accentColor: ND_ORANGE },
     ]
   },
   {
     category: 'Organize Pages',
     tools: [
-      { id: 'merge-pdf', title: 'Merge PDF', desc: 'Combine multiple documents into one file.', icon: <GitMerge />, path: '/merge-pdf', color: 'text-purple-500 bg-purple-100 dark:bg-purple-900/30' },
-      { id: 'split-pdf', title: 'Split PDF', desc: 'Extract specific pages into a new file.', icon: <GitFork />, path: '/split-pdf', color: 'text-purple-500 bg-purple-100 dark:bg-purple-900/30' },
-      { id: 'reorder-pdf', title: 'Reorder Pages', desc: 'Arrange pages by dragging and dropping.', icon: <ListOrdered />, path: '/reorder-pdf', color: 'text-indigo-500 bg-indigo-100 dark:bg-indigo-900/30' },
-      { id: 'rotate-pdf', title: 'Rotate PDF', desc: 'Change page orientation permanently.', icon: <RotateCw />, path: '/rotate-pdf', color: 'text-purple-500 bg-purple-100 dark:bg-purple-900/30' },
-      { id: 'delete-pdf-pages', title: 'Delete Pages', desc: 'Select and remove unwanted pages.', icon: <FileMinus />, path: '/delete-pdf-pages', color: 'text-rose-500 bg-rose-100 dark:bg-rose-900/30' },
+      { id: 'merge-pdf', title: 'Merge PDF', desc: 'Combine multiple documents into one file.', icon: <GitMerge />, path: '/merge-pdf', accentColor: ND_RED },
+      { id: 'split-pdf', title: 'Split PDF', desc: 'Extract specific pages into a new file.', icon: <GitFork />, path: '/split-pdf', accentColor: ND_RED },
+      { id: 'reorder-pdf', title: 'Reorder Pages', desc: 'Arrange pages by dragging and dropping.', icon: <ListOrdered />, path: '/reorder-pdf', accentColor: ND_RED },
+      { id: 'rotate-pdf', title: 'Rotate PDF', desc: 'Change page orientation permanently.', icon: <RotateCw />, path: '/rotate-pdf', accentColor: ND_RED },
+      { id: 'delete-pdf-pages', title: 'Delete Pages', desc: 'Select and remove unwanted pages.', icon: <FileMinus />, path: '/delete-pdf-pages', accentColor: ND_RED },
     ]
   },
   {
     category: 'Optimize & Edit',
     tools: [
-      { id: 'compress-pdf', title: 'Compress PDF', desc: 'Optimize stream size and downsample images.', icon: <Minimize2 />, path: '/compress-pdf', color: 'text-red-500 bg-red-100 dark:bg-red-900/30' },
-      { id: 'grayscale-pdf', title: 'Grayscale PDF', desc: 'Remove color channels (1-bit/8-bit conversion).', icon: <ScanLine />, path: '/grayscale-pdf', color: 'text-slate-600 bg-slate-200 dark:bg-slate-700/50 dark:text-slate-200' },
-      { id: 'add-page-numbers', title: 'Page Numbers', desc: 'Inject sequential numbering markers.', icon: <Hash />, path: '/add-page-numbers', color: 'text-indigo-500 bg-indigo-100 dark:bg-indigo-900/30' },
-      { id: 'crop-pdf', title: 'Crop PDF', desc: 'Visually select an area and crop PDF pages.', icon: <Crop />, path: '/crop-pdf', color: 'text-lime-500 bg-lime-100 dark:bg-lime-900/30' },
+      { id: 'compress-pdf', title: 'Compress PDF', desc: 'Optimize stream size and downsample images.', icon: <Minimize2 />, path: '/compress-pdf', accentColor: ND_GREEN },
+      { id: 'grayscale-pdf', title: 'Grayscale PDF', desc: 'Remove color channels (1-bit/8-bit conversion).', icon: <ScanLine />, path: '/grayscale-pdf', accentColor: ND_MONO },
+      { id: 'add-page-numbers', title: 'Page Numbers', desc: 'Inject sequential numbering markers.', icon: <Hash />, path: '/add-page-numbers', accentColor: ND_PURPLE },
+      { id: 'crop-pdf', title: 'Crop PDF', desc: 'Visually select an area and crop PDF pages.', icon: <Crop />, path: '/crop-pdf', accentColor: ND_GREEN },
     ]
   },
   {
     category: 'Security',
     tools: [
-      { id: 'redact-pdf', title: 'Redact PDF', desc: 'Permanently mask sensitive data blocks.', icon: <EyeOff />, path: '/redact-pdf', color: 'text-slate-600 bg-slate-200 dark:bg-slate-700/50 dark:text-slate-200' },
-      { id: 'unlock-pdf', title: 'Unlock PDF', desc: 'Decrypt secured documents.', icon: <UnlockKeyhole />, path: '/unlock-pdf', color: 'text-rose-500 bg-rose-100 dark:bg-rose-900/30' },
+      { id: 'redact-pdf', title: 'Redact PDF', desc: 'Permanently mask sensitive data blocks.', icon: <EyeOff />, path: '/redact-pdf', accentColor: ND_MONO },
+      { id: 'unlock-pdf', title: 'Unlock PDF', desc: 'Decrypt secured documents.', icon: <UnlockKeyhole />, path: '/unlock-pdf', accentColor: ND_GREEN },
     ]
   },
   {
     category: 'Developer Tools',
     tools: [
-      { id: 'code-editor', title: 'Code Editor', desc: 'IDE-lite for syntax editing.', icon: <Terminal />, path: '/code-editor', color: 'text-cyan-500 bg-cyan-100 dark:bg-cyan-900/30' },
+      { id: 'code-editor', title: 'Code Editor', desc: 'IDE-lite for syntax editing.', icon: <Terminal />, path: '/code-editor', accentColor: ND_MONO },
     ]
   },
   {
     category: 'File Utilities',
     tools: [
-      { id: 'zip-files', title: 'Zip Files', desc: 'Archive and compress multiple file streams.', icon: <Package />, path: '/zip-it', color: 'text-amber-500 bg-amber-100 dark:bg-amber-900/30' },
+      { id: 'zip-files', title: 'Zip Files', desc: 'Archive and compress multiple file streams.', icon: <Package />, path: '/zip-it', accentColor: ND_YELLOW },
     ]
   },
 ];
