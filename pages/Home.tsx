@@ -4,12 +4,11 @@ import { Link } from 'react-router-dom';
 import gsap from 'gsap';
 import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'framer-motion';
 import { 
-  ArrowRight, ShieldCheck, Presentation, Package, 
-  Image as ImageIcon, Minimize2, Archive, Pencil, Plus, Monitor, Layout, Ratio, LayoutTemplate
+  ArrowRight, Image as ImageIcon, Minimize2, Archive, Pencil, Plus, RefreshCw
 } from 'lucide-react';
 import { PageReadyTracker } from '../components/PageReadyTracker';
 import { toolCategories } from '../utils/tool-list';
-import { physicalSpring, heavySpring, bouncySpring } from '../utils/animations';
+import { physicalSpring, heavySpring } from '../utils/animations';
 
 // --- VISUAL COMPONENTS ---
 
@@ -31,7 +30,7 @@ const ShowcaseCanvas = ({ forcedToolId }: { forcedToolId?: string }) => {
     if (forcedToolId) return;
     const timer = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % tools.length);
-    }, 5000);
+    }, 4000); // Slightly faster cycle for smaller card
     return () => clearInterval(timer);
   }, [tools.length, forcedToolId]);
 
@@ -42,18 +41,17 @@ const ShowcaseCanvas = ({ forcedToolId }: { forcedToolId?: string }) => {
       case 'pdf-workspace':
         return (
           <div className="relative w-full h-full flex items-center justify-center">
-            <motion.div layoutId="doc-1" transition={heavySpring} className="absolute w-40 h-56 bg-white rounded-2xl border-2 border-[#111111] shadow-sm rotate-[-6deg] translate-x-[-15px]" />
-            <motion.div layoutId="doc-2" transition={heavySpring} className="absolute w-40 h-56 bg-stone-50 rounded-2xl border-2 border-[#111111] shadow-sm rotate-[3deg] translate-x-[15px] flex flex-col p-4 gap-2">
-              <div className="flex gap-1.5 mb-4">
-                 <div className="w-4 h-4 rounded-md bg-accent-lime border border-[#111111]" />
-                 <div className="w-4 h-4 rounded-md bg-stone-200 border border-[#111111]" />
-                 <div className="w-4 h-4 rounded-md bg-stone-200 border border-[#111111]" />
+            <motion.div layoutId="doc-1" transition={heavySpring} className="absolute w-32 h-44 bg-white rounded-xl border-2 border-[#111111] shadow-sm rotate-[-6deg] translate-x-[-12px]" />
+            <motion.div layoutId="doc-2" transition={heavySpring} className="absolute w-32 h-44 bg-stone-50 rounded-xl border-2 border-[#111111] shadow-sm rotate-[3deg] translate-x-[12px] flex flex-col p-3 gap-2">
+              <div className="flex gap-1 mb-2">
+                 <div className="w-3 h-3 rounded-full bg-accent-lime border border-[#111111]" />
+                 <div className="w-3 h-3 rounded-full bg-stone-200 border border-[#111111]" />
               </div>
-              <div className="w-1/2 h-1.5 bg-stone-200 rounded-full" />
-              <div className="w-full h-1.5 bg-stone-100 rounded-full" />
-              <div className="w-3/4 h-1.5 bg-stone-100 rounded-full" />
-              <div className="mt-auto self-end w-10 h-10 rounded-xl bg-accent-lime border-2 border-[#111111] flex items-center justify-center shadow-sm">
-                <motion.div animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }}><RefreshCw size={18} /></motion.div>
+              <div className="w-1/2 h-1 bg-stone-200 rounded-full" />
+              <div className="w-full h-1 bg-stone-100 rounded-full" />
+              <div className="w-3/4 h-1 bg-stone-100 rounded-full" />
+              <div className="mt-auto self-end w-8 h-8 rounded-lg bg-accent-lime border-2 border-[#111111] flex items-center justify-center shadow-sm">
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }}><RefreshCw size={14} /></motion.div>
               </div>
             </motion.div>
           </div>
@@ -61,13 +59,13 @@ const ShowcaseCanvas = ({ forcedToolId }: { forcedToolId?: string }) => {
       case 'image-to-pdf':
         return (
           <div className="relative w-full h-full flex items-center justify-center">
-            <div className="grid grid-cols-2 gap-3 translate-y-[-20px]">
-              <motion.div layoutId="img-1" transition={heavySpring} className="w-16 h-16 bg-white rounded-xl border-2 border-[#111111] shadow-sm flex items-center justify-center rotate-[-10deg]"><ImageIcon size={20}/></motion.div>
-              <motion.div layoutId="img-2" transition={heavySpring} className="w-16 h-16 bg-white rounded-xl border-2 border-[#111111] shadow-sm flex items-center justify-center rotate-[12deg]"><ImageIcon size={20}/></motion.div>
+            <div className="grid grid-cols-2 gap-2 translate-y-[-16px]">
+              <motion.div layoutId="img-1" transition={heavySpring} className="w-14 h-14 bg-white rounded-xl border-2 border-[#111111] shadow-sm flex items-center justify-center rotate-[-10deg]"><ImageIcon size={18}/></motion.div>
+              <motion.div layoutId="img-2" transition={heavySpring} className="w-14 h-14 bg-white rounded-xl border-2 border-[#111111] shadow-sm flex items-center justify-center rotate-[12deg]"><ImageIcon size={18}/></motion.div>
             </div>
-            <motion.div layoutId="doc-1" transition={heavySpring} className="absolute w-44 h-60 bg-white/90 rounded-2xl border-2 border-[#111111] shadow-lg translate-y-[20px] flex items-center justify-center">
-               <div className="w-32 h-40 border-2 border-dashed border-stone-200 rounded-xl flex items-center justify-center text-stone-300">
-                  <Plus size={24} />
+            <motion.div layoutId="doc-1" transition={heavySpring} className="absolute w-36 h-48 bg-white/90 rounded-xl border-2 border-[#111111] shadow-lg translate-y-[16px] flex items-center justify-center">
+               <div className="w-24 h-32 border-2 border-dashed border-stone-200 rounded-lg flex items-center justify-center text-stone-300">
+                  <Plus size={20} />
                </div>
             </motion.div>
           </div>
@@ -75,18 +73,18 @@ const ShowcaseCanvas = ({ forcedToolId }: { forcedToolId?: string }) => {
       case 'pdf-to-image':
         return (
           <div className="relative w-full h-full flex items-center justify-center">
-            <motion.div layoutId="doc-1" transition={heavySpring} className="absolute w-48 h-64 bg-white rounded-2xl border-2 border-[#111111] shadow-sm opacity-20" />
-            <div className="grid grid-cols-2 gap-4">
+            <motion.div layoutId="doc-1" transition={heavySpring} className="absolute w-40 h-52 bg-white rounded-xl border-2 border-[#111111] shadow-sm opacity-20" />
+            <div className="grid grid-cols-2 gap-3">
               {[1, 2, 3, 4].map(i => (
                 <motion.div 
                   key={i}
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: i * 0.1, ...bouncySpring }}
-                  className="w-20 h-28 bg-white rounded-xl border-2 border-[#111111] shadow-md flex items-center justify-center overflow-hidden"
+                  transition={{ delay: i * 0.1, ...heavySpring }}
+                  className="w-16 h-20 bg-white rounded-lg border-2 border-[#111111] shadow-md flex items-center justify-center overflow-hidden"
                 >
-                  <div className="w-full h-full p-2 flex flex-col gap-1">
-                    <div className="w-full h-full bg-stone-50 rounded flex items-center justify-center text-accent-pink"><ImageIcon size={16}/></div>
+                  <div className="w-full h-full p-1.5 flex flex-col gap-1">
+                    <div className="w-full h-full bg-stone-50 rounded flex items-center justify-center text-accent-pink"><ImageIcon size={14}/></div>
                   </div>
                 </motion.div>
               ))}
@@ -99,11 +97,11 @@ const ShowcaseCanvas = ({ forcedToolId }: { forcedToolId?: string }) => {
             <motion.div 
               layoutId="doc-1" 
               transition={heavySpring}
-              animate={{ scale: [1, 0.7, 1] }}
-              className="w-56 h-72 bg-white rounded-3xl border-2 border-[#111111] shadow-xl flex flex-col items-center justify-center gap-4"
+              animate={{ scale: [1, 0.8, 1] }}
+              className="w-44 h-56 bg-white rounded-2xl border-2 border-[#111111] shadow-xl flex flex-col items-center justify-center gap-3"
             >
-              <Minimize2 size={48} strokeWidth={2.5} />
-              <div className="w-32 h-2 bg-stone-100 rounded-full overflow-hidden">
+              <Minimize2 size={32} strokeWidth={2.5} />
+              <div className="w-24 h-1.5 bg-stone-100 rounded-full overflow-hidden">
                 <motion.div 
                    animate={{ width: ['20%', '100%', '20%'] }}
                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
@@ -116,16 +114,16 @@ const ShowcaseCanvas = ({ forcedToolId }: { forcedToolId?: string }) => {
       case 'zip':
         return (
           <div className="relative w-full h-full flex items-center justify-center">
-             <motion.div layoutId="doc-1" transition={heavySpring} className="absolute w-32 h-44 bg-white rounded-xl border-2 border-[#111111] rotate-[-5deg] translate-x-[-15px] opacity-40" />
-             <motion.div layoutId="doc-2" transition={heavySpring} className="absolute w-32 h-44 bg-white rounded-xl border-2 border-[#111111] rotate-[5deg] translate-x-[15px] opacity-40" />
+             <motion.div layoutId="doc-1" transition={heavySpring} className="absolute w-28 h-36 bg-white rounded-xl border-2 border-[#111111] rotate-[-5deg] translate-x-[-12px] opacity-40" />
+             <motion.div layoutId="doc-2" transition={heavySpring} className="absolute w-28 h-36 bg-white rounded-xl border-2 border-[#111111] rotate-[5deg] translate-x-[12px] opacity-40" />
              <motion.div 
                initial={{ scale: 0.5, y: 20 }}
                animate={{ scale: 1, y: 0 }}
-               transition={bouncySpring}
-               className="w-40 h-40 bg-white rounded-3xl border-2 border-[#111111] shadow-2xl flex flex-col items-center justify-center gap-2 z-10"
+               transition={heavySpring}
+               className="w-32 h-32 bg-white rounded-2xl border-2 border-[#111111] shadow-2xl flex flex-col items-center justify-center gap-1.5 z-10"
              >
-                <Archive size={40} strokeWidth={2.5} />
-                <span className="text-[10px] font-black uppercase tracking-widest">EZ_ARCHIVE</span>
+                <Archive size={32} strokeWidth={2.5} />
+                <span className="text-[8px] font-black uppercase tracking-widest">ZIP</span>
              </motion.div>
           </div>
         );
@@ -135,17 +133,17 @@ const ShowcaseCanvas = ({ forcedToolId }: { forcedToolId?: string }) => {
              <motion.div 
                layoutId="doc-1" 
                transition={heavySpring}
-               className="w-64 h-48 bg-white rounded-2xl border-2 border-[#111111] shadow-xl flex flex-col overflow-hidden"
+               className="w-52 h-40 bg-white rounded-xl border-2 border-[#111111] shadow-xl flex flex-col overflow-hidden"
              >
-                <div className="h-10 bg-accent-pink/20 border-b-2 border-[#111111] flex items-center px-4">
-                   <div className="w-2 h-2 rounded-full bg-accent-pink" />
+                <div className="h-8 bg-accent-pink/20 border-b-2 border-[#111111] flex items-center px-3">
+                   <div className="w-1.5 h-1.5 rounded-full bg-accent-pink" />
                 </div>
-                <div className="flex-1 p-6 flex flex-col gap-3">
-                   <div className="w-2/3 h-3 bg-stone-100 rounded-full" />
-                   <div className="w-full h-3 bg-stone-50 rounded-full" />
+                <div className="flex-1 p-4 flex flex-col gap-2">
+                   <div className="w-2/3 h-2 bg-stone-100 rounded-full" />
+                   <div className="w-full h-2 bg-stone-50 rounded-full" />
                    <div className="mt-auto flex gap-2">
-                      <div className="w-12 h-12 bg-stone-100 rounded-lg border-2 border-[#111111]" />
-                      <div className="w-12 h-12 bg-stone-100 rounded-lg border-2 border-[#111111]" />
+                      <div className="w-10 h-10 bg-stone-100 rounded-md border-2 border-[#111111]" />
+                      <div className="w-10 h-10 bg-stone-100 rounded-md border-2 border-[#111111]" />
                    </div>
                 </div>
              </motion.div>
@@ -153,43 +151,43 @@ const ShowcaseCanvas = ({ forcedToolId }: { forcedToolId?: string }) => {
         );
       case 'rename':
         return (
-          <div className="relative w-full h-full flex items-center justify-center p-8">
+          <div className="relative w-full h-full flex items-center justify-center p-6">
              <motion.div 
-               initial={{ x: -20, opacity: 0 }}
+               initial={{ x: -10, opacity: 0 }}
                animate={{ x: 0, opacity: 1 }}
                transition={physicalSpring}
-               className="w-full bg-white rounded-2xl border-2 border-[#111111] shadow-lg p-6 flex flex-col gap-4"
+               className="w-full bg-white rounded-xl border-2 border-[#111111] shadow-lg p-4 flex flex-col gap-3"
              >
-                <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-                   <div className="flex items-center gap-2">
-                      <Pencil size={14} className="text-stone-400" />
-                      <span className="text-[10px] font-bold text-stone-400 font-mono">FILE_01.PDF</span>
+                <div className="flex items-center justify-between border-b border-stone-100 pb-2">
+                   <div className="flex items-center gap-1.5">
+                      <Pencil size={12} className="text-stone-400" />
+                      <span className="text-[9px] font-bold text-stone-400 font-mono">FILE_01</span>
                    </div>
-                   <ArrowRight size={14} className="text-accent-lime" />
-                   <span className="text-[10px] font-bold text-[#111111] font-mono">INVOICE_v2.PDF</span>
+                   <ArrowRight size={12} className="text-accent-lime" />
+                   <span className="text-[9px] font-bold text-[#111111] font-mono">INV_v2</span>
                 </div>
                 <div className="flex items-center justify-between">
-                   <div className="flex items-center gap-2">
-                      <Pencil size={14} className="text-stone-400" />
-                      <span className="text-[10px] font-bold text-stone-400 font-mono">SCAN_99.PDF</span>
+                   <div className="flex items-center gap-1.5">
+                      <Pencil size={12} className="text-stone-400" />
+                      <span className="text-[9px] font-bold text-stone-400 font-mono">SCAN_99</span>
                    </div>
-                   <ArrowRight size={14} className="text-accent-lime" />
-                   <span className="text-[10px] font-bold text-[#111111] font-mono">REPORT_v2.PDF</span>
+                   <ArrowRight size={12} className="text-accent-lime" />
+                   <span className="text-[9px] font-bold text-[#111111] font-mono">REP_v2</span>
                 </div>
              </motion.div>
           </div>
         );
       case 'metadata':
         return (
-          <div className="relative w-full h-full flex items-center justify-center p-8">
-             <div className="grid grid-cols-2 gap-4 w-full">
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={physicalSpring} className="bg-white rounded-2xl border-2 border-[#111111] p-4 flex flex-col gap-2">
-                   <span className="text-[8px] font-black text-stone-400 uppercase">Existing</span>
+          <div className="relative w-full h-full flex items-center justify-center p-6">
+             <div className="grid grid-cols-2 gap-3 w-full">
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={physicalSpring} className="bg-white rounded-xl border-2 border-[#111111] p-3 flex flex-col gap-1.5">
+                   <span className="text-[7px] font-black text-stone-400 uppercase">Old</span>
                    <div className="w-full h-1 bg-stone-100 rounded-full" />
                    <div className="w-2/3 h-1 bg-stone-100 rounded-full" />
                 </motion.div>
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, ...physicalSpring }} className="bg-[#111111] rounded-2xl border-2 border-[#111111] p-4 flex flex-col gap-2">
-                   <span className="text-[8px] font-black text-stone-500 uppercase">Update</span>
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, ...physicalSpring }} className="bg-[#111111] rounded-xl border-2 border-[#111111] p-3 flex flex-col gap-1.5">
+                   <span className="text-[7px] font-black text-stone-500 uppercase">New</span>
                    <div className="w-full h-1 bg-accent-lime rounded-full" />
                    <div className="w-full h-1 bg-stone-700 rounded-full" />
                 </motion.div>
@@ -203,47 +201,56 @@ const ShowcaseCanvas = ({ forcedToolId }: { forcedToolId?: string }) => {
 
   return (
     <motion.div 
-      initial={{ opacity: 0, scale: 0.95, y: 15 }}
+      initial={{ opacity: 0, scale: 0.9, y: 20 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-      className="relative w-full aspect-[4/3] md:aspect-square bg-accent-lime rounded-4xl border-2 border-[#111111] overflow-hidden flex flex-col shadow-soft group/showcase"
+      transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+      className="relative w-full max-w-[340px] aspect-square bg-[#FFFFFF] rounded-[2rem] border-2 border-[#111111] overflow-hidden flex flex-col shadow-[8px_8px_0px_0px_rgba(17,17,17,0.1)] group/showcase ml-auto mr-auto md:mr-0"
     >
-      <div className="flex-1 relative overflow-hidden">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeToolId}
-            initial={{ opacity: 0, scale: 0.9, rotate: -2 }}
-            animate={{ opacity: 1, scale: 1, rotate: 0 }}
-            exit={{ opacity: 0, scale: 1.1, rotate: 2 }}
-            transition={heavySpring}
-            className="w-full h-full"
-          >
-            {renderToolGraphic()}
-          </motion.div>
-        </AnimatePresence>
-      </div>
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#111111_1px,transparent_1px)] [background-size:12px_12px]" />
+        
+        {/* Floating Tag */}
+        <div className="absolute top-6 left-0 right-0 flex justify-center z-20 pointer-events-none">
+             <AnimatePresence mode="wait">
+                <motion.div 
+                    key={activeToolId}
+                    initial={{ y: -10, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: 10, opacity: 0 }}
+                    className="px-3 py-1 bg-[#111111] text-white rounded-full text-[9px] font-bold uppercase tracking-widest shadow-lg flex items-center gap-2"
+                >
+                    <div className="w-1.5 h-1.5 rounded-full bg-accent-lime animate-pulse" />
+                    {tools.find(t => t.id === activeToolId)?.label}
+                </motion.div>
+             </AnimatePresence>
+        </div>
 
-      <div className="h-14 bg-[#111111] flex items-center justify-between px-6 shrink-0 z-20">
-         <div className="flex items-center gap-3">
-            <div className="w-1.5 h-1.5 rounded-full bg-accent-lime animate-pulse" />
+        {/* Content */}
+        <div className="flex-1 relative overflow-hidden p-6">
             <AnimatePresence mode="wait">
-              <motion.span 
+            <motion.div
                 key={activeToolId}
-                initial={{ opacity: 0, x: -5 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 5 }}
-                className="text-[10px] font-black text-white uppercase tracking-[0.2em] font-mono"
-              >
-                MODULE_{activeToolId.toUpperCase().replace('-', '_')}
-              </motion.span>
+                initial={{ opacity: 0, scale: 0.8, rotate: 2 }}
+                animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                exit={{ opacity: 0, scale: 1.1, rotate: -2 }}
+                transition={heavySpring}
+                className="w-full h-full flex items-center justify-center"
+            >
+                {renderToolGraphic()}
+            </motion.div>
             </AnimatePresence>
-         </div>
-         <div className="flex gap-1.5">
-            {tools.map((_, i) => (
-              <div key={i} className={`w-1 h-1 rounded-full transition-all duration-500 ${i === currentIndex ? 'bg-accent-lime w-4' : 'bg-stone-700'}`} />
-            ))}
-         </div>
-      </div>
+        </div>
+
+        {/* Progress Line */}
+        <div className="h-1 bg-stone-100 w-full relative">
+             <motion.div 
+                key={activeToolId}
+                initial={{ width: "0%" }}
+                animate={{ width: "100%" }}
+                transition={{ duration: 4, ease: "linear" }}
+                className="h-full bg-accent-lime"
+             />
+        </div>
     </motion.div>
   );
 };
@@ -285,27 +292,6 @@ const SectionHeading = ({ title }: { title: string }) => (
   </h2>
 );
 
-const RefreshCw = ({ size, className }: { size?: number, className?: string }) => (
-  <svg 
-    width={size || 24} 
-    height={size || 24} 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2.5" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
-    className={className}
-  >
-    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-    <path d="M21 3v5h-5" />
-    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-    <path d="M3 21v-5h5" />
-  </svg>
-);
-
-// --- MAIN PAGE ---
-
 const MotionLink = motion(Link);
 
 export const Home: React.FC = () => {
@@ -328,22 +314,22 @@ export const Home: React.FC = () => {
   }, []);
 
   return (
-    <div ref={containerRef} className="w-full pb-20 pt-12 md:pt-20 px-6 md:px-12 bg-[#FAF9F6] selection:bg-accent-lime selection:text-white">
+    <div ref={containerRef} className="w-full pb-20 pt-8 md:pt-16 px-6 md:px-12 bg-[#FAF9F6] selection:bg-accent-lime selection:text-white">
       <PageReadyTracker />
       
       <div className="max-w-7xl mx-auto">
         
         {/* 1. HERO SECTION */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center mb-12 md:mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center mb-16 md:mb-24">
           
           {/* Left: Copy */}
-          <motion.div style={{ y: smoothY, opacity: opacityFade }} className="flex flex-col items-start gap-6 hero-anim">
+          <motion.div style={{ y: smoothY, opacity: opacityFade }} className="flex flex-col items-start gap-6 hero-anim max-w-xl">
             <h1 className="text-5xl md:text-[5.5rem] font-bold tracking-tighter text-[#111111] leading-[0.95]">
               The PDF <br/>
               <span className="text-stone-300">Workspace.</span>
             </h1>
             
-            <p className="text-lg md:text-xl text-stone-600 font-medium leading-relaxed max-w-md">
+            <p className="text-lg md:text-xl text-stone-600 font-medium leading-relaxed">
               A private environment focused purely on page operations. Merge, split, reorder, crop, and watermark with native speed. No heavy text editing, just essential control.
             </p>
             
@@ -362,12 +348,8 @@ export const Home: React.FC = () => {
 
           {/* Right: Graphic */}
           <motion.div 
-            className="w-full relative hidden md:block"
-            whileHover={{ scale: 1.01, rotate: 0.5 }}
-            transition={heavySpring}
+            className="w-full flex justify-center md:justify-end"
           >
-             {/* Subtle ambient shadow behind the showcase */}
-             <div className="absolute inset-10 bg-[#111111]/5 blur-[100px] rounded-full pointer-events-none" />
              <ShowcaseCanvas forcedToolId={isCTAByHovered ? 'pdf-workspace' : undefined} />
           </motion.div>
         </div>

@@ -117,8 +117,9 @@ const UnifiedUploadCard: React.FC<{
   onUpload: () => void; 
   isProcessing: boolean; 
   progress: number; 
+  status?: string;
   isMobile: boolean;
-}> = ({ onUpload, isProcessing, progress, isMobile }) => {
+}> = ({ onUpload, isProcessing, progress, status, isMobile }) => {
   return (
     <div className="w-full h-full flex flex-col items-center justify-center p-6">
       <motion.div
@@ -133,6 +134,13 @@ const UnifiedUploadCard: React.FC<{
         `}
         onClick={!isProcessing ? onUpload : undefined}
       >
+         <motion.div 
+            className="absolute inset-0 bg-gradient-to-br from-stone-50/50 via-white to-white z-0"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: isProcessing ? 1 : 0 }}
+            transition={{ duration: 0.5 }}
+         />
+
          <AnimatePresence mode="wait">
             {isProcessing ? (
                 <motion.div 
@@ -151,7 +159,9 @@ const UnifiedUploadCard: React.FC<{
                        </div>
                     </div>
                     <h2 className="text-xl font-bold text-[#111111] tracking-tight mb-2">Analyzing</h2>
-                    <p className="text-sm text-nd-muted font-medium mb-6 font-mono">Mounting stream...</p>
+                    <p className="text-sm text-nd-muted font-medium mb-6 font-mono truncate max-w-full">
+                        {status || 'Mounting stream...'}
+                    </p>
                 </motion.div>
             ) : (
                 <motion.div 
@@ -418,11 +428,14 @@ export const BatchRenamePdfPage: React.FC = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 className="flex-1 flex items-center justify-center"
               >
-                <div 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full max-w-lg aspect-square md:aspect-video rounded-[3rem] border-2 border-dashed border-nd-border bg-white hover:border-nd-muted transition-all cursor-pointer flex flex-col items-center justify-center group"
-                >
-                   <UnifiedUploadCard onUpload={() => fileInputRef.current?.click()} isProcessing={isProcessing} progress={progress} isMobile={isMobile} />
+                <div className="w-full max-w-lg aspect-square md:aspect-video">
+                   <UnifiedUploadCard 
+                      onUpload={() => fileInputRef.current?.click()} 
+                      isProcessing={isProcessing} 
+                      progress={progress} 
+                      status={status}
+                      isMobile={isMobile} 
+                   />
                 </div>
               </motion.div>
             ) : (
