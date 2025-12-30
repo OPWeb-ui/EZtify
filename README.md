@@ -24,6 +24,27 @@ EZtify is a suite of high-performance, client-side file manipulation tools. It e
 *   **Styling:** Tailwind CSS + Framer Motion
 *   **Core Libraries:** `pdf-lib`, `pdfjs-dist`, `jszip`, `mammoth`, `@uiw/react-codemirror`.
 
+## 📦 Quick Start
+
+Ensure you have Node.js installed.
+
+1.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
+
+2.  **Run development server:**
+    ```bash
+    npm run dev
+    ```
+
+3.  **Build for production:**
+    ```bash
+    npm run build
+    ```
+
+The production build outputs to `dist/`, ready for deployment to Cloudflare Pages, Vercel, or Netlify.
+
 ## 🔒 Privacy & Security
 
 EZtify is designed with a "local-first" architecture. 
