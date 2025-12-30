@@ -5,7 +5,8 @@ import { UploadedImage, ExportConfig } from '../types';
 export const generateZip = async (
   images: UploadedImage[],
   config: ExportConfig,
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number) => void,
+  onStatusUpdate?: (status: string) => void
 ): Promise<void> => {
   const zip = new JSZip();
   const folder = zip.folder("EZtify-Images");
@@ -14,7 +15,7 @@ export const generateZip = async (
   const scale = config.scale || 1;
 
   for (let i = 0; i < images.length; i++) {
-    // Yield
+    onStatusUpdate?.(`Processing image ${i + 1}/${images.length}`);
     await new Promise(resolve => setTimeout(resolve, 0));
     if (onProgress) onProgress(Math.round((i / images.length) * 50)); // First 50% is preparation
 
@@ -77,12 +78,16 @@ export const generateZip = async (
   }
 
   // Generate Zip
+  onStatusUpdate?.('Compressing archive...');
   if (onProgress) onProgress(75);
   
   const content = await zip.generateAsync({ type: "blob" }, (metadata) => {
     if (onProgress && metadata.percent) {
       // Map 0-100 of zip gen to 50-100 of total
        onProgress(50 + (metadata.percent / 2));
+    }
+    if(metadata.currentFile) {
+        onStatusUpdate?.(`Compressing ${metadata.currentFile}`);
     }
   });
   

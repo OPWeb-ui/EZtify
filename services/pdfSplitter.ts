@@ -1,7 +1,7 @@
 
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import JSZip from 'jszip';
-import { PdfPage, PageNumberConfig } from '../types';
+import { PdfPage, PageNumberConfig, CropData } from '../types';
 import { nanoid } from 'nanoid';
 import { loadPdfJs } from './pdfProvider';
 
@@ -88,12 +88,73 @@ export const loadPdfPages = async (
 };
 
 /**
- * Applies reordering, deletion (implicit by absence), and page numbering
+ * Renders a single page from a PDF file at a high resolution.
+ * Used for detailed previews in editors.
+ * Now supports direct cropping on canvas to prevent CSS clip-path artifacts.
+ */
+export const renderSinglePage = async (
+  file: File,
+  pageIndex: number, // 0-based index
+  scale: number = 2.0,
+  crop?: CropData
+): Promise<string> => {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdfjsLib = await loadPdfJs();
+  
+  const loadingTask = pdfjsLib.getDocument({ 
+    data: arrayBuffer,
+    cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/cmaps/',
+    cMapPacked: true, 
+  });
+  
+  const pdf = await loadingTask.promise;
+  const page = await pdf.getPage(pageIndex + 1); // PDF.js uses 1-based indexing
+  const viewport = page.getViewport({ scale });
+  
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  
+  if (!context) throw new Error("Canvas context failed");
+  
+  if (crop) {
+    // Calculate pixel dimensions of the crop
+    const x = (crop.x / 100) * viewport.width;
+    const y = (crop.y / 100) * viewport.height;
+    const w = (crop.width / 100) * viewport.width;
+    const h = (crop.height / 100) * viewport.height;
+
+    // Resize canvas to exactly fit the crop
+    canvas.width = w;
+    canvas.height = h;
+
+    // Reset transform to identity then shift viewport
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.translate(-x, -y);
+  } else {
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+  }
+  
+  await page.render({
+    canvasContext: context,
+    viewport: viewport
+  }).promise;
+  
+  return new Promise<string>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+        if (blob) resolve(URL.createObjectURL(blob));
+        else reject(new Error("Canvas rendering failed"));
+    }, 'image/jpeg', 0.9);
+  });
+};
+
+/**
+ * Applies reordering, deletion, and optional page numbering
  */
 export const savePdfWithModifications = async (
   originalFile: File,
   pages: PdfPage[], // The current state of pages (ordered, filtered)
-  numbering?: PageNumberConfig,
+  numberingConfig?: PageNumberConfig,
   onProgress?: (percent: number) => void,
   onStatusUpdate?: (status: string) => void,
 ): Promise<Blob> => {
@@ -123,65 +184,44 @@ export const savePdfWithModifications = async (
     newPdf.addPage(copiedPages[i]);
   }
 
-  if (onProgress) onProgress(60);
-
-  // 2. Apply Page Numbers if configured
-  if (numbering) {
-    onStatusUpdate?.('Adding page numbers...');
-    
-    const fontMap = {
-      'Helvetica': StandardFonts.Helvetica,
-      'Helvetica-Bold': StandardFonts.HelveticaBold,
-      'Helvetica-Oblique': StandardFonts.HelveticaOblique,
-      'Helvetica-BoldOblique': StandardFonts.HelveticaBoldOblique,
-      'Times-Roman': StandardFonts.TimesRoman,
-      'Times-Roman-Bold': StandardFonts.TimesRomanBold,
-      'Times-Roman-Italic': StandardFonts.TimesRomanItalic,
-      'Courier': StandardFonts.Courier,
-      'Courier-Bold': StandardFonts.CourierBold,
-      'Courier-Oblique': StandardFonts.CourierOblique,
-    };
-    const fontToEmbed = fontMap[numbering.fontFamily as keyof typeof fontMap] || StandardFonts.Helvetica;
-    const font = await newPdf.embedFont(fontToEmbed);
-    
-    const size = numbering.fontSize;
-    const margin = 20; // Base margin from edge in points
-    const xOffset = numbering.offsetX || 0;
-    const yOffset = numbering.offsetY || 0;
-
+  // 2. Apply Page Numbers if config exists
+  if (numberingConfig) {
+    onStatusUpdate?.('Applying page numbers...');
+    const font = await newPdf.embedFont(StandardFonts.Helvetica);
     const pdfPages = newPdf.getPages();
+    
     for (let i = 0; i < pdfPages.length; i++) {
-      const page = pdfPages[i];
-      const { width, height } = page.getSize();
-      const num = numbering.startFrom + i;
-      const text = `${num}`;
-      const textWidth = font.widthOfTextAtSize(text, size);
+      const pdfPage = pdfPages[i];
+      const { width, height } = pdfPage.getSize();
+      const pageNumText = (numberingConfig.startFrom + i).toString();
       
-      let x = margin;
-      let y = margin; // Default bottom-left
-
-      // Y Position (base)
-      if (numbering.position === 'top') {
-        y = height - margin - size;
+      const fontSize = numberingConfig.fontSize;
+      const textWidth = font.widthOfTextAtSize(pageNumText, fontSize);
+      
+      let x = 0;
+      let y = 0;
+      
+      // Position Y (Top-left origin in config vs Bottom-left origin in pdf-lib)
+      if (numberingConfig.position === 'top') {
+        y = height - fontSize - 20 + numberingConfig.offsetY;
+      } else {
+        y = 20 + numberingConfig.offsetY;
       }
-
-      // X Position (base)
-      if (numbering.alignment === 'center') {
-        x = (width / 2) - (textWidth / 2);
-      } else if (numbering.alignment === 'right') {
-        x = width - margin - textWidth;
+      
+      // Position X
+      if (numberingConfig.alignment === 'left') {
+        x = 20 + numberingConfig.offsetX;
+      } else if (numberingConfig.alignment === 'right') {
+        x = width - textWidth - 20 + numberingConfig.offsetX;
+      } else {
+        x = (width - textWidth) / 2 + numberingConfig.offsetX;
       }
-
-      // Apply offsets
-      x += xOffset;
-      // For user, positive Y is "inward" from edge
-      y += (numbering.position === 'top' ? -yOffset : yOffset);
-
-      page.drawText(text, {
+      
+      pdfPage.drawText(pageNumText, {
         x,
         y,
-        size,
-        font,
+        size: fontSize,
+        font: font,
         color: rgb(0, 0, 0),
       });
     }

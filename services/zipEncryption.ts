@@ -27,7 +27,8 @@ const loadZipLib = async () => {
 export const createEncryptedZip = async (
   files: ZipFile[],
   password: string,
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number) => void,
+  onStatusUpdate?: (status: string) => void
 ): Promise<Blob> => {
   const lib = await loadZipLib();
   const { BlobReader, BlobWriter, ZipWriter } = lib;
@@ -48,22 +49,24 @@ export const createEncryptedZip = async (
 
   for (let i = 0; i < totalFiles; i++) {
     const fileItem = files[i];
+    onStatusUpdate?.(`Encrypting ${fileItem.file.name}`);
     
     // Normalize filename
     let name = fileItem.file.name;
     const lastDot = name.lastIndexOf('.');
     if (lastDot === -1) name += "-EZtify";
     
-    if (onProgress) {
-        // Map progress based on file count
-        onProgress(Math.round((i / totalFiles) * 100));
-    }
-
     await zipWriter.add(name, new BlobReader(fileItem.file));
+
+    if (onProgress) {
+      // Progress up to 95% during file addition
+      onProgress(Math.round(((i + 1) / totalFiles) * 95));
+    }
+    // Yield to UI to allow status update to render
+    await new Promise(resolve => setTimeout(resolve, 10));
   }
 
-  if (onProgress) onProgress(95);
-  
+  onStatusUpdate?.('Finalizing archive...');
   await zipWriter.close();
   const blob = await blobWriter.getData();
   

@@ -1,147 +1,117 @@
-import { jsPDF } from 'jspdf';
-import { extractImagesFromPdf } from './pdfExtractor';
-import { CompressionLevel, CompressionResult, PdfFile } from '../types';
 
-export const compressPDF = async (
-  pdfFile: PdfFile,
+import { jsPDF } from 'jspdf';
+import { loadPdfJs } from './pdfProvider';
+
+export type CompressionLevel = 'extreme' | 'recommended' | 'less';
+
+interface CompressionConfig {
+  scale: number;
+  quality: number;
+}
+
+const CONFIGS: Record<CompressionLevel, CompressionConfig> = {
+  extreme: { scale: 0.6, quality: 0.5 },
+  recommended: { scale: 1.0, quality: 0.75 },
+  less: { scale: 1.5, quality: 0.9 },
+};
+
+export const compressPdf = async (
+  file: File,
   level: CompressionLevel,
   onProgress?: (percent: number) => void,
   onStatusUpdate?: (status: string) => void
-): Promise<CompressionResult> => {
-  const file = pdfFile.file;
+): Promise<{ blob: Blob; savings: number; newSize: number }> => {
+  const config = CONFIGS[level];
   const originalSize = file.size;
-  
-  // 1. Extract images from PDF
-  // We use the extractor service but we'll need to process these images
-  if (onProgress) onProgress(10);
-  onStatusUpdate?.('Reading PDF...');
-  
-  // Settings based on compression level
-  // Normal: Better quality, decent size reduction
-  // Strong: Aggressive compression, smaller size, potential visual artifacts
-  const scale = level === 'normal' ? 1.5 : 1.0; 
-  const quality = level === 'normal' ? 0.7 : 0.4;
-  
-  // Helper to load image for canvas drawing
-  const loadImage = (url: string): Promise<HTMLImageElement> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.src = url;
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-    });
-  };
 
+  onStatusUpdate?.('Initializing engine...');
+  const arrayBuffer = await file.arrayBuffer();
+  const pdfjsLib = await loadPdfJs();
+
+  let pdf;
   try {
-    // Extract raw images first (this uses pdf.js to render pages)
-    // We repurpose the extractor but we might need to be careful about memory
-    const extractedImages = await extractImagesFromPdf(file, (p) => {
-      // Map extraction progress (0-100) to overall progress (10-40)
-      if (onProgress) onProgress(10 + (p * 0.3));
-    }, onStatusUpdate);
-
-    if (extractedImages.length === 0) {
-      throw new Error("No content found to compress");
-    }
-
-    // 2. Create new PDF
-    const doc = new jsPDF({
-      orientation: 'p',
-      unit: 'mm',
-      compress: true
+    onStatusUpdate?.('Parsing document...');
+    const loadingTask = pdfjsLib.getDocument({
+      data: arrayBuffer,
+      cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/cmaps/',
+      cMapPacked: true,
     });
-
-    // Set standardized metadata
-    doc.setProperties({
-        title: 'files_EZtify',
-        author: 'EZtify',
-        producer: 'EZtify',
-        subject: 'Generated with EZtify',
-        creator: 'EZtify – Compress PDF'
-    });
-
-    const mmPerPx = 0.264583;
-
-    for (let i = 0; i < extractedImages.length; i++) {
-      const imgData = extractedImages[i];
-      
-      onStatusUpdate?.(`Compressing page ${i + 1} of ${extractedImages.length}...`);
-      // Update progress (40-90)
-      if (onProgress) onProgress(40 + Math.round((i / extractedImages.length) * 50));
-      
-      // Yield to UI
-      await new Promise(resolve => setTimeout(resolve, 0));
-
-      const imgElement = await loadImage(imgData.previewUrl);
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      
-      if (!ctx) continue;
-
-      // Calculate target dimensions based on "Scale" (Resolution reduction)
-      // If Strong compression, we might downscale the image resolution
-      const targetWidth = imgElement.width * (level === 'strong' ? 0.8 : 1.0);
-      const targetHeight = imgElement.height * (level === 'strong' ? 0.8 : 1.0);
-
-      canvas.width = targetWidth;
-      canvas.height = targetHeight;
-
-      // White background
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(imgElement, 0, 0, targetWidth, targetHeight);
-
-      // Compress to JPEG
-      const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-
-      // Add to PDF
-      const pdfPageWidth = canvas.width * mmPerPx;
-      const pdfPageHeight = canvas.height * mmPerPx;
-
-      const orientation = pdfPageWidth > pdfPageHeight ? 'l' : 'p';
-      
-      if (i > 0) {
-        doc.addPage([pdfPageWidth, pdfPageHeight], orientation);
-      } else {
-        // First page setup
-        // delete initial page if dimensions assume A4 default, or just set page 1
-        // easiest to set page 1 size then add image
-        doc.deletePage(1);
-        doc.addPage([pdfPageWidth, pdfPageHeight], orientation);
-      }
-
-      doc.addImage(compressedDataUrl, 'JPEG', 0, 0, pdfPageWidth, pdfPageHeight);
-      
-      // Clean up memory
-      URL.revokeObjectURL(imgData.previewUrl);
-    }
-
-    onStatusUpdate?.('Finalizing PDF...');
-    if (onProgress) onProgress(95);
-
-    const pdfBlob = doc.output('blob');
-    const newSize = pdfBlob.size;
-
-    if (onProgress) onProgress(100);
-
-    // Derive filename
-    const originalName = file.name;
-    const nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
-    // Sanitize filename
-    const safeName = nameWithoutExt.replace(/[^a-zA-Z0-9\-_]/g, '_');
-    const fileName = `${safeName}_EZtify.pdf`;
-
-    return {
-      id: pdfFile.id,
-      originalFileName: file.name,
-      originalSize,
-      newSize,
-      blob: pdfBlob,
-      fileName: fileName
-    };
-
+    pdf = await loadingTask.promise;
   } catch (error) {
-    console.error("Compression failed", error);
-    throw error;
+    console.error("PDF Load Error:", error);
+    throw new Error("Failed to load PDF.");
   }
+
+  const doc = new jsPDF({
+    orientation: 'p',
+    unit: 'pt',
+    compress: true
+  });
+
+  doc.setProperties({
+    title: file.name,
+    creator: 'EZtify - Compressed',
+    producer: 'EZtify'
+  });
+
+  const numPages = pdf.numPages;
+
+  for (let i = 1; i <= numPages; i++) {
+    onStatusUpdate?.(`Processing page ${i} of ${numPages}...`);
+    
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale: config.scale });
+    
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d', { alpha: false, willReadFrequently: true });
+    
+    if (!context) continue;
+
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+
+    // White background for transparency flattening
+    context.fillStyle = '#FFFFFF';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    await page.render({
+      canvasContext: context,
+      viewport: viewport,
+    }).promise;
+
+    const imgData = canvas.toDataURL('image/jpeg', config.quality);
+    
+    // Add page to PDF
+    const widthPt = viewport.width;
+    const heightPt = viewport.height;
+    
+    // jsPDF adds first page automatically, but sizing might be wrong.
+    if (i === 1) {
+       doc.deletePage(1); // Remove default
+    }
+    
+    doc.addPage([widthPt, heightPt], widthPt > heightPt ? 'l' : 'p');
+    doc.addImage(imgData, 'JPEG', 0, 0, widthPt, heightPt);
+
+    if (onProgress) {
+        onProgress(Math.round((i / numPages) * 90));
+    }
+    
+    // Memory cleanup
+    canvas.width = 0;
+    canvas.height = 0;
+    
+    // Yield
+    await new Promise(r => setTimeout(r, 0));
+  }
+
+  onStatusUpdate?.('Finalizing...');
+  const compressedBlob = doc.output('blob');
+  
+  if (onProgress) onProgress(100);
+
+  const newSize = compressedBlob.size;
+  const savings = originalSize > 0 ? Math.max(0, Math.round(((originalSize - newSize) / originalSize) * 100)) : 0;
+
+  return { blob: compressedBlob, savings, newSize };
 };

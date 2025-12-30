@@ -19,26 +19,37 @@ interface PptxMetadata {
     orientation: 'portrait' | 'landscape';
 }
 
-export const detectPptxMetadata = async (file: File): Promise<PptxMetadata> => {
+export interface PptxInfo extends PptxMetadata {
+    slideCount: number;
+}
+
+export const getPptxInfo = async (file: File): Promise<PptxInfo> => {
     try {
         const arrayBuffer = await file.arrayBuffer();
         const zip = await JSZip.loadAsync(arrayBuffer);
-        const presXml = await zip.file("ppt/presentation.xml")?.async("string");
         
+        // Get slide count
+        const slideFiles = Object.keys(zip.files).filter(path => 
+            path.startsWith('ppt/slides/slide') && path.endsWith('.xml')
+        );
+        const slideCount = slideFiles.length;
+
+        // Get dimensions
+        const presXml = await zip.file("ppt/presentation.xml")?.async("string");
         if (presXml) {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(presXml, "application/xml");
-            const sldSz = doc.getElementsByTagName("p:sldSz")[0];
-            if (sldSz) {
-                // Dimensions in EMUs (English Metric Units). 1 inch = 914400 EMU.
-                // jsPDF uses points (1/72 inch).
-                const cx = parseInt(sldSz.getAttribute("cx") || "0");
-                const cy = parseInt(sldSz.getAttribute("cy") || "0");
+            // Using regex to find sldSz to avoid namespace issues with DOMParser in some environments
+            const cxMatch = presXml.match(/cx="(\d+)"/);
+            const cyMatch = presXml.match(/cy="(\d+)"/);
+            
+            if (cxMatch && cyMatch) {
+                const cx = parseInt(cxMatch[1]);
+                const cy = parseInt(cyMatch[1]);
                 
                 if (cx > 0 && cy > 0) {
                     const widthPt = (cx / 914400) * 72;
                     const heightPt = (cy / 914400) * 72;
                     return {
+                        slideCount,
                         widthPt,
                         heightPt,
                         orientation: widthPt >= heightPt ? 'landscape' : 'portrait'
@@ -47,10 +58,20 @@ export const detectPptxMetadata = async (file: File): Promise<PptxMetadata> => {
             }
         }
     } catch (e) {
-        console.warn("Failed to detect PPTX size", e);
+        console.warn("Failed to detect PPTX info", e);
     }
-    // Default to Widescreen (16:9) 13.333 x 7.5 inches if detection fails
-    return { widthPt: 960, heightPt: 540, orientation: 'landscape' };
+    // Default fallback
+    return { slideCount: 0, widthPt: 720, heightPt: 540, orientation: 'landscape' };
+};
+
+
+export const detectPptxMetadata = async (file: File): Promise<PptxMetadata> => {
+    const info = await getPptxInfo(file);
+    return {
+        widthPt: info.widthPt,
+        heightPt: info.heightPt,
+        orientation: info.orientation,
+    };
 };
 
 export const detectPptxOrientation = async (file: File): Promise<'portrait' | 'landscape'> => {
@@ -60,7 +81,7 @@ export const detectPptxOrientation = async (file: File): Promise<'portrait' | 'l
 
 export const convertPptxToPdf = async (
   file: File,
-  config: PdfConfig, // config.pageSize is mostly ignored for 'auto' behavior
+  config: PdfConfig, 
   onProgress?: (percent: number) => void,
   onStatusUpdate?: (status: string) => void
 ): Promise<Blob> => {
@@ -78,6 +99,7 @@ export const convertPptxToPdf = async (
     path.startsWith('ppt/slides/slide') && path.endsWith('.xml')
   );
   
+  // Sort naturally (slide1, slide2, slide10...)
   slideFiles.sort((a, b) => {
     const numA = parseInt(a.match(/slide(\d+)\.xml/)?.[1] || '0');
     const numB = parseInt(b.match(/slide(\d+)\.xml/)?.[1] || '0');
@@ -99,7 +121,7 @@ export const convertPptxToPdf = async (
   const parser = new DOMParser();
 
   for (let i = 0; i < slideFiles.length; i++) {
-    // Add page for slides > 1
+    // Add page for slides > 1 (jsPDF creates first page automatically)
     if (i > 0) {
       doc.addPage([widthPt, heightPt], orientation);
     }
@@ -114,96 +136,101 @@ export const convertPptxToPdf = async (
     const slideXmlStr = await zip.file(slidePath)?.async('string');
     if (!slideXmlStr) continue;
     
-    const slideDoc = parser.parseFromString(slideXmlStr, 'application/xml');
+    // --- Extract Text (Robust Method) ---
+    // Instead of complex DOM traversal with namespaces, we extract all text within <a:t> tags using regex.
+    // This loses position data but guarantees content visibility for this lightweight tool.
     
-    // --- Extract Text (Basic) ---
-    // Note: PPTX text extraction without position logic (offT, offL, ext) is very crude.
-    // Ideally we'd parse <a:off> and <a:ext> for position, but for a client-side tool, 
-    // simply listing text or placing it nicely is a compromise.
-    // For "Smart Defaults", we will place text top-down to avoid overlap if possible, 
-    // or just render it plainly. A full layout engine is out of scope for a single file update.
-    // We will stick to the existing logic but respect the canvas size.
+    // Regex matches <a:t>...</a:t> content
+    const textMatches = slideXmlStr.match(/<a:t[^>]*>(.*?)<\/a:t>/g);
     
-    const textNodes = slideDoc.getElementsByTagName('a:t');
-    const margin = 30;
-    let yPos = margin; 
+    const margin = 40;
+    let yPos = margin;
     
-    doc.setFontSize(12);
+    doc.setFont("helvetica");
+    doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
     
-    for (let j = 0; j < textNodes.length; j++) {
-      const text = textNodes[j].textContent || '';
-      if (text.trim()) {
-        // Rudimentary layout: just list text. 
-        // Real preservation requires complex parsing of xfrm offsets.
-        const lines = doc.splitTextToSize(text, widthPt - (margin * 2));
-        doc.text(lines, margin, yPos);
-        yPos += lines.length * 14; 
-        if (yPos > heightPt - margin) break; // clipped
-      }
+    if (textMatches) {
+        for (const match of textMatches) {
+            // Strip tags to get clean text
+            const text = match.replace(/<\/?a:t[^>]*>/g, "");
+            if (text.trim()) {
+                const lines = doc.splitTextToSize(text, widthPt - (margin * 2));
+                
+                // Simple layout flow
+                if (yPos + (lines.length * 16) > heightPt - margin) {
+                    // Stop drawing if out of bounds (naive pagination)
+                    break;
+                }
+                
+                doc.text(lines, margin, yPos);
+                yPos += lines.length * 18 + 10; // Line height + paragraph spacing
+            }
+        }
     }
     
     // --- Extract Images ---
+    // Look for relationships to find images
     const relsPath = slidePath.replace('ppt/slides/', 'ppt/slides/_rels/') + '.rels';
     const relsFile = zip.file(relsPath);
     
     if (relsFile) {
        try {
          const relsXmlStr = await relsFile.async('string');
-         const relsDoc = parser.parseFromString(relsXmlStr, 'application/xml');
-         const relationships = relsDoc.getElementsByTagName('Relationship');
+         // Extract targets with type image
+         const relMatches = Array.from(relsXmlStr.matchAll(/Type="http:\/\/schemas.openxmlformats.org\/officeDocument\/2006\/relationships\/image" Target="([^"]+)"/g));
          
-         // To avoid text overlap, reset Y for images or place them carefully.
-         // Since we don't parse positions, we'll append images after text or at fixed positions?
-         // Let's just append for now to ensure content is visible.
-         
-         for (let k = 0; k < relationships.length; k++) {
-            const rel = relationships[k];
-            const type = rel.getAttribute('Type');
-            const target = rel.getAttribute('Target');
+         for (const match of relMatches) {
+            let target = match[1];
+            // Resolve relative path
+            let imagePath = target.startsWith('../') ? 'ppt/' + target.replace('../', '') : 'ppt/slides/' + target;
             
-            if (type && type.endsWith('/image') && target) {
-               let imagePath = target.startsWith('../') ? 'ppt/' + target.replace('../', '') : 'ppt/slides/' + target;
-               const imgFile = zip.file(imagePath);
-               if (imgFile) {
-                  const imgBlob = await imgFile.async('blob');
-                  const imgDataUrl = await blobToDataUrl(imgBlob);
-                  
-                  try {
-                    const imgProps = await new Promise<{w: number, h: number}>((resolve) => {
-                       const img = new Image();
-                       img.onload = () => resolve({ w: img.width, h: img.height });
-                       img.onerror = () => resolve({ w: 100, h: 100 });
-                       img.src = imgDataUrl;
-                    });
-                    
-                    // Basic fit logic: center image
-                    const availH = heightPt - yPos - margin;
-                    if (availH > 50) {
-                        let renderW = Math.min(widthPt - margin*2, imgProps.w); // Don't exceed page width
-                        let renderH = (imgProps.h / imgProps.w) * renderW;
-                        
-                        if (renderH > availH) {
-                            renderH = availH;
-                            renderW = (imgProps.w / imgProps.h) * renderH;
-                        }
-                        
-                        const xPos = (widthPt - renderW) / 2;
-                        
-                        const ext = imagePath.split('.').pop()?.toUpperCase() || 'JPEG';
-                        const format = ext === 'PNG' ? 'PNG' : 'JPEG';
-                        
-                        doc.addImage(imgDataUrl, format, xPos, yPos, renderW, renderH);
-                        yPos += renderH + 20;
+            const imgFile = zip.file(imagePath);
+            if (imgFile) {
+                const imgBlob = await imgFile.async('blob');
+                const imgDataUrl = await blobToDataUrl(imgBlob);
+                
+                // Get dimensions to fit it
+                const imgProps = await new Promise<{w: number, h: number}>((resolve) => {
+                    const img = new Image();
+                    img.onload = () => resolve({ w: img.width, h: img.height });
+                    img.onerror = () => resolve({ w: 100, h: 100 });
+                    img.src = imgDataUrl;
+                });
+                
+                // Place image after text if space permits, or center if page empty
+                let renderW = Math.min(widthPt - margin*2, imgProps.w);
+                let renderH = (imgProps.h / imgProps.w) * renderW;
+                
+                // Limit height
+                const maxH = heightPt - yPos - margin;
+                
+                // If text took up most space, just put image on top of text or skip? 
+                // Better: Just center it if there's no text, or append.
+                if (maxH > 100) {
+                    if (renderH > maxH) {
+                        renderH = maxH;
+                        renderW = (imgProps.w / imgProps.h) * renderH;
                     }
-                  } catch (e) {
-                     // skip
-                  }
-               }
+                    
+                    const xPos = (widthPt - renderW) / 2;
+                    const format = imagePath.toLowerCase().endsWith('.png') ? 'PNG' : 'JPEG';
+                    
+                    doc.addImage(imgDataUrl, format, xPos, yPos, renderW, renderH);
+                    yPos += renderH + 20;
+                } else if (textMatches === null) {
+                    // No text, so center image on page
+                    renderH = Math.min(heightPt - margin*2, renderH);
+                    renderW = (imgProps.w / imgProps.h) * renderH;
+                    const xPos = (widthPt - renderW) / 2;
+                    const yPosImg = (heightPt - renderH) / 2;
+                    const format = imagePath.toLowerCase().endsWith('.png') ? 'PNG' : 'JPEG';
+                    doc.addImage(imgDataUrl, format, xPos, yPosImg, renderW, renderH);
+                }
             }
          }
        } catch (err) {
-         console.warn("Error processing slide resources:", err);
+         console.warn("Error processing slide images:", err);
        }
     }
   }

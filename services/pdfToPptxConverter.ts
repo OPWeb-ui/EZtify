@@ -7,13 +7,21 @@ export interface PptxConfig {
   backgroundColor?: string;
 }
 
+// PPTX Layout Dimensions in Inches
+const LAYOUT_DIMS: Record<string, { w: number, h: number }> = {
+  '16x9': { w: 10.0, h: 5.625 },
+  '16x10': { w: 10.0, h: 6.25 },
+  '4x3': { w: 10.0, h: 7.5 },
+  'wide': { w: 13.333, h: 7.5 },
+};
+
 export const convertPdfToPptx = async (
   file: File,
   pageIndices: number[] | 'all', // 0-based indices
   config: PptxConfig,
   onProgress?: (percent: number) => void,
   onStatusUpdate?: (status: string) => void
-): Promise<Blob> => {
+): Promise<{ blob: Blob; slideCount: number }> => {
 
     onStatusUpdate?.('Initializing PDF engine...');
     if (onProgress) onProgress(5);
@@ -33,21 +41,30 @@ export const convertPdfToPptx = async (
     const pptx = new PptxGenJS();
     
     // --- SMART LAYOUT DETECTION ---
+    let slideWidth = 0;
+    let slideHeight = 0;
+
     if (config.layout === 'auto') {
         onStatusUpdate?.('Detecting page layout...');
-        // Read page 1 dimensions
+        // Read page 1 dimensions to set the presentation master layout
         const page1 = await pdf.getPage(1);
         const { width, height } = page1.getViewport({ scale: 1.0 });
         
         // Define Custom Layout based on PDF point dimensions (72 dpi) -> Inches
-        // PptxGenJS uses inches. 1 inch = 72 pt.
         const widthIn = width / 72;
         const heightIn = height / 72;
         
+        slideWidth = widthIn;
+        slideHeight = heightIn;
+
         pptx.defineLayout({ name: 'CUSTOM_PDF_MATCH', width: widthIn, height: heightIn });
         pptx.layout = 'CUSTOM_PDF_MATCH';
     } else {
-        // Map legacy string to PptxGenJS layout
+        // Use standard preset dimensions
+        const dims = LAYOUT_DIMS[config.layout] || LAYOUT_DIMS['16x9'];
+        slideWidth = dims.w;
+        slideHeight = dims.h;
+
         const layoutMap: Record<string, string> = {
           '16x9': 'LAYOUT_16x9',
           '16x10': 'LAYOUT_16x10',
@@ -101,14 +118,35 @@ export const convertPdfToPptx = async (
              slide.background = { color: config.backgroundColor.replace('#', '') };
           }
 
-          // Add the rendered page as a full-slide image
-          // x:0, y:0, w:'100%', h:'100%' forces it to cover the slide
+          // --- ASPECT RATIO CALCULATION ---
+          // Calculate dimensions to FIT content (contain) without stretching
+          const imgRatio = viewport.width / viewport.height;
+          const slideRatio = slideWidth / slideHeight;
+
+          let w, h, x, y;
+
+          if (imgRatio > slideRatio) {
+              // Image is wider than slide (relative to aspect) -> Constrain Width
+              w = slideWidth;
+              h = slideWidth / imgRatio;
+              x = 0;
+              // Center Vertically
+              y = (slideHeight - h) / 2;
+          } else {
+              // Image is taller or equal -> Constrain Height
+              h = slideHeight;
+              w = slideHeight * imgRatio;
+              y = 0;
+              // Center Horizontally
+              x = (slideWidth - w) / 2;
+          }
+
           slide.addImage({
               data: dataUrl,
-              x: 0,
-              y: 0,
-              w: '100%',
-              h: '100%',
+              x: x,
+              y: y,
+              w: w,
+              h: h,
           });
         } catch (e) {
           console.warn(`Skipping page ${pageNum} due to error`, e);
@@ -118,9 +156,15 @@ export const convertPdfToPptx = async (
     }
 
     onStatusUpdate?.('Packing presentation...');
-    const blob = await pptx.write('blob');
+    
+    // Explicitly cast to unknown then Blob to satisfy TS if definitions mismatch
+    const pptxBlob = await pptx.write('blob') as unknown as Blob;
+
+    const finalBlob = new Blob([pptxBlob], { 
+        type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' 
+    });
 
     if (onProgress) onProgress(100);
 
-    return blob as Blob;
+    return { blob: finalBlob, slideCount: total };
 };

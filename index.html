@@ -11,11 +11,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- Typography: Inter (UI) + JetBrains Mono (Data/Tech) - LOCKED -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#000000" />
+    <meta name="theme-color" content="#FAF9F6" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     
@@ -27,21 +27,12 @@
         theme: {
           extend: {
             colors: {
-              // Linear-Inspired Zinc Palette
-              zinc: {
-                50: '#fafafa',
-                100: '#f4f4f5',
-                200: '#e4e4e7',
-                300: '#d4d4d8',
-                400: '#a1a1aa',
-                500: '#71717a',
-                600: '#52525b',
-                700: '#3f3f46',
-                800: '#27272a',
-                900: '#18181b',
-                950: '#09090b',
+              // Base Palette (Stone/Neutral)
+              stone: {
+                50: '#fafaf9', 100: '#f5f5f4', 200: '#e7e5e4', 300: '#d6d3d1', 
+                800: '#292524', 900: '#1c1917', 950: '#0c0a09',
               },
-              // Semantic Mappings
+              // Semantic System
               nd: {
                 base: 'var(--bg-base)',
                 surface: 'var(--bg-surface)',
@@ -51,23 +42,17 @@
                 secondary: 'var(--text-secondary)',
                 muted: 'var(--text-muted)',
               },
-              // Tool Accent (Dynamic)
-              tool: {
-                DEFAULT: 'var(--tool-accent)',
-                dim: 'var(--tool-accent-dim)',
-              },
-              // Legacy Compatibility
-              charcoal: {
-                50: '#fafafa', 100: '#f4f4f5', 200: '#e4e4e7', 300: '#d4d4d8', 
-                400: '#a1a1aa', 500: '#71717a', 600: '#52525b', 700: '#3f3f46', 
-                800: '#27272a', 850: '#18181b', 900: '#09090b', 950: '#000000'
+              // Visual Accents
+              accent: {
+                lime: '#84CC16',  // Fresh Green
+                pink: '#F472B6',  // Soft Pink
+                yellow: '#FACC15', // Sunny Yellow
+                black: '#111111', // Ink Black
               },
               brand: {
-                purple: 'var(--tool-accent)',
-                purpleDark: 'var(--tool-accent)',
-                blue: '#3B82F6',
-                mint: '#10B981',
-              }
+                purple: '#111111', // Legacy mapping to Black
+                purpleDark: '#000000', // Legacy mapping to Black
+              },
             },
             fontFamily: {
               sans: ['Inter', 'sans-serif'],
@@ -76,14 +61,14 @@
             },
             boxShadow: {
               'sm': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-              'DEFAULT': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)',
-              'md': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
-              'lg': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)',
-              'subtle': '0 0 0 1px var(--border-color), 0 1px 3px 0 rgba(0,0,0,0.04)',
+              'DEFAULT': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
+              'soft': '0 10px 40px -10px rgba(0,0,0,0.08)',
             },
             borderRadius: {
-              'xl': '0.75rem',
-              '2xl': '1rem',
+              'xl': '1rem',      
+              '2xl': '1.5rem',    
+              '3xl': '2rem',    
+              '4xl': '2.5rem',
             }
           },
         },
@@ -93,31 +78,46 @@
     <!-- Design System Variables -->
     <style>
       :root {
-        /* Light Mode (Formerly Colorful Mode): Warm, Premium, Expressive */
-        --bg-base: #FFFCF9; /* Very subtle warm tint */
-        --bg-surface: #F9F5F1;
-        --bg-subtle: #F2EBE5;
-        --border-color: #E7E0DA; 
-        --text-primary: #292524; /* Stone 800 */
-        --text-secondary: #57534E; /* Stone 600 */
-        --text-muted: #A8A29E; /* Stone 400 */
+        /* Soft Modern Theme */
+        --bg-base: #FAF9F6;        /* Warm Off-White / Cream */
+        --bg-surface: #FFFFFF;     /* Pure White */
+        --bg-subtle: #F5F5F4;      /* Stone 100 */
         
-        --tool-accent: #C026D3; /* Fuchsia 600 - Confident */
-        --tool-accent-dim: rgba(192, 38, 211, 0.1);
+        --border-color: #E5E5E0;   /* Soft Border */
+        
+        --text-primary: #111111;   /* Sharp Black */
+        --text-secondary: #57534E; /* Stone 600 */
+        --text-muted: #A8A29E;     /* Stone 400 */
+        
+        /* Unified Accent System - NEUTRAL/LIME */
+        --brand-purple: #111111;      
+        --brand-purple-dark: #000000;
+        
+        /* The Core "Active" Color - Mapped to Black for high contrast UI */
+        --ez-accent: #111111; 
+        
+        /* The Core "Soft" Color - Mapped to very light gray */
+        --ez-accent-soft: #F5F5F4;
+        
+        /* Secondary functional accent */
+        --accent-lime: #84CC16;
       }
 
-      /* Dark Mode: Deep, High Contrast */
+      /* Dark Mode Overrides (Muted Charcoal) */
       .dark {
-        --bg-base: #09090B; /* Zinc 950 */
-        --bg-surface: #121214;
-        --bg-subtle: #18181B; /* Zinc 900 */
-        --border-color: #27272A; /* Zinc 800 */
-        --text-primary: #F4F4F5; /* Zinc 100 */
-        --text-secondary: #A1A1AA; /* Zinc 400 */
-        --text-muted: #52525B; /* Zinc 600 */
+        --bg-base: #111111;
+        --bg-surface: #1C1C1E;
+        --bg-subtle: #2C2C2E;
+        --border-color: #333333;
+        --text-primary: #FAFAFA;
+        --text-secondary: #A1A1AA;
+        --text-muted: #71717A;
         
-        --tool-accent: #FFFFFF;
-        --tool-accent-dim: rgba(255, 255, 255, 0.1);
+        --brand-purple: #FFFFFF;
+        --brand-purple-dark: #E5E5E5;
+        
+        --ez-accent: #FFFFFF; 
+        --ez-accent-soft: #27272a; /* Zinc 800 */
       }
 
       html {
@@ -137,37 +137,23 @@
         transition: background-color 0.3s ease, color 0.3s ease;
       }
 
-      /* Typography Discipline */
       h1, h2, h3, h4, .font-heading {
-        letter-spacing: -0.025em;
-        font-weight: 600;
+        letter-spacing: -0.02em;
+        font-weight: 700;
       }
       
-      /* Selection */
       ::selection {
-        background-color: var(--tool-accent);
-        color: var(--bg-base);
+        background-color: #84CC16; /* Lime Highlight */
+        color: white;
       }
 
-      /* Custom Scrollbar (Minimal) */
-      ::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-      }
-      ::-webkit-scrollbar-track {
-        background: transparent;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: var(--border-color);
-        border-radius: 99px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: var(--text-muted);
-      }
+      .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+      .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+      .custom-scrollbar::-webkit-scrollbar-thumb { background: #E5E5E0; border-radius: 99px; }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #D4D4D0; }
 
-      /* Focus Styles */
       :focus-visible {
-        outline: 2px solid var(--tool-accent);
+        outline: 2px solid #111111;
         outline-offset: 2px;
         border-radius: 4px;
       }
@@ -176,7 +162,7 @@
       }
     </style>
 
-    <!-- Import Map (UNCHANGED) -->
+    <!-- Import Map -->
     <script type="importmap">
 {
   "imports": {
@@ -193,7 +179,6 @@
     "react-router-dom": "https://esm.sh/react-router-dom@^7.10.1",
     "nanoid": "https://esm.sh/nanoid@^5.1.6",
     "jszip": "https://esm.sh/jszip@^3.10.1",
-    "mammoth": "https://esm.sh/mammoth@^1.11.0",
     "pdfjs-dist": "https://esm.sh/pdfjs-dist@4.0.379",
     "pptxgenjs": "https://esm.sh/pptxgenjs@^3.12.0",
     "pdf-lib": "https://esm.sh/pdf-lib@1.17.1?bundle",
@@ -214,7 +199,8 @@
     "file-saver": "https://esm.sh/file-saver@^2.0.5",
     "vite": "https://esm.sh/vite@^7.2.7",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "react-dom": "https://esm.sh/react-dom@^19.2.3"
+    "react-dom": "https://esm.sh/react-dom@^19.2.3",
+    "gsap": "https://esm.sh/gsap@^3.14.2"
   }
 }
 </script>
@@ -223,6 +209,7 @@
   <link rel="stylesheet" href="/index.css">
 </head>
   <body>
+    <div class="fixed inset-0 -z-10 bg-nd-base transition-colors duration-500"></div>
     <div id="root"></div>
   </body>
 </html>

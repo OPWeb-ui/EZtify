@@ -1,3 +1,4 @@
+
 import { jsPDF } from 'jspdf';
 import { UploadedImage, PdfConfig } from '../types';
 
@@ -70,6 +71,10 @@ export const generatePDF = async (
   if (images.length === 0) return;
 
   onStatusUpdate?.('Initializing PDF...');
+  
+  // Create doc with initial orientation from global config
+  // Note: We'll add pages dynamically so the initial format matters less, 
+  // but we initialize with the global default.
   const doc = new jsPDF({
     orientation: config.orientation,
     unit: 'mm',
@@ -96,6 +101,9 @@ export const generatePDF = async (
 
     const imgData = images[i];
     
+    // Merge global config with per-image overrides
+    const effectiveConfig = { ...config, ...(imgData.pdfConfig || {}) };
+    
     try {
       const imgElement = await loadImage(imgData.previewUrl);
       
@@ -118,11 +126,11 @@ export const generatePDF = async (
       ctx.rotate((imgData.rotation * Math.PI) / 180);
       ctx.drawImage(imgElement, -srcWidth / 2, -srcHeight / 2);
 
-      const finalDataUrl = canvas.toDataURL('image/jpeg', config.quality);
+      const finalDataUrl = canvas.toDataURL('image/jpeg', effectiveConfig.quality);
 
       let pdfPageWidth, pdfPageHeight;
       
-      if (config.pageSize === 'auto') {
+      if (effectiveConfig.pageSize === 'auto') {
         pdfPageWidth = canvas.width * mmPerPx;
         pdfPageHeight = canvas.height * mmPerPx;
       } else {
@@ -130,9 +138,9 @@ export const generatePDF = async (
           a4: [210, 297],
           letter: [215.9, 279.4]
         };
-        const std = sizes[config.pageSize] || sizes['a4'];
+        const std = sizes[effectiveConfig.pageSize] || sizes['a4'];
         
-        if (config.orientation === 'landscape') {
+        if (effectiveConfig.orientation === 'landscape') {
           pdfPageWidth = std[1];
           pdfPageHeight = std[0];
         } else {
@@ -142,6 +150,14 @@ export const generatePDF = async (
       }
 
       const orientation = pdfPageWidth > pdfPageHeight ? 'l' : 'p';
+      
+      // If it's the first page, we might need to delete the default one created by constructor
+      // IF we want to strictly follow the page size of the first image.
+      // However, jsPDF API usually adds a page. 
+      // Strategy: Add page for every image. If i===0, delete the initial default page *after* adding the real first page, 
+      // or set the page properties of the existing one. 
+      // Doc.addPage is cleaner for mixed orientations.
+      
       doc.addPage([pdfPageWidth, pdfPageHeight], orientation);
 
       const dims = calculateDimensions(
@@ -149,8 +165,8 @@ export const generatePDF = async (
         canvas.height, 
         pdfPageWidth, 
         pdfPageHeight, 
-        config.pageSize === 'auto' ? 'fill' : config.fitMode, 
-        config.margin
+        effectiveConfig.pageSize === 'auto' ? 'fill' : effectiveConfig.fitMode, 
+        effectiveConfig.margin
       );
 
       doc.addImage(finalDataUrl, 'JPEG', dims.x, dims.y, dims.width, dims.height);
@@ -160,15 +176,20 @@ export const generatePDF = async (
     }
   }
 
+  // Remove the initial blank page created by jsPDF constructor
+  // Since we used addPage for every image (starting index 1, effectively), 
+  // the page at index 1 (internal logic) is the first default one usually.
+  // jsPDF page indexing is 1-based.
+  const totalPages = doc.getNumberOfPages();
+  if (totalPages > images.length) {
+    // The default page is usually the first one if we just started adding new ones.
+    doc.deletePage(1);
+  }
+
   onProgress?.(100);
   onStatusUpdate?.('Saving PDF...');
   
   await new Promise(resolve => setTimeout(resolve, 800));
-
-  const totalPages = doc.getNumberOfPages();
-  if (totalPages > 1) {
-    doc.deletePage(1);
-  }
 
   // Derive filename from first image
   const firstImage = images[0];

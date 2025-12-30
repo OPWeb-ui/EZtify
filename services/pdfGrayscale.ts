@@ -131,6 +131,7 @@ export const convertPdfVisual = async (
 
   const pdfBlob = doc.output('blob');
   const newSize = pdfBlob.size;
+  const savingsPercent = originalSize > 0 ? Math.max(0, Math.round(((originalSize - newSize) / originalSize) * 100)) : 0;
 
   if (onProgress) onProgress(100);
 
@@ -146,6 +147,7 @@ export const convertPdfVisual = async (
     newSize,
     blob: pdfBlob,
     fileName,
-    status: 'Success'
+    status: 'Success',
+    savingsPercent
   };
 };
