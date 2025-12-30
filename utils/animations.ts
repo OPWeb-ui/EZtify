@@ -1,17 +1,16 @@
 
 // --- GLOBAL MOTION TOKENS ---
-// Reference: Linear Design System
-// Constraint: Precise, Engineered, Non-decorative
+// Reference: Linear / Apple Design Systems
+// Constraint: Precise, Engineered, Physically Believable
 
 export const motionTokens = {
   duration: {
     instant: 0,
-    fast: 0.12, // 120ms - Exits, micro-interactions
-    base: 0.16, // 160ms - Standard UI changes, Toasts
-    slow: 0.22, // 220ms - Large layout shifts
+    fast: 0.12, 
+    base: 0.16, 
+    slow: 0.22, 
   },
   ease: {
-    // The "Linear" curve: Quick acceleration, precise snapping finish
     out: [0.16, 1, 0.3, 1] as const, 
     linear: "linear" as const,
   },
@@ -21,94 +20,99 @@ export const motionTokens = {
   }
 };
 
-// Export commonly used easing for manual transitions
-export const techEase = motionTokens.ease.out;
+// --- PHYSICAL SPRING TOKENS ---
+// These define the "weight" and "friction" of the UI elements
+export const physicalSpring = {
+  type: "spring" as const,
+  stiffness: 380,
+  damping: 35,
+  mass: 0.8,
+  restDelta: 0.001
+};
+
+export const heavySpring = {
+  type: "spring" as const,
+  stiffness: 260,
+  damping: 32,
+  mass: 1.2
+};
+
+export const bouncySpring = {
+  type: "spring" as const,
+  stiffness: 400,
+  damping: 25,
+  mass: 1
+};
 
 // --- STANDARD TRANSITIONS ---
-// Use this for almost all UI elements
 export const standardLayoutTransition = { 
   duration: motionTokens.duration.base, 
   ease: motionTokens.ease.out 
 };
 
 // --- INTERACTION VARIANTS ---
-// Subtle, non-intrusive feedback
+// Tactical feedback for buttons and cards
 export const buttonTap = { 
-  opacity: 0.8,
-  scale: 0.99, // Extremely subtle scale
-  transition: { duration: motionTokens.duration.fast, ease: motionTokens.ease.out }
+  scale: 0.96,
+  transition: physicalSpring
 };
 
 export const cardHover = { 
-  y: -2, // Minimal lift
-  transition: { duration: motionTokens.duration.base, ease: motionTokens.ease.out }
+  y: -6,
+  scale: 1.01,
+  transition: physicalSpring
 };
 
-// --- TOAST ANIMATIONS (STRICT) ---
+// --- TOAST ANIMATIONS ---
 export const toastVariants = {
-  initial: { 
-    opacity: 0, 
-    y: motionTokens.translate.md,
-    scale: 1 // No scale pop
-  },
+  initial: { opacity: 0, y: motionTokens.translate.md },
   animate: { 
     opacity: 1, 
     y: 0, 
-    scale: 1,
-    transition: { 
-      duration: motionTokens.duration.base, 
-      ease: motionTokens.ease.out 
-    } 
+    transition: physicalSpring 
   },
   exit: { 
     opacity: 0, 
-    y: motionTokens.translate.sm, 
-    scale: 1,
-    transition: { 
-      duration: motionTokens.duration.fast, 
-      ease: motionTokens.ease.out 
-    } 
+    scale: 0.95,
+    transition: { duration: 0.15 } 
   }
 };
 
 // --- PAGE TRANSITIONS ---
 export const pageVariants = {
-  initial: { 
-    opacity: 0, 
-    y: 4,
-  },
+  initial: { opacity: 0, y: 10 },
   animate: { 
     opacity: 1, 
     y: 0, 
-    transition: { duration: motionTokens.duration.slow, ease: motionTokens.ease.out } 
+    transition: { duration: 0.4, ease: motionTokens.ease.out } 
   },
   exit: { 
     opacity: 0, 
-    y: -4,
-    transition: { duration: motionTokens.duration.fast, ease: motionTokens.ease.out } 
+    y: -10,
+    transition: { duration: 0.2 } 
   }
 };
 
 // --- MODAL / DIALOG ---
 export const modalOverlayVariants = {
     hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { duration: motionTokens.duration.base } },
-    exit: { opacity: 0, transition: { duration: motionTokens.duration.fast } }
+    visible: { opacity: 1, transition: { duration: 0.2 } },
+    exit: { opacity: 0 }
 };
 
 export const modalContentVariants = {
-  hidden: { opacity: 0, y: 8, scale: 0.98 },
+  hidden: { opacity: 0, y: 20, scale: 0.96 },
   visible: { 
     opacity: 1, 
     y: 0, 
     scale: 1,
-    transition: { duration: motionTokens.duration.base, ease: motionTokens.ease.out } 
+    transition: physicalSpring 
   },
   exit: { 
     opacity: 0, 
-    y: 4,
+    y: 10,
     scale: 0.98, 
-    transition: { duration: motionTokens.duration.fast, ease: motionTokens.ease.out } 
+    transition: { duration: 0.2 } 
   }
 };
 
@@ -118,17 +122,17 @@ export const staggerContainer = {
   show: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.03, // Tighter stagger
-      delayChildren: 0.01
+      staggerChildren: 0.05,
+      delayChildren: 0.1
     }
   }
 };
 
 export const fadeInUp = {
-  hidden: { opacity: 0, y: 8 },
+  hidden: { opacity: 0, y: 15 },
   show: { 
     opacity: 1, 
     y: 0, 
-    transition: { duration: motionTokens.duration.base, ease: motionTokens.ease.out } 
+    transition: physicalSpring 
   }
 };

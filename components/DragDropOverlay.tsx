@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UploadCloud, CornerDownLeft, CornerDownRight, CornerUpLeft, CornerUpRight, FileInput, ScanLine, HardDrive } from 'lucide-react';
+import { CornerDownLeft, CornerDownRight, CornerUpLeft, CornerUpRight, UploadCloud, ScanLine } from 'lucide-react';
 
 export type OverlayVariant = 'purple' | 'blue' | 'green' | 'orange' | 'red' | 'amber' | 'mint' | 'violet' | 'indigo' | 'pink' | 'wordBlue' | 'pptOrange' | 'cyan' | 'slate';
 
@@ -14,33 +15,24 @@ interface DragDropOverlayProps {
 
 export const DragDropOverlay: React.FC<DragDropOverlayProps> = ({ 
   isDragActive, 
-  message = "INCOMING_DATA_STREAM", 
-  subMessage = "RELEASE_TO_MOUNT",
+  message = "STREAMING_DATA", 
+  subMessage = "RELEASE_TO_INITIALIZE",
   icon,
-  variant = 'purple' 
+  variant = 'slate' // Default changed to slate (Neutral)
 }) => {
   
-  const getColor = (v: OverlayVariant) => {
+  // Mapped all legacy color variants to strictly defined palette colors or Neutral/Lime
+  // To ensure visual consistency, we mostly force Neutral or Lime unless specific context demands warning/error.
+  const getColorClasses = (v: OverlayVariant) => {
     switch (v) {
-      case 'purple': return 'text-brand-purple border-brand-purple bg-brand-purple/5';
-      case 'blue': return 'text-blue-500 border-blue-500 bg-blue-500/5';
-      case 'green': return 'text-emerald-500 border-emerald-500 bg-emerald-500/5';
-      case 'orange': return 'text-orange-500 border-orange-500 bg-orange-500/5';
-      case 'red': return 'text-rose-500 border-rose-500 bg-rose-500/5';
-      case 'amber': return 'text-amber-500 border-amber-500 bg-amber-500/5';
-      case 'mint': return 'text-teal-500 border-teal-500 bg-teal-500/5';
-      case 'violet': return 'text-violet-500 border-violet-500 bg-violet-500/5';
-      case 'indigo': return 'text-indigo-500 border-indigo-500 bg-indigo-500/5';
-      case 'pink': return 'text-pink-500 border-pink-500 bg-pink-500/5';
-      case 'wordBlue': return 'text-blue-600 border-blue-600 bg-blue-600/5';
-      case 'pptOrange': return 'text-orange-600 border-orange-600 bg-orange-600/5';
-      case 'cyan': return 'text-cyan-500 border-cyan-500 bg-cyan-500/5';
-      case 'slate': return 'text-slate-500 border-slate-500 bg-slate-500/5';
-      default: return 'text-brand-purple border-brand-purple bg-brand-purple/5';
+      case 'red': return { text: 'text-rose-600', border: 'border-rose-600', bg: 'bg-rose-50/95' };
+      case 'green': return { text: 'text-emerald-600', border: 'border-emerald-600', bg: 'bg-emerald-50/95' };
+      // All other variants map to Neutral/Black style for consistent "System" feel
+      default: return { text: 'text-[#111111]', border: 'border-[#111111]', bg: 'bg-[#FAF9F6]/95' };
     }
   };
 
-  const colorClass = getColor(variant as OverlayVariant);
+  const colors = getColorClasses(variant as OverlayVariant);
 
   return (
     <AnimatePresence>
@@ -50,22 +42,15 @@ export const DragDropOverlay: React.FC<DragDropOverlayProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="absolute inset-0 z-[100] flex items-center justify-center bg-white/90 dark:bg-charcoal-950/90 backdrop-blur-xl overflow-hidden"
+          className="absolute inset-0 z-[100] flex items-center justify-center bg-white/80 backdrop-blur-xl overflow-hidden"
         >
           {/* Animated Grid Background */}
           <div 
-            className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]" 
+            className="absolute inset-0 opacity-[0.05]" 
             style={{ 
               backgroundImage: 'linear-gradient(#000 1px, transparent 1px), linear-gradient(to right, #000 1px, transparent 1px)', 
               backgroundSize: '40px 40px' 
             }} 
-          />
-          <motion.div 
-             className={`absolute inset-0 ${colorClass} opacity-10`}
-             initial={{ scale: 0.8, opacity: 0 }}
-             animate={{ scale: 1.5, opacity: 0.1 }}
-             transition={{ duration: 1.5, repeat: Infinity, repeatType: "reverse" }}
-             style={{ borderRadius: '50%' }}
           />
 
           {/* Main Content Container */}
@@ -75,42 +60,42 @@ export const DragDropOverlay: React.FC<DragDropOverlayProps> = ({
             exit={{ scale: 0.95, y: 10 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
             className={`
-              relative p-12 rounded-3xl border-2 border-dashed
+              relative p-16 rounded-[2.5rem] border-2 border-dashed
               flex flex-col items-center text-center max-w-lg w-full mx-4
-              ${colorClass}
+              ${colors.text} ${colors.border} ${colors.bg} shadow-2xl
             `}
           >
             {/* Tech Corners */}
-            <div className="absolute top-0 left-0 -mt-1 -ml-1"><CornerUpLeft size={24} strokeWidth={3} /></div>
-            <div className="absolute top-0 right-0 -mt-1 -mr-1"><CornerUpRight size={24} strokeWidth={3} /></div>
-            <div className="absolute bottom-0 left-0 -mb-1 -ml-1"><CornerDownLeft size={24} strokeWidth={3} /></div>
-            <div className="absolute bottom-0 right-0 -mb-1 -mr-1"><CornerDownRight size={24} strokeWidth={3} /></div>
+            <div className="absolute top-0 left-0 -mt-1 -ml-1"><CornerUpLeft size={32} strokeWidth={3} /></div>
+            <div className="absolute top-0 right-0 -mt-1 -mr-1"><CornerUpRight size={32} strokeWidth={3} /></div>
+            <div className="absolute bottom-0 left-0 -mb-1 -ml-1"><CornerDownLeft size={32} strokeWidth={3} /></div>
+            <div className="absolute bottom-0 right-0 -mb-1 -mr-1"><CornerDownRight size={32} strokeWidth={3} /></div>
 
             {/* Icon Pulse */}
             <motion.div 
               animate={{ y: [0, -10, 0] }}
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              className="mb-6 relative"
+              className="mb-8 relative"
             >
-               <div className="absolute inset-0 bg-current opacity-20 blur-xl rounded-full" />
-               {icon || <UploadCloud size={64} strokeWidth={1.5} className="relative z-10" />}
+               <div className="absolute inset-0 bg-current opacity-20 blur-2xl rounded-full" />
+               {icon || <UploadCloud size={80} strokeWidth={1.5} className="relative z-10" />}
             </motion.div>
 
             {/* Typography */}
-            <h3 className="text-3xl font-heading font-black tracking-tighter mb-2 uppercase">
+            <h3 className="text-4xl font-heading font-black tracking-tighter mb-3 uppercase">
               {message}
             </h3>
             
-            <div className="flex items-center gap-2 text-xs font-mono font-bold tracking-widest opacity-70">
-               <ScanLine size={14} className="animate-pulse" />
+            <div className="flex items-center gap-3 text-xs font-mono font-bold tracking-[0.2em] opacity-80">
+               <ScanLine size={18} className="animate-pulse" />
                <span>{subMessage}</span>
             </div>
 
-            {/* Fake System Stats */}
-            <div className="absolute bottom-4 right-6 text-[8px] font-mono opacity-40 text-right hidden sm:block">
-               PORT: 8080<br/>
-               STATUS: LISTENING<br/>
-               BUFFER: READY
+            {/* Tech Data Overlay */}
+            <div className="absolute bottom-6 right-8 text-[9px] font-mono opacity-40 text-right hidden sm:block uppercase tracking-widest font-bold">
+               Runtime_Enc: Enabled<br/>
+               Buffer_State: Listening<br/>
+               I/O_Link: Established
             </div>
           </motion.div>
         </motion.div>

@@ -1,3 +1,4 @@
+
 import JSZip from 'jszip';
 import { ZipFile, ZipCompressionLevel } from '../types';
 
@@ -12,7 +13,9 @@ export const generateGenericZip = async (
   onStatusUpdate?.('Preparing files...');
   await new Promise(resolve => setTimeout(resolve, 0)); 
 
-  files.forEach((item) => {
+  const totalFiles = files.length;
+  for (let i = 0; i < totalFiles; i++) {
+    const item = files[i];
     const originalName = item.file.name;
     const lastDotIndex = originalName.lastIndexOf('.');
     let newName = originalName;
@@ -25,10 +28,18 @@ export const generateGenericZip = async (
       newName = `${originalName}-EZtify`;
     }
 
+    onStatusUpdate?.(`Adding ${item.file.name}`);
     zip.file(newName, item.file);
-  });
 
-  onStatusUpdate?.('Zipping files...');
+    if (onProgress) {
+      // First 50% of progress is for adding files to the zip instance
+      onProgress(Math.round(((i + 1) / totalFiles) * 50));
+    }
+    // Yield to UI to allow status update to render
+    await new Promise(resolve => setTimeout(resolve, 10)); 
+  }
+
+  onStatusUpdate?.('Compressing archive...');
   const zipBlob = await zip.generateAsync(
     {
       type: 'blob',
@@ -38,8 +49,12 @@ export const generateGenericZip = async (
       }
     },
     (metadata) => {
-      if (onProgress) {
-        onProgress(metadata.percent);
+      if (onProgress && metadata.percent) {
+        // Second 50% is for the final compression stage
+        onProgress(50 + (metadata.percent / 2));
+      }
+      if (metadata.currentFile) {
+        onStatusUpdate?.(`Compressing ${metadata.currentFile}`);
       }
     }
   );

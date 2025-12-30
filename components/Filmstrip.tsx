@@ -23,7 +23,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { UploadedImage, CropData } from '../types';
-import { X, RotateCw, GripHorizontal, Hash, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { X, RotateCw, GripHorizontal, Hash, Image as ImageIcon, Trash2, GripVertical } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { buttonTap, standardLayoutTransition } from '../utils/animations';
 import { IconBox } from './IconBox';
@@ -44,9 +44,6 @@ interface FilmstripProps {
   isReorderable?: boolean;
   size?: 'sm' | 'md' | 'lg';
 }
-
-const fullPageCrop: CropData = { x: 0, y: 0, width: 100, height: 100 };
-const isEqual = (a: CropData, b: CropData) => a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
 
 // --- Visual Item Component ---
 interface FilmstripItemProps {
@@ -89,120 +86,115 @@ const FilmstripItem: React.FC<FilmstripItemProps> = React.memo(({
   dragAttributes
 }) => {
   const isVertical = direction === 'vertical';
-  const crop = image.appliedCrop;
-  const isCropped = crop && !isEqual(crop, fullPageCrop);
-  
-  const imgStyle: React.CSSProperties = {
-    transform: `rotate(${image.rotation}deg)`
-  };
 
-  if (isCropped) {
-    (imgStyle as any).clipPath = `inset(${crop.y.toFixed(2)}% ${(100 - (crop.x + crop.width)).toFixed(2)}% ${(100 - (crop.y + crop.height)).toFixed(2)}% ${crop.x.toFixed(2)}%)`;
-  }
-
-  const verticalDims = 'w-full aspect-square';
-  const horizontalDims = isCompact ? 'w-24 h-32' : 'w-36 h-48';
-  
-  const sizingClass = isMobile 
-    ? 'w-full aspect-[3/4]' 
-    : isVertical 
-      ? verticalDims 
-      : horizontalDims;
+  // Consistent sizing logic
+  const widthClass = isVertical ? 'w-full' : isCompact ? 'w-24' : 'w-36';
+  const aspectRatioClass = 'aspect-[3/4]'; // Fixed aspect ratio for consistency
 
   return (
-    <div className={`relative group flex-shrink-0 select-none ${isVertical ? 'w-full mb-3' : 'mr-3 last:mr-0'}`}>
+    <div 
+      className={`relative group flex-shrink-0 select-none ${isVertical ? 'mb-3 last:mb-0' : 'mr-3 last:mr-0'} ${widthClass}`}
+    >
       <div
         role="button"
         tabIndex={isOverlay ? -1 : 0}
         onClick={onSelect}
         className={`
           relative overflow-hidden transition-all duration-200 ease-out cursor-pointer outline-none
-          ${sizingClass}
-          rounded-2xl
+          ${aspectRatioClass}
+          rounded-xl
           border
           ${isOverlay 
-             ? 'border-brand-purple shadow-2xl scale-105 z-50 bg-white dark:bg-charcoal-800' 
+             ? 'border-orange-500 shadow-2xl scale-105 z-50 bg-white dark:bg-charcoal-800' 
              : isDragging 
                 ? 'opacity-30 grayscale border-dashed border-slate-300 dark:border-charcoal-600' 
                 : isActive 
-                  ? 'border-brand-purple ring-1 ring-brand-purple/20 bg-slate-50 dark:bg-charcoal-800 shadow-md' 
+                  ? 'border-orange-500 ring-2 ring-orange-500/20 bg-white dark:bg-charcoal-800 shadow-md transform scale-[1.02]' 
                   : isSelected
-                    ? 'border-slate-400 bg-slate-50'
-                    : 'border-slate-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 hover:border-slate-300 dark:hover:border-charcoal-600'
+                    ? 'border-orange-400 bg-orange-50 dark:bg-orange-900/10'
+                    : 'border-slate-200 dark:border-charcoal-700 bg-white dark:bg-charcoal-800 hover:border-slate-300 dark:hover:border-charcoal-600 hover:shadow-sm'
           }
         `}
       >
-        {/* Delete Button - Using IconBox logic (Strict Square) */}
-        {showRemoveButton && !isDragging && (
-          <div className="absolute top-2 right-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity">
-             <motion.button 
-               onClick={onRemove} 
-               whileTap={buttonTap}
-               className="bg-white dark:bg-charcoal-800 text-charcoal-400 hover:text-rose-500 border border-slate-200 dark:border-charcoal-600 hover:border-rose-200 dark:hover:border-rose-900 rounded-lg p-1.5 shadow-sm transition-colors"
-             >
-               <X size={14} />
-             </motion.button>
+        {/* Drag Handle (Hover Only) */}
+        {isReorderable && !isDragging && !isMobile && (
+          <div 
+            {...dragAttributes} 
+            {...dragListeners}
+            className="absolute top-2 left-1/2 -translate-x-1/2 z-30 p-1.5 text-charcoal-300 dark:text-charcoal-600 opacity-0 group-hover:opacity-100 hover:text-charcoal-500 cursor-grab active:cursor-grabbing transition-opacity"
+          >
+            <GripHorizontal size={16} />
           </div>
         )}
 
-        {/* Index Badge (Strict Tag) */}
+        {/* Index Badge - Subtle */}
         {index !== undefined && (
           <div className="absolute top-2 left-2 z-20">
              <div className={`
-               h-6 px-2 flex items-center justify-center rounded-lg text-[10px] font-mono font-bold
+               h-5 min-w-[20px] px-1 flex items-center justify-center rounded-md text-[9px] font-mono font-bold
                ${isActive 
-                 ? 'bg-brand-purple text-white shadow-sm' 
-                 : 'bg-slate-100 dark:bg-charcoal-700 text-charcoal-500 dark:text-charcoal-400 border border-slate-200 dark:border-charcoal-600'}
+                 ? 'bg-orange-500 text-white shadow-sm' 
+                 : 'bg-charcoal-900/80 text-white backdrop-blur-sm'}
              `}>
-               {String(index + 1).padStart(2, '0')}
+               {String(index + 1)}
              </div>
           </div>
         )}
 
-        {/* Image Area */}
+        {/* Delete Button (Hover) */}
+        {showRemoveButton && !isDragging && (
+          <motion.button 
+            whileTap={buttonTap}
+            onClick={onRemove} 
+            className="
+              absolute top-2 right-2 z-30 
+              w-7 h-7 flex items-center justify-center
+              bg-white/90 dark:bg-charcoal-800/90 
+              text-charcoal-400 hover:text-rose-500 
+              rounded-lg opacity-0 group-hover:opacity-100 transition-opacity 
+              shadow-sm border border-slate-100 dark:border-charcoal-600
+            "
+          >
+            <X size={14} />
+          </motion.button>
+        )}
+
+        {/* Image Container */}
         <div className="w-full h-full p-4 flex items-center justify-center relative">
-          {!isDragging && (
-             <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]" 
-                  style={{ 
-                    backgroundImage: 'linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000), linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000)', 
-                    backgroundSize: '12px 12px', 
-                    backgroundPosition: '0 0, 6px 6px' 
-                  }} 
-             />
-          )}
-          
-          <img
+          {/* Radial Dot Pattern for consistency with other tools */}
+          <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]" 
+               style={{ 
+                 backgroundImage: 'radial-gradient(circle, #000 1px, transparent 1px)', 
+                 backgroundSize: '8px 8px'
+               }} 
+          />
+          <motion.img
             src={image.previewUrl}
             alt={`Frame ${index !== undefined ? index + 1 : ''}`}
-            className="max-w-full max-h-full object-contain relative z-10 shadow-sm transition-all duration-300"
-            style={imgStyle}
+            className="max-w-full max-h-full object-contain relative z-10 shadow-sm transition-transform duration-300 bg-white"
+            animate={{
+              rotate: image.rotation,
+            }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
             draggable={false}
           />
         </div>
 
-        {/* Bottom Actions Overlay (Strict Rectangular Bar) */}
-        {(showRotateButton || isReorderable) && !isDragging && (
-          <div className="absolute bottom-0 left-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity z-30">
-             <div className="flex items-center justify-center gap-2 bg-white/90 dark:bg-charcoal-900/90 backdrop-blur-md rounded-xl border border-slate-200 dark:border-charcoal-700 p-1 shadow-sm">
-                {isReorderable && (
-                  <div 
-                    {...dragAttributes} 
-                    {...dragListeners}
-                    className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-charcoal-700 text-charcoal-400 cursor-grab active:cursor-grabbing"
-                  >
-                    <GripHorizontal size={14} />
-                  </div>
-                )}
-                {showRotateButton && (
-                   <motion.button 
-                     onClick={onRotate} 
-                     whileTap={buttonTap} 
-                     className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-charcoal-700 text-charcoal-500 hover:text-brand-purple transition-colors"
-                   >
-                     <RotateCw size={14} />
-                   </motion.button>
-                )}
-             </div>
+        {/* Quick Rotate Action (Hover) */}
+        {showRotateButton && !isDragging && (
+          <div className="absolute bottom-2 right-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity">
+             <motion.button 
+               whileTap={buttonTap}
+               onClick={onRotate} 
+               className="
+                 w-7 h-7 flex items-center justify-center
+                 bg-white/90 dark:bg-charcoal-800/90 
+                 text-charcoal-500 hover:text-orange-500 
+                 rounded-lg shadow-sm border border-slate-100 dark:border-charcoal-600
+               "
+             >
+               <RotateCw size={14} />
+             </motion.button>
           </div>
         )}
       </div>
@@ -288,21 +280,21 @@ export const Filmstrip: React.FC<FilmstripProps> = ({
     setActiveDragId(null);
   };
 
-  const isCompact = images.length > 10;
+  // Force compact mode for horizontal strip on desktop to keep it slim
+  const isCompact = images.length > 10 || (direction === 'horizontal' && !isMobile);
   const isVertical = direction === 'vertical';
   const dndStrategy = isVertical ? verticalListSortingStrategy : horizontalListSortingStrategy;
 
   const containerClasses = isMobile
-    ? 'grid grid-cols-2 landscape:grid-cols-3 gap-3 p-3 w-full content-start' 
+    ? 'grid grid-cols-2 landscape:grid-cols-3 gap-3 p-4 w-full content-start' 
     : isVertical
-      ? 'flex flex-col w-full' 
-      : 'flex flex-row items-center gap-3 px-4 py-4 overflow-x-auto custom-scrollbar max-w-full bg-slate-50/30 dark:bg-charcoal-900/30';
+      ? 'flex flex-col w-full px-1 pb-4' 
+      : 'flex flex-row items-center gap-3 px-4 py-3 overflow-x-auto custom-scrollbar max-w-full';
 
   const activeItem = activeDragId ? images.find(i => i.id === activeDragId) : null;
 
   return (
     <div className={`w-full h-full relative flex flex-col group/filmstrip ${className}`}>
-      
       <DndContext 
         sensors={sensors} 
         collisionDetection={closestCenter} 
@@ -312,8 +304,8 @@ export const Filmstrip: React.FC<FilmstripProps> = ({
         <div className="flex-1 min-h-0 relative">
           {images.length === 0 && (
              <div className="absolute inset-0 flex flex-col items-center justify-center text-charcoal-400 opacity-50">
-                <IconBox icon={<Hash />} size="lg" variant="transparent" />
-                <span className="text-[10px] font-mono uppercase tracking-widest mt-2">No Frames</span>
+                <IconBox icon={<ImageIcon />} size="lg" variant="transparent" />
+                <span className="text-[10px] font-mono uppercase tracking-widest mt-2">No Content</span>
              </div>
           )}
 

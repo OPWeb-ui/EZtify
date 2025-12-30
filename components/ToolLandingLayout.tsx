@@ -3,7 +3,7 @@ import React, { useRef } from 'react';
 import { useDropzone, DropzoneOptions, FileRejection } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileProcessingLoader } from './FileProcessingLoader';
-import { Plus, Command, ArrowUp, File as FileIcon } from 'lucide-react';
+import { Plus, Command, ArrowUp } from 'lucide-react';
 import { useLayoutContext } from './Layout';
 import { IconBox } from './IconBox';
 
@@ -37,7 +37,7 @@ export const ToolLandingLayout: React.FC<ToolLandingLayoutProps> = ({
   multiple = false,
   isProcessing = false,
   tip,
-  accentColor
+  accentColor = '#71717a'
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { isMobile } = useLayoutContext();
@@ -83,7 +83,7 @@ export const ToolLandingLayout: React.FC<ToolLandingLayoutProps> = ({
         
         <div className="w-full max-w-2xl">
           {/* Header Area */}
-          <div className="mb-10 text-center sm:text-left flex flex-col sm:flex-row items-center sm:items-start gap-6">
+          <div className="mb-10 text-center sm:text-left flex flex-col sm:flex-row items-center sm:items-start gap-8">
             <div className="shrink-0">
                <IconBox 
                   icon={icon} 
@@ -92,63 +92,63 @@ export const ToolLandingLayout: React.FC<ToolLandingLayoutProps> = ({
                   active 
                />
             </div>
-            <div>
-              <h1 className="text-3xl font-semibold text-nd-primary tracking-tight mb-3">
+            <div className="flex-1">
+              <h1 className="text-4xl font-bold text-nd-primary tracking-tighter mb-4">
                 {title}
               </h1>
-              <p className="text-nd-secondary text-base max-w-md mx-auto sm:mx-0 leading-relaxed">
+              <p className="text-nd-secondary text-lg max-w-md mx-auto sm:mx-0 leading-relaxed font-medium">
                 {description}
               </p>
             </div>
           </div>
 
           {/* Upload Zone (Visual Table) */}
-          <div className="w-full border border-nd-border rounded-xl bg-nd-surface overflow-hidden shadow-sm">
-            <div className="h-10 border-b border-nd-border flex items-center px-4 bg-slate-50 dark:bg-charcoal-900">
-              <span className="text-[10px] font-bold text-nd-muted uppercase tracking-wider font-mono">File System</span>
-              <span className="ml-auto text-[10px] font-bold text-nd-muted uppercase tracking-wider font-mono">Size</span>
+          <div className="w-full border border-nd-border rounded-[2rem] bg-nd-surface overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300">
+            <div className="h-12 border-b border-nd-border flex items-center px-6 bg-nd-subtle/50">
+              <span className="text-[10px] font-bold text-nd-muted uppercase tracking-[0.2em] font-mono">System_Module</span>
+              <span className="ml-auto text-[10px] font-bold text-nd-muted uppercase tracking-[0.2em] font-mono">Status: Ready</span>
             </div>
 
             <div 
-              className="h-40 flex flex-col items-center justify-center bg-nd-base hover:bg-slate-50 dark:hover:bg-charcoal-800/50 transition-colors cursor-pointer group" 
+              className="h-48 flex flex-col items-center justify-center bg-nd-base/30 hover:bg-white transition-colors cursor-pointer group" 
               onClick={handleButtonClick}
             >
-               <div className="flex items-center gap-3 text-nd-secondary group-hover:text-nd-primary transition-colors">
-                  <div className="p-2 rounded-lg bg-white dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 shadow-sm group-hover:border-slate-300 dark:group-hover:border-charcoal-600 transition-colors">
-                    <Plus size={20} />
+               <div className="flex items-center gap-4 text-nd-secondary group-hover:text-nd-primary transition-all duration-200">
+                  <div className="p-3 rounded-2xl bg-white border border-nd-border shadow-sm group-hover:border-nd-primary group-hover:shadow-lg transition-all">
+                    <Plus size={24} />
                   </div>
-                  <span className="text-sm font-medium">Add source files...</span>
+                  <span className="text-lg font-bold tracking-tight">Mount local files...</span>
                </div>
-               <div className="mt-3 flex items-center gap-2 text-xs text-nd-muted">
+               <div className="mt-4 flex items-center gap-2 text-xs font-mono font-bold text-nd-muted uppercase tracking-widest opacity-60">
                   {!isMobile && (
-                    <span className="flex items-center gap-1 bg-slate-100 dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 px-2 py-1 rounded-md font-mono text-[10px]">
+                    <span className="flex items-center gap-1 bg-nd-subtle border border-nd-border px-2 py-1 rounded-md">
                       <Command size={10} /> O
                     </span>
                   )}
-                  <span>or drag and drop</span>
+                  <span>or drop to stream</span>
                </div>
             </div>
           </div>
 
           {/* Specs Grid */}
-          <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-4">
              {specs.map((spec, idx) => (
-                <div key={idx} className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-charcoal-900 border border-slate-100 dark:border-charcoal-800">
-                   <div className="shrink-0">
-                      <IconBox icon={spec.icon} size="xs" variant="ghost" />
+                <div key={idx} className="flex flex-col gap-3 p-5 rounded-[1.5rem] bg-nd-surface border border-nd-border hover:bg-nd-subtle/50 transition-colors">
+                   <div className="shrink-0 opacity-80">
+                      {React.cloneElement(spec.icon as React.ReactElement, { size: 18, strokeWidth: 2, style: { color: accentColor } })}
                    </div>
                    <div className="min-w-0">
-                      <div className="text-[10px] font-bold text-nd-muted uppercase tracking-wider mb-0.5">{spec.label}</div>
-                      <div className="text-xs font-medium text-nd-primary truncate">{spec.value}</div>
+                      <div className="text-[9px] font-bold text-nd-muted uppercase tracking-widest mb-1 font-mono">{spec.label}</div>
+                      <div className="text-xs font-bold text-nd-primary truncate uppercase tracking-tight">{spec.value}</div>
                    </div>
                 </div>
              ))}
           </div>
 
           {tip && (
-             <div className="mt-6 p-4 rounded-xl bg-slate-50 dark:bg-charcoal-900/50 border border-slate-200 dark:border-charcoal-800 text-xs text-nd-secondary leading-relaxed flex items-start gap-3">
-                <div className="shrink-0 mt-0.5 w-1.5 h-1.5 rounded-full bg-brand-purple" />
-                {tip}
+             <div className="mt-8 p-5 rounded-2xl bg-nd-subtle/30 border border-nd-border text-[11px] text-nd-secondary leading-relaxed flex items-start gap-4">
+                <div className="shrink-0 mt-1 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accentColor }} />
+                <span className="font-medium">{tip}</span>
              </div>
           )}
 
@@ -161,12 +161,15 @@ export const ToolLandingLayout: React.FC<ToolLandingLayoutProps> = ({
              initial={{ opacity: 0 }} 
              animate={{ opacity: 1 }} 
              exit={{ opacity: 0 }} 
-             className="absolute inset-0 z-50 bg-charcoal-900/90 backdrop-blur-md flex flex-col items-center justify-center text-white"
+             className="absolute inset-0 z-[120] bg-nd-base/90 backdrop-blur-xl flex flex-col items-center justify-center"
            >
-              <div className="w-24 h-24 rounded-3xl bg-white/10 flex items-center justify-center mb-8 backdrop-blur-xl border border-white/20">
-                 <ArrowUp size={40} className="animate-bounce" />
+              <div 
+                className="w-24 h-24 rounded-3xl flex items-center justify-center mb-8 border-2 border-dashed animate-pulse"
+                style={{ borderColor: accentColor, color: accentColor }}
+              >
+                 <ArrowUp size={40} />
               </div>
-              <h3 className="text-2xl font-bold tracking-tight">Release to Import</h3>
+              <h3 className="text-2xl font-bold tracking-tighter text-nd-primary uppercase">Release to Mount</h3>
            </motion.div>
         )}
       </AnimatePresence>

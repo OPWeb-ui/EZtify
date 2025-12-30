@@ -2,286 +2,324 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { useLayoutContext } from '../components/Layout';
 import { PageReadyTracker } from '../components/PageReadyTracker';
-import { convertPptxToPdf, detectPptxOrientation } from '../services/pptxConverter';
-import { useDropzone, FileRejection } from 'react-dropzone';
-import { Presentation, Lock, Cpu, Zap, FilePlus, RefreshCw, Loader2, ArrowRight, HardDrive, Settings } from 'lucide-react';
-import { ToolLandingLayout } from '../components/ToolLandingLayout';
+import { convertPptxToPdf } from '../services/pptxConverter';
+import { nanoid } from 'nanoid';
+import { useDropzone } from 'react-dropzone';
+import { 
+  Presentation, FileText, RefreshCw, 
+  Plus, X, Check, 
+  Download, ArrowRight, Play,
+  Trash2, Archive, FileType
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { buttonTap, techEase } from '../utils/animations';
-import { DragDropOverlay } from '../components/DragDropOverlay';
-import { IconBox } from '../components/IconBox';
-import { PdfConfig } from '../types';
+import { EZButton } from '../components/EZButton';
+import JSZip from 'jszip';
+
+// Refined Motion Tokens
+const listTransition = { type: "spring", stiffness: 500, damping: 40 };
+const MAX_FILES = 5; // PPTX is heavy, limit to 5
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+
+interface QueueItem {
+  id: string;
+  file: File;
+  status: 'pending' | 'processing' | 'completed' | 'error';
+  progress: number;
+  resultBlob?: Blob;
+  resultName?: string;
+}
 
 export const PptxToPdfPage: React.FC = () => {
   const { addToast, isMobile } = useLayoutContext();
-  const [file, setFile] = useState<File | null>(null);
-  
-  const [isProcessingFiles, setIsProcessingFiles] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState('');
-  
-  // Config
-  const [config, setConfig] = useState<PdfConfig>({
-    pageSize: 'a4',
-    orientation: 'landscape', // PPTX default
-    fitMode: 'contain',
-    margin: 20,
-    quality: 1
-  });
-  
+  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [isProcessingGlobal, setIsProcessingGlobal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const onDrop = useCallback(async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
-    if (fileRejections.length > 0) {
-      addToast("Invalid File", "Please upload a valid .pptx file.", "error");
-      return;
-    }
+  const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
-    const f = acceptedFiles[0];
-    
-    setIsProcessingFiles(true);
-    setStatus('Checking file...');
-    
-    try {
-        const detected = await detectPptxOrientation(f);
-        setConfig(prev => ({ ...prev, orientation: detected }));
-        
-        // Simulate check
-        setTimeout(() => {
-            setFile(f);
-            addToast("Success", "PPTX file loaded.", "success");
-            setIsProcessingFiles(false);
-            setStatus('');
-        }, 500);
-    } catch(e) {
-        setIsProcessingFiles(false);
-        addToast("Error", "Failed to analyze PPTX", "error");
-    }
+
+    setQueue(prev => {
+      const remainingSlots = MAX_FILES - prev.length;
+      if (remainingSlots <= 0) {
+        addToast("Limit Reached", `Maximum ${MAX_FILES} files allowed.`, "warning");
+        return prev;
+      }
+
+      const filesToAdd = acceptedFiles.slice(0, remainingSlots);
+      if (acceptedFiles.length > remainingSlots) {
+        addToast("Files Capped", `Only the first ${remainingSlots} files were added.`, "info");
+      }
+
+      const newItems: QueueItem[] = filesToAdd.map(f => ({
+        id: nanoid(),
+        file: f,
+        status: 'pending',
+        progress: 0
+      }));
+
+      // Size check
+      const validItems = newItems.filter(item => {
+        if (item.file.size > MAX_FILE_SIZE) {
+          addToast("Size Limit", `${item.file.name} exceeds 100MB limit.`, "error");
+          return false;
+        }
+        return true;
+      });
+
+      return [...prev, ...validItems];
+    });
   }, [addToast]);
 
-  const { getRootProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: { 'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'] },
-    noClick: true,
-    noKeyboard: true,
-    disabled: isProcessingFiles || isGenerating
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
+    onDrop, 
+    accept: { 'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'] }, 
+    noClick: true, 
+    noKeyboard: true, 
+    multiple: true,
+    disabled: isProcessingGlobal 
   });
 
-  const handleAddFilesClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-        onDrop(Array.from(e.target.files), []);
-    }
-    if (e.target) e.target.value = '';
-  };
-
-  const handleReset = () => {
-    setFile(null);
-    setProgress(0);
-    setStatus('');
-  };
-
   const handleConvert = async () => {
-    if (!file) return;
-    setIsGenerating(true);
-    try {
-      const blob = await convertPptxToPdf(file, config, setProgress, setStatus);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${file.name.replace(/\.[^/.]+$/, "")}_EZtify.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      addToast("Success", "PDF created successfully!", "success");
-    } catch (e) {
-      console.error(e);
-      addToast("Error", "Conversion failed. File may be encrypted or complex.", "error");
-    } finally {
-      setIsGenerating(false);
-      setProgress(0);
-      setStatus('');
+    const pending = queue.filter(item => item.status === 'pending');
+    if (pending.length === 0) return;
+
+    setIsProcessingGlobal(true);
+
+    // Sequential processing to preserve browser memory
+    for (const item of pending) {
+      setQueue(q => q.map(i => i.id === item.id ? { ...i, status: 'processing' } : i));
+      
+      try {
+        const blob = await convertPptxToPdf(
+            item.file, 
+            { pageSize: 'auto', orientation: 'landscape', fitMode: 'contain', margin: 0, quality: 1 },
+            (p) => {
+                setQueue(q => q.map(i => i.id === item.id ? { ...i, progress: p } : i));
+            }
+        );
+        
+        const resultName = item.file.name.replace(/\.[^/.]+$/, "") + "_EZtify.pdf";
+        
+        setQueue(q => q.map(i => i.id === item.id ? { 
+            ...i, 
+            status: 'completed', 
+            resultBlob: blob, 
+            resultName: resultName,
+            progress: 100 
+        } : i));
+
+      } catch (e) {
+        console.error(e);
+        setQueue(q => q.map(i => i.id === item.id ? { ...i, status: 'error' } : i));
+        addToast("Error", `Failed to convert ${item.file.name}`, "error");
+      }
     }
+
+    setIsProcessingGlobal(false);
+    addToast("Success", "Batch conversion complete.", "success");
   };
 
-  const ConfigPanel = () => (
-    <div className="space-y-4">
-        <div className="space-y-2">
-            <label className="text-[10px] font-bold text-charcoal-400 dark:text-charcoal-500 uppercase tracking-widest font-mono pl-1">Page Size</label>
-            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-charcoal-800 rounded-xl border border-slate-200 dark:border-charcoal-700">
-                {(['a4', 'letter'] as const).map(size => {
-                    const isActive = config.pageSize === size;
-                    return (
-                        <button 
-                            key={size}
-                            onClick={() => setConfig({...config, pageSize: size})} 
-                            className={`relative py-2 rounded-lg text-xs font-bold font-mono transition-colors z-10 ${isActive ? 'text-orange-600' : 'text-charcoal-500 hover:text-charcoal-700 dark:text-slate-400'}`}
-                        >
-                            {size.toUpperCase()}
-                            {isActive && <motion.div layoutId="size-bg" className="absolute inset-0 bg-white dark:bg-charcoal-700 shadow-sm rounded-lg -z-10" transition={{ type: "spring", bounce: 0.2, duration: 0.6 }} />}
-                        </button>
-                    )
-                })}
-            </div>
-        </div>
+  const handleDownloadSingle = (item: QueueItem) => {
+    if (!item.resultBlob || !item.resultName) return;
+    const url = URL.createObjectURL(item.resultBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = item.resultName;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
-        <div className="space-y-2">
-            <label className="text-[10px] font-bold text-charcoal-400 dark:text-charcoal-500 uppercase tracking-widest font-mono pl-1">Orientation</label>
-            <div className="flex bg-slate-100 dark:bg-charcoal-800 p-1 rounded-xl relative isolate border border-slate-200 dark:border-charcoal-700">
-                {(['landscape', 'portrait'] as const).map(ori => {
-                    const isActive = config.orientation === ori;
-                    return (
-                        <button 
-                            key={ori}
-                            onClick={() => setConfig({...config, orientation: ori})} 
-                            className={`flex-1 relative py-2 rounded-lg text-xs font-bold font-mono transition-colors z-10 capitalize ${isActive ? 'text-charcoal-900 dark:text-white' : 'text-charcoal-500 hover:text-charcoal-700 dark:text-slate-400'}`}
-                        >
-                            {ori}
-                            {isActive && <motion.div layoutId="ori-bg" className="absolute inset-0 bg-white dark:bg-charcoal-700 shadow-sm rounded-lg -z-10" transition={{ type: "spring", bounce: 0.2, duration: 0.6 }} />}
-                        </button>
-                    )
-                })}
-            </div>
-        </div>
-    </div>
-  );
+  const handleDownloadAll = async () => {
+    const completed = queue.filter(item => item.status === 'completed' && item.resultBlob);
+    if (completed.length === 0) return;
 
-  if (!file) {
-    return (
-      <ToolLandingLayout
-          title="PPTX to PDF"
-          description="Convert PowerPoint presentations to PDF documents. Slides are rendered as high-fidelity pages."
-          icon={<Presentation />}
-          onDrop={(files, rejections) => onDrop(files, rejections)}
-          accept={{ 'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'] }}
-          multiple={false}
-          isProcessing={isProcessingFiles}
-          accentColor="text-orange-500"
-          specs={[
-            { label: "Format", value: "PPTX", icon: <Presentation /> },
-            { label: "Privacy", value: "Client-Side", icon: <Lock /> },
-            { label: "Engine", value: "JSZip/PDF", icon: <Cpu /> },
-            { label: "Output", value: "PDF", icon: <Zap /> },
-          ]}
-          tip="Animations and transitions are not preserved. Each slide becomes a static PDF page."
-      />
-    );
-  }
+    if (completed.length === 1) {
+      handleDownloadSingle(completed[0]);
+      return;
+    }
 
-  // MOBILE: Vertical
-  if (isMobile) {
-      return (
-        <div className="flex flex-col h-full bg-slate-50 dark:bg-charcoal-900 font-sans" {...getRootProps()}>
-            <PageReadyTracker />
-            <input ref={fileInputRef} type="file" className="hidden" accept=".pptx" onChange={handleFileChange} />
-            <div className="shrink-0 h-14 border-b border-slate-200 dark:border-charcoal-800 px-4 flex items-center justify-between bg-white dark:bg-charcoal-900">
-               <span className="font-bold text-charcoal-900 dark:text-white">Convert PPTX</span>
-               <button onClick={handleReset}><RefreshCw size={18} /></button>
-            </div>
-            <div className="flex-1 flex flex-col items-center justify-center p-8 overflow-y-auto">
-               <div className="text-center mb-8">
-                  <div className="w-20 h-20 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center mx-auto mb-4 text-orange-600"><Presentation size={40} /></div>
-                  <h3 className="font-bold text-lg">{file.name}</h3>
-                  <p className="text-sm text-charcoal-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-               </div>
-               <div className="w-full max-w-xs">
-                   <ConfigPanel />
-               </div>
-            </div>
-            <div className="p-4 bg-white dark:bg-charcoal-900 border-t border-slate-200 dark:border-charcoal-700">
-               <button onClick={handleConvert} disabled={isGenerating} className="w-full h-12 bg-orange-600 text-white rounded-xl font-bold flex items-center justify-center gap-2">
-                  {isGenerating ? <Loader2 className="animate-spin" /> : <ArrowRight />} Convert
-               </button>
-            </div>
-        </div>
-      );
-  }
+    const zip = new JSZip();
+    completed.forEach(item => {
+      if (item.resultBlob && item.resultName) zip.file(item.resultName, item.resultBlob);
+    });
 
-  // DESKTOP: 2-Pane
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(zipBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = "converted_slides_EZtify.zip";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const removeItem = (id: string) => {
+    setQueue(prev => prev.filter(i => i.id !== id));
+  };
+
+  const reset = () => {
+    setQueue([]);
+    setIsProcessingGlobal(false);
+  };
+
+  const formatSize = (bytes: number) => {
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  };
+
+  const hasPending = queue.some(i => i.status === 'pending');
+  const allCompleted = queue.length > 0 && queue.every(i => i.status === 'completed' || i.status === 'error');
+
   return (
-    <div className="flex w-full h-full bg-slate-100 dark:bg-charcoal-950 font-sans overflow-hidden relative" {...getRootProps()}>
+    <div className="flex-1 w-full h-full flex flex-col items-center justify-center p-4 bg-nd-base overflow-hidden" {...getRootProps()}>
       <PageReadyTracker />
-      <input ref={fileInputRef} type="file" className="hidden" accept=".pptx" onChange={handleFileChange} />
-      <DragDropOverlay isDragActive={isDragActive} message="Drop to Replace File" variant="pptOrange" />
-
-      {/* 1. Main Content: File Info */}
-      <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-charcoal-900 border-r border-slate-200 dark:border-charcoal-800 relative z-10">
-          <div className="h-16 border-b border-slate-200 dark:border-charcoal-800 px-6 flex items-center justify-between shrink-0">
-             <div className="flex items-center gap-3">
-                <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-orange-600 dark:text-orange-400">
-                   <Presentation size={20} />
-                </div>
-                <div>
-                   <h3 className="text-sm font-bold text-charcoal-900 dark:text-white uppercase tracking-wider font-mono">PPTX Converter</h3>
-                   <p className="text-[10px] text-charcoal-500 dark:text-charcoal-400 font-mono">Ready to process</p>
-                </div>
-             </div>
-             <motion.button whileTap={buttonTap} onClick={handleAddFilesClick} className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-charcoal-800 hover:bg-slate-200 dark:hover:bg-charcoal-700 text-charcoal-700 dark:text-slate-200 rounded-lg text-xs font-bold transition-colors">
-                <FilePlus size={14} /> Replace
-             </motion.button>
-          </div>
-
-          <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-50/50 dark:bg-charcoal-900">
-              <div className="max-w-md w-full bg-white dark:bg-charcoal-800 rounded-2xl shadow-sm border border-slate-200 dark:border-charcoal-700 p-8 text-center">
-                  <div className="w-24 h-24 bg-orange-50 dark:bg-orange-900/10 rounded-full flex items-center justify-center mx-auto mb-6 text-orange-600 dark:text-orange-400 ring-1 ring-orange-100 dark:ring-orange-900/20">
-                      <Presentation size={48} strokeWidth={1.5} />
-                  </div>
-                  <h2 className="text-xl font-bold text-charcoal-900 dark:text-white mb-2 truncate" title={file.name}>{file.name}</h2>
-                  <div className="flex items-center justify-center gap-2 text-charcoal-500 dark:text-charcoal-400 mb-8">
-                      <HardDrive size={14} />
-                      <span className="text-sm font-mono">{(file.size / 1024 / 1024).toFixed(2)} MB</span>
-                  </div>
-                  
-                  <div className="text-xs text-charcoal-400 dark:text-charcoal-500 bg-slate-50 dark:bg-charcoal-900/50 p-4 rounded-xl border border-slate-100 dark:border-charcoal-700/50">
-                      Files are processed locally. Large presentations with many images may take a moment to render.
-                  </div>
+      <input {...getInputProps()} />
+      
+      <div className="w-full max-w-xl flex flex-col items-center relative z-10">
+        <AnimatePresence mode="wait">
+          {queue.length === 0 ? (
+            <motion.div
+              key="upload"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              className={`
+                w-full aspect-[4/3] rounded-[2.5rem] bg-white shadow-2xl shadow-black/5 
+                border-2 border-dashed flex flex-col items-center justify-center p-8 transition-all
+                ${isDragActive ? 'border-violet-400 bg-violet-50/20 scale-[1.01]' : 'border-nd-border hover:border-violet-200'}
+                cursor-pointer group
+              `}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input ref={fileInputRef} type="file" multiple className="hidden" accept=".pptx" onChange={e => e.target.files && onDrop(Array.from(e.target.files))} />
+              <div className="w-16 h-16 bg-nd-subtle rounded-2xl flex items-center justify-center text-violet-600 mb-6 group-hover:scale-105 transition-transform shadow-sm border border-nd-border">
+                <Presentation size={32} />
               </div>
-          </div>
+              <h3 className="text-xl font-bold text-nd-primary mb-1">PPTX to PDF</h3>
+              <p className="text-xs text-nd-muted font-medium uppercase tracking-widest font-mono">
+                {isMobile ? 'Tap to mount Slides' : 'Drag or click to mount PPTX'}
+              </p>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="workspace"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full rounded-[2.5rem] bg-white shadow-2xl shadow-black/5 p-5 md:p-8 border border-nd-border flex flex-col"
+            >
+              <div className="flex items-center justify-between mb-6 px-1">
+                <div>
+                    <h3 className="text-sm font-bold text-nd-primary uppercase tracking-widest">Workspace</h3>
+                    <p className="text-[10px] font-bold text-nd-muted font-mono">{queue.length} / {MAX_FILES} DECKS</p>
+                </div>
+                {!isProcessingGlobal && (
+                    <button onClick={reset} className="p-2 text-nd-muted hover:text-rose-500 transition-colors" title="Reset All">
+                        <RefreshCw size={16} />
+                    </button>
+                )}
+              </div>
+
+              {/* List Area */}
+              <div className="flex-1 max-h-[40vh] overflow-y-auto custom-scrollbar mb-6 pr-1 space-y-3">
+                <AnimatePresence mode="popLayout">
+                    {queue.map((item) => (
+                        <motion.div 
+                            key={item.id}
+                            layout
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={listTransition}
+                            className="flex items-center gap-4 p-4 bg-nd-subtle/50 rounded-2xl border border-nd-border group relative overflow-hidden"
+                        >
+                            {/* Progress Background */}
+                            {item.status === 'processing' && (
+                                <motion.div 
+                                    className="absolute inset-0 bg-violet-500/10 origin-left z-0" 
+                                    initial={{ scaleX: 0 }}
+                                    animate={{ scaleX: item.progress / 100 }}
+                                />
+                            )}
+
+                            <div className="relative z-10 w-10 h-10 bg-white rounded-xl flex items-center justify-center text-violet-600 shadow-sm border border-nd-border shrink-0">
+                                {item.status === 'completed' ? <Check size={20} className="text-emerald-500" /> : <Presentation size={20} />}
+                            </div>
+                            
+                            <div className="relative z-10 flex-1 min-w-0">
+                                <h4 className="text-xs font-bold text-nd-primary truncate">{item.file.name}</h4>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                    <p className="text-[10px] font-bold text-nd-muted font-mono uppercase">
+                                        {item.status === 'processing' 
+                                            ? `Converting ${Math.round(item.progress)}%` 
+                                            : item.status === 'completed' 
+                                                ? 'Ready to Download' 
+                                                : item.status === 'error'
+                                                    ? 'Conversion Failed'
+                                                    : formatSize(item.file.size)
+                                        }
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="relative z-10 flex items-center gap-1">
+                                {item.status === 'completed' ? (
+                                    <button onClick={() => handleDownloadSingle(item)} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
+                                        <Download size={16} />
+                                    </button>
+                                ) : (
+                                    <button onClick={() => removeItem(item.id)} disabled={isProcessingGlobal} className="p-2 text-nd-muted hover:text-rose-500 transition-colors disabled:opacity-0">
+                                        <X size={16} />
+                                    </button>
+                                )}
+                            </div>
+                        </motion.div>
+                    ))}
+                </AnimatePresence>
+
+                {/* Add More Button */}
+                {queue.length < MAX_FILES && !isProcessingGlobal && !allCompleted && (
+                    <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full h-14 border-2 border-dashed border-nd-border rounded-2xl flex items-center justify-center gap-2 text-nd-muted hover:border-violet-300 hover:text-violet-600 transition-all active:scale-[0.98]"
+                    >
+                        <input ref={fileInputRef} type="file" multiple className="hidden" accept=".pptx" onChange={e => e.target.files && onDrop(Array.from(e.target.files))} />
+                        <Plus size={18} />
+                        <span className="text-xs font-bold uppercase tracking-widest">Add more Slides</span>
+                    </button>
+                )}
+              </div>
+
+              {/* Action */}
+              <div className="shrink-0 flex gap-3">
+                {allCompleted ? (
+                    <>
+                        <EZButton variant="secondary" fullWidth size="lg" onClick={reset} className="h-16 rounded-2xl">
+                            New Session
+                        </EZButton>
+                        <EZButton variant="primary" fullWidth size="lg" onClick={handleDownloadAll} className="h-16 rounded-2xl !bg-emerald-600 shadow-emerald-500/10" icon={<Archive size={18} />}>
+                            Download All
+                        </EZButton>
+                    </>
+                ) : (
+                    <EZButton 
+                        variant="primary" 
+                        fullWidth 
+                        size="lg" 
+                        onClick={handleConvert} 
+                        disabled={!hasPending || isProcessingGlobal}
+                        isLoading={isProcessingGlobal}
+                        className="h-16 rounded-2xl shadow-xl !bg-violet-600 shadow-violet-500/10" 
+                        icon={!isProcessingGlobal && <Play size={18} fill="currentColor" />}
+                    >
+                        {isProcessingGlobal ? 'Converting...' : 'Start Conversion'}
+                    </EZButton>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* 2. Sidebar: Actions */}
-      <div className="w-80 bg-slate-50 dark:bg-charcoal-950 flex flex-col shrink-0 z-20">
-          <div className="h-16 px-6 border-b border-slate-200 dark:border-charcoal-800 flex items-center shrink-0">
-              <span className="font-mono text-xs font-bold uppercase tracking-widest text-charcoal-600 dark:text-charcoal-300 flex items-center gap-2">
-                  <Settings size={14} /> Config
-              </span>
-          </div>
-
-          <div className="flex-1 p-6 space-y-6 overflow-y-auto">
-              <ConfigPanel />
-          </div>
-
-          <div className="p-4 border-t border-slate-200 dark:border-charcoal-800 bg-white dark:bg-charcoal-900 shrink-0 space-y-3">
-              <motion.button 
-                  onClick={handleConvert} 
-                  disabled={isGenerating} 
-                  whileTap={buttonTap} 
-                  className="w-full h-12 bg-charcoal-900 dark:bg-white text-white dark:text-charcoal-900 font-bold font-mono text-xs uppercase tracking-wide rounded-xl shadow-lg hover:shadow-xl hover:bg-orange-600 dark:hover:bg-amber-100 transition-all disabled:opacity-50 disabled:shadow-none flex items-center justify-center gap-2 relative overflow-hidden"
-              >
-                  {isGenerating && (
-                      <motion.div 
-                          className="absolute inset-y-0 left-0 bg-white/20 dark:bg-black/10" 
-                          initial={{ width: '0%' }} 
-                          animate={{ width: `${progress}%` }} 
-                          transition={{ duration: 0.1, ease: "linear" }} 
-                      />
-                  )}
-                  <div className="relative flex items-center justify-center gap-2 z-10">
-                      {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
-                      <span>{isGenerating ? status || 'CONVERTING...' : 'CONVERT TO PDF'}</span>
-                  </div>
-              </motion.button>
-              
-              <motion.button whileTap={buttonTap} onClick={handleReset} className="w-full py-2 text-[10px] font-bold uppercase tracking-wide text-charcoal-400 hover:text-charcoal-600 dark:hover:text-charcoal-300 transition-colors flex items-center justify-center gap-2">
-                  <RefreshCw size={12} /> Start Over
-              </motion.button>
-          </div>
-      </div>
+      {/* Decorative Grid */}
+      <div className="fixed inset-0 pointer-events-none -z-10 opacity-[0.02]" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
     </div>
   );
 };

@@ -44,13 +44,14 @@ export const ToolCard: React.FC<ToolCardProps> = ({ tool, className }) => {
       <Link to={tool.path} className="block w-full h-full outline-none">
         <motion.div
           className="
-            bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 
-            relative overflow-hidden aspect-square flex flex-col justify-between p-5
-            transition-colors duration-200
+            bg-white dark:bg-gray-900 rounded-3xl 
+            border border-gray-100 dark:border-gray-800 
+            relative overflow-hidden aspect-square flex flex-col justify-between p-6
+            shadow-sm hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-black/20
+            transition-all duration-300
           "
-          whileHover={cardHover}
+          whileHover={{ y: -4 }}
           whileTap={{ scale: 0.98 }}
-          style={{ borderColor: isHovered ? accentColor : '' }}
         >
           {/* Header */}
           <div className="flex justify-between items-start">
@@ -59,41 +60,35 @@ export const ToolCard: React.FC<ToolCardProps> = ({ tool, className }) => {
                 size="md" 
                 active={isHovered} 
                 toolAccentColor={accentColor}
+                variant="tool"
              />
              
-             <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 -mr-2 -mt-2">
+             <div className={`p-2 rounded-full transition-colors duration-200 ${isHovered ? 'bg-gray-100 dark:bg-gray-800' : 'bg-transparent'}`}>
                  <ArrowRight 
-                    className="-rotate-45 group-hover:rotate-0 transition-transform duration-300" 
+                    className="text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-300" 
                     size={20} 
-                    strokeWidth={1.5} 
-                    style={{ color: accentColor }}
+                    strokeWidth={2}
                  />
              </div>
           </div>
 
           {/* Body */}
           <div className="mt-4 relative z-10 flex-1">
-              <h3 className="font-medium text-sm text-zinc-900 dark:text-white mb-2 transition-colors">
+              <h3 className="font-bold text-base text-gray-900 dark:text-white mb-2 tracking-tight">
                   {tool.title}
               </h3>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed line-clamp-3">
+              <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2 font-medium">
                    {tool.desc}
               </p>
           </div>
 
-          {/* Usage Stat (Subtle Footer) */}
+          {/* Usage Stat */}
           {usageCount > 0 && (
-            <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center gap-1.5 text-[10px] font-mono text-zinc-400 dark:text-zinc-500">
-                <Activity size={10} />
+            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center gap-1.5 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                <Activity size={12} />
                 <span>{formatUsageCount(usageCount)} runs</span>
             </div>
           )}
-          
-          {/* Subtle Background Tint on Hover */}
-          <div 
-            className="absolute inset-0 opacity-0 group-hover:opacity-[0.03] transition-opacity duration-300 pointer-events-none"
-            style={{ backgroundColor: accentColor }}
-          />
         </motion.div>
       </Link>
     </motion.div>

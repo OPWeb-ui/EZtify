@@ -1,8 +1,12 @@
 
 import React from 'react';
 import { PdfConfig, AppMode, ExportConfig, ImageFormat } from '../types';
-import { X, ArrowRight } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { X, Download, Settings } from 'lucide-react';
+import { EZDropdown, DropdownOption } from './EZDropdown';
+import { EZSlider } from './EZSlider';
+import { EZSegmentedControl } from './EZSegmentedControl';
+import { EZButton } from './EZButton';
+import { IconBox } from './IconBox';
 
 interface SidebarProps {
   mode: AppMode;
@@ -17,6 +21,12 @@ interface SidebarProps {
   onClose?: () => void;
   variant?: 'default' | 'embedded';
 }
+
+const PAGE_SIZE_OPTIONS: DropdownOption[] = [
+  { value: 'a4', label: 'A4 (Standard)' },
+  { value: 'letter', label: 'US Letter' },
+  { value: 'auto', label: 'Auto (Match Image)' },
+];
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
   mode, config, exportConfig, onConfigChange, onExportConfigChange,
@@ -34,26 +44,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const isEmbedded = variant === 'embedded';
-  const containerClass = isEmbedded
-    ? 'w-full h-full bg-transparent' 
-    : isMobile 
-      ? 'fixed inset-0 z-50 flex flex-col bg-white dark:bg-charcoal-900' 
-      : 'w-72 shrink-0 relative flex flex-col bg-white dark:bg-charcoal-900 border-l border-slate-200 dark:border-charcoal-800';
-
-  // Shared Animation Props
-  const segmentBg = (
-    <motion.div 
-      layoutId="segment-active"
-      className="absolute inset-0 bg-white dark:bg-charcoal-700 shadow-sm rounded-lg z-0"
-      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-    />
-  );
-
+  
+  // Clean container class for the panel internals
+  // This component now represents the CONTENT of the right panel.
+  // The layout wrapper (floating etc) is handled by the page for max flexibility, 
+  // or used as 'embedded' inside other containers.
+  
   return (
-    <aside className={containerClass}>
+    <div className="flex flex-col h-full bg-[#FAFAFA] dark:bg-[#121212] w-full">
+      {/* Header */}
       {!isEmbedded && (
-        <div className="h-14 flex items-center justify-between px-4 border-b border-slate-200 dark:border-charcoal-800 shrink-0 bg-slate-50 dark:bg-charcoal-850">
-          <span className="text-xs font-bold uppercase tracking-wide text-charcoal-600 dark:text-slate-300">Properties</span>
+        <div className="h-16 flex items-center justify-between px-6 border-b border-slate-200/60 dark:border-white/10 shrink-0">
+          <div className="flex items-center gap-2">
+             <IconBox icon={<Settings />} size="xs" variant="ghost" />
+             <span className="text-[11px] font-bold uppercase tracking-[0.05em] text-charcoal-500/80 dark:text-slate-400/80">Properties</span>
+          </div>
           {isMobile && onClose && (
             <button onClick={onClose} className="p-2 text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white transition-colors">
               <X size={18} />
@@ -62,154 +67,96 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       )}
 
-      <div className={`flex-1 overflow-y-auto ${isEmbedded ? 'p-0' : 'p-4'} space-y-6`}>
+      {/* Body - 24px Padding (p-6) */}
+      <div className={`flex-1 overflow-y-auto custom-scrollbar ${isEmbedded ? 'p-0' : 'p-6'} space-y-8`}>
         
         {/* --- Image to PDF Settings --- */}
         {mode === 'image-to-pdf' && (
           <>
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-charcoal-500 dark:text-slate-400 uppercase tracking-wider pl-1">Page Size</label>
-              <div className="relative">
-                <select 
-                  value={config.pageSize}
-                  onChange={(e) => handlePdfChange('pageSize', e.target.value as any)}
-                  className="w-full h-10 px-3 bg-white dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 rounded-xl text-sm font-medium text-charcoal-900 dark:text-slate-200 focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple outline-none transition-all appearance-none cursor-pointer"
-                >
-                  <option value="a4">A4 (Standard)</option>
-                  <option value="letter">US Letter</option>
-                  <option value="auto">Auto (Match Image)</option>
-                </select>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-charcoal-400">
-                  <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 1L5 5L9 1"/></svg>
-                </div>
-              </div>
-            </div>
+            <EZDropdown
+              label="Page Size"
+              value={config.pageSize}
+              options={PAGE_SIZE_OPTIONS}
+              onChange={(val) => handlePdfChange('pageSize', val)}
+              fullWidth
+            />
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-charcoal-500 dark:text-slate-400 uppercase tracking-wider pl-1">Orientation</label>
-              <div className="flex bg-slate-100 dark:bg-charcoal-800 rounded-xl border border-slate-200 dark:border-charcoal-700 p-1 relative isolate">
-                {['portrait', 'landscape'].map((opt) => {
-                  const isActive = config.orientation === opt;
-                  return (
-                    <button
-                      key={opt}
-                      onClick={() => handlePdfChange('orientation', opt as any)}
-                      className={`flex-1 py-2 text-xs font-bold rounded-lg capitalize transition-colors relative z-10 ${isActive ? 'text-brand-purple' : 'text-charcoal-500 dark:text-slate-400 hover:text-charcoal-700 dark:hover:text-slate-200'}`}
-                    >
-                      {opt}
-                      {isActive && <motion.div layoutId="orientation-bg" className="absolute inset-0 bg-white dark:bg-charcoal-700 shadow-sm rounded-lg -z-10" transition={{ type: "spring", bounce: 0.2, duration: 0.6 }} />}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <EZSegmentedControl
+              label="Orientation"
+              value={config.orientation}
+              options={[
+                { value: 'portrait', label: 'Portrait' },
+                { value: 'landscape', label: 'Landscape' }
+              ]}
+              onChange={(val) => handlePdfChange('orientation', val)}
+            />
 
-            <div className="space-y-3">
-              <div className="flex justify-between items-center px-1">
-                <label className="text-[10px] font-bold text-charcoal-500 dark:text-slate-400 uppercase tracking-wider">Margin</label>
-                <span className="text-[10px] font-mono font-bold text-charcoal-600 dark:text-slate-300 bg-slate-100 dark:bg-charcoal-800 px-2 py-0.5 rounded border border-slate-200 dark:border-charcoal-700">{config.margin}mm</span>
-              </div>
-              <input 
-                type="range" 
-                min="0" max="50" 
-                value={config.margin}
-                onChange={(e) => handlePdfChange('margin', parseInt(e.target.value))}
-                className="w-full h-1.5 bg-slate-200 dark:bg-charcoal-700 rounded-lg appearance-none cursor-pointer accent-brand-purple"
-              />
-            </div>
+            <EZSlider
+              label="Margin"
+              value={config.margin}
+              min={0}
+              max={50}
+              step={1}
+              suffix="mm"
+              onChange={(val) => handlePdfChange('margin', val)}
+            />
           </>
         )}
 
         {/* --- PDF to Image Settings --- */}
         {mode === 'pdf-to-image' && (
           <>
-             <div className="space-y-2">
-                <label className="text-[10px] font-bold text-charcoal-500 dark:text-slate-400 uppercase tracking-wider pl-1 flex items-center gap-2">
-                   Output Format
-                </label>
-                <div className="flex bg-slate-100 dark:bg-charcoal-800 rounded-xl border border-slate-200 dark:border-charcoal-700 p-1 relative isolate">
-                  {(['jpeg', 'png'] as ImageFormat[]).map((fmt) => {
-                    const isActive = exportConfig.format === fmt;
-                    return (
-                      <button
-                        key={fmt}
-                        onClick={() => handleExportChange('format', fmt)}
-                        className={`flex-1 py-2 text-xs font-bold rounded-lg uppercase transition-colors relative z-10 ${isActive ? 'text-brand-purple' : 'text-charcoal-500 dark:text-slate-400 hover:text-charcoal-700 dark:hover:text-slate-200'}`}
-                      >
-                        {fmt === 'jpeg' ? 'JPG' : 'PNG'}
-                        {isActive && <motion.div layoutId="format-bg" className="absolute inset-0 bg-white dark:bg-charcoal-700 shadow-sm rounded-lg -z-10" transition={{ type: "spring", bounce: 0.2, duration: 0.6 }} />}
-                      </button>
-                    );
-                  })}
-                </div>
-             </div>
+             <EZSegmentedControl
+                label="Format"
+                value={exportConfig.format}
+                options={[
+                  { value: 'jpeg', label: 'JPG' },
+                  { value: 'png', label: 'PNG' }
+                ]}
+                onChange={(val) => handleExportChange('format', val)}
+             />
 
-             <div className="space-y-2">
-                <label className="text-[10px] font-bold text-charcoal-500 dark:text-slate-400 uppercase tracking-wider pl-1 flex items-center gap-2">
-                   Resolution
-                </label>
-                <div className="flex bg-slate-100 dark:bg-charcoal-800 rounded-xl border border-slate-200 dark:border-charcoal-700 p-1 relative isolate">
-                  {[1, 2, 3].map((scale) => {
-                    const isActive = exportConfig.scale === scale;
-                    return (
-                      <button
-                        key={scale}
-                        onClick={() => handleExportChange('scale', scale)}
-                        className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors relative z-10 ${isActive ? 'text-brand-purple' : 'text-charcoal-500 dark:text-slate-400 hover:text-charcoal-700 dark:hover:text-slate-200'}`}
-                      >
-                        {scale}x
-                        {isActive && <motion.div layoutId="res-bg" className="absolute inset-0 bg-white dark:bg-charcoal-700 shadow-sm rounded-lg -z-10" transition={{ type: "spring", bounce: 0.2, duration: 0.6 }} />}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="text-[10px] text-charcoal-400 dark:text-charcoal-500 px-1 pt-1">
-                   {exportConfig.scale === 1 ? 'Standard (72 DPI)' : exportConfig.scale === 2 ? 'High (144 DPI)' : 'Ultra (216 DPI)'}
-                </p>
-             </div>
+             <EZSegmentedControl
+                label="Resolution"
+                value={exportConfig.scale}
+                options={[
+                  { value: 1, label: 'Standard' },
+                  { value: 2, label: 'High' },
+                  { value: 3, label: 'Ultra' }
+                ]}
+                onChange={(val) => handleExportChange('scale', val)}
+             />
 
              {exportConfig.format === 'jpeg' && (
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center px-1">
-                    <label className="text-[10px] font-bold text-charcoal-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                       Quality
-                    </label>
-                    <span className="text-[10px] font-mono font-bold text-charcoal-600 dark:text-slate-300 bg-slate-100 dark:bg-charcoal-800 px-2 py-0.5 rounded border border-slate-200 dark:border-charcoal-700">
-                       {Math.round(exportConfig.quality * 100)}%
-                    </span>
-                  </div>
-                  <input 
-                    type="range" 
-                    min="0.1" max="1.0" step="0.1"
-                    value={exportConfig.quality}
-                    onChange={(e) => handleExportChange('quality', parseFloat(e.target.value))}
-                    className="w-full h-1.5 bg-slate-200 dark:bg-charcoal-700 rounded-lg appearance-none cursor-pointer accent-brand-purple"
-                  />
-                </div>
+                <EZSlider
+                  label="Quality"
+                  value={exportConfig.quality}
+                  min={0.1}
+                  max={1.0}
+                  step={0.1}
+                  suffix=""
+                  onChange={(val) => handleExportChange('quality', val)}
+                />
              )}
           </>
         )}
       </div>
 
+      {/* Footer Actions */}
       {!isEmbedded && onGenerate && (
-        <div className="p-4 border-t border-slate-200 dark:border-charcoal-800 shrink-0 bg-slate-50 dark:bg-charcoal-900">
-          <motion.button
-            whileTap={{ scale: 0.98 }}
+        <div className="p-6 border-t border-slate-200/60 dark:border-white/10 shrink-0">
+          <EZButton
+            variant="primary"
+            fullWidth
             onClick={onGenerate}
-            disabled={isGenerating}
-            className="w-full h-12 bg-brand-purple text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-brand-purpleDark transition-all disabled:opacity-50 shadow-md shadow-brand-purple/20"
+            isLoading={isGenerating}
+            size="lg"
+            icon={!isGenerating && <Download size={20} />}
           >
-            {isGenerating ? (
-              <span>Processing...</span>
-            ) : (
-              <>
-                <span>Export</span>
-                <ArrowRight size={16} />
-              </>
-            )}
-          </motion.button>
+            {isGenerating ? 'Processing...' : 'Export'}
+          </EZButton>
         </div>
       )}
-    </aside>
+    </div>
   );
 };

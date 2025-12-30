@@ -4,13 +4,13 @@ import React, { useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useLayoutContext } from '../components/Layout';
 import { PageReadyTracker } from '../components/PageReadyTracker';
-import { compressPdf, CompressionLevel } from '../services/pdfCompressor';
+import { extractImagesFromPdf } from '../services/pdfExtractor';
 import { generatePdfThumbnail } from '../services/pdfThumbnail';
 import { nanoid } from 'nanoid';
 import { useDropzone } from 'react-dropzone';
 import { 
-  Trash2, Plus, FilePlus, X, Check,
-  Minimize2, Download, RefreshCw, Loader2, ArrowRight
+  Trash2, Plus, FilePlus, X,
+  FileArchive, Download, RefreshCw, Loader2, FileText, Check, ArrowRight
 } from 'lucide-react';
 import {
   DndContext, DragEndEvent, useSensor, useSensors, KeyboardSensor,
@@ -30,9 +30,10 @@ import { DragDropOverlay } from '../components/DragDropOverlay';
 import { EZButton } from '../components/EZButton';
 import JSZip from 'jszip';
 
-const WORKSPACE_CARD_LAYOUT_ID = "compress-pdf-card-surface";
+const WORKSPACE_CARD_LAYOUT_ID = "pdf-zip-card-surface";
 
-// ... existing Confetti component ...
+// ... existing Confetti component
+
 const Confetti = () => {
   const particles = Array.from({ length: 40 }).map((_, i) => ({
     id: i,
@@ -67,22 +68,21 @@ const Confetti = () => {
   );
 };
 
-// ... existing interfaces ...
-interface CompressedFile {
+// ... existing interfaces
+
+interface PdfFileItem {
   id: string;
   file: File;
-  thumbnail: string;
   status: 'pending' | 'processing' | 'done' | 'error';
   progress: number;
-  resultBlob?: Blob;
-  savings?: number;
-  newSize?: number;
+  thumbnail?: string;
 }
 
-interface CompressionResultState {
+interface ZipResultState {
   originalSize: number;
   finalSize: number;
-  count: number;
+  blob: Blob;
+  fileName: string;
 }
 
 const formatSize = (bytes: number) => {
@@ -113,10 +113,10 @@ const ProcessingOverlay = ({ progress, status }: { progress: number, status: str
             transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
             className="mb-8 p-5 rounded-3xl bg-[#111111] text-white shadow-sm border-2 border-[#111111]"
         >
-            <Minimize2 size={40} strokeWidth={2} />
+            <FileArchive size={40} strokeWidth={2} />
         </motion.div>
         
-        <h2 className="text-xl font-bold text-[#111111] tracking-tight mb-2">Compressing</h2>
+        <h2 className="text-xl font-bold text-[#111111] tracking-tight mb-2">Archiving</h2>
         <p className="text-sm text-stone-500 font-medium mb-8 font-mono max-w-[200px] truncate text-center">{status}</p>
         
         <div className="w-56 bg-stone-100 rounded-full h-3 overflow-hidden mb-3 border border-stone-200">
@@ -135,7 +135,7 @@ const ProcessingOverlay = ({ progress, status }: { progress: number, status: str
   </motion.div>
 );
 
-const ResultView: React.FC<{ result: CompressionResultState; onDownload: () => void; onReset: () => void }> = ({ result, onDownload, onReset }) => {
+const ResultView: React.FC<{ result: ZipResultState; onDownload: () => void; onReset: () => void }> = ({ result, onDownload, onReset }) => {
 // ... existing ResultView
     const savings = Math.max(0, result.originalSize - result.finalSize);
     const savingsPercent = result.originalSize > 0 ? Math.round((savings / result.originalSize) * 100) : 0;
@@ -153,10 +153,8 @@ const ResultView: React.FC<{ result: CompressionResultState; onDownload: () => v
                 <Check size={40} strokeWidth={3} />
             </div>
 
-            <h2 className="text-3xl font-bold text-[#111111] mb-2 tracking-tight z-10">Success</h2>
-            <p className="text-stone-500 font-medium mb-8 z-10">
-                {result.count > 1 ? `${result.count} files compressed successfully.` : 'File compressed successfully.'}
-            </p>
+            <h2 className="text-3xl font-bold text-[#111111] mb-2 tracking-tight z-10">Archive Ready</h2>
+            <p className="text-stone-500 font-medium mb-8 z-10">Your PDFs have been converted & zipped.</p>
 
             <div className="grid grid-cols-3 gap-4 w-full mb-8 bg-stone-50 rounded-2xl p-5 border border-stone-100 z-10">
                 <div className="flex flex-col items-center">
@@ -167,7 +165,7 @@ const ResultView: React.FC<{ result: CompressionResultState; onDownload: () => v
                     <ArrowRight size={24} />
                 </div>
                 <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Compressed</span>
+                    <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Archive</span>
                     <span className="text-lg font-bold text-emerald-600 font-mono">{formatSize(result.finalSize)}</span>
                 </div>
             </div>
@@ -186,7 +184,7 @@ const ResultView: React.FC<{ result: CompressionResultState; onDownload: () => v
                     icon={<Download size={20} />}
                     fullWidth
                 >
-                    {result.count > 1 ? 'Download ZIP' : 'Download PDF'}
+                    Download ZIP
                 </EZButton>
                 <EZButton 
                     variant="ghost" 
@@ -263,12 +261,12 @@ const UnifiedUploadCard: React.FC<{
                 >
                      {isMobile && (
                         <div className="mb-6 opacity-30">
-                           <span className="text-[10px] font-black text-[#111111] uppercase tracking-[0.25em]">Compress PDF</span>
+                           <span className="text-[10px] font-black text-[#111111] uppercase tracking-[0.25em]">PDF to ZIP</span>
                         </div>
                      )}
                      <div className="w-24 h-24 rounded-full bg-[#FAF9F6] border border-stone-200 flex items-center justify-center text-[#111111] mb-6 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300 shadow-sm relative">
                          <div className="absolute inset-2 rounded-full border border-dashed border-stone-300" />
-                         <Minimize2 size={40} strokeWidth={2.5} />
+                         <FileArchive size={40} strokeWidth={2.5} />
                      </div>
                      <span className="text-xl font-bold text-[#111111] group-hover:text-stone-600 transition-colors">
                          Add PDFs
@@ -389,15 +387,13 @@ const SortablePdf: React.FC<any> = ({ file, onRemove, onPreview, isMobile, ...pr
 
 // --- MAIN PAGE COMPONENT ---
 
-export const CompressPdfPage: React.FC = () => {
-// ... existing CompressPdfPage implementation
+export const PdfToZipPage: React.FC = () => {
   const { addToast, isMobile } = useLayoutContext();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // State
-  const [files, setFiles] = useState<CompressedFile[]>([]);
-  const [result, setResult] = useState<CompressionResultState | null>(null);
-  const [compressionLevel, setCompressionLevel] = useState<CompressionLevel>('recommended');
+  const [files, setFiles] = useState<PdfFileItem[]>([]);
+  const [result, setResult] = useState<ZipResultState | null>(null);
   
   // UI State
   const [isProcessing, setIsProcessing] = useState(false);
@@ -413,20 +409,18 @@ export const CompressPdfPage: React.FC = () => {
     setProgress(5);
     setStatus('Analyzing PDFs...');
 
-    const newFiles: CompressedFile[] = [];
+    const newFiles: PdfFileItem[] = [];
     
     for (let i = 0; i < uploadedFiles.length; i++) {
         const file = uploadedFiles[i];
         const thumbnail = await generatePdfThumbnail(file);
-        
         newFiles.push({
             id: nanoid(),
             file,
-            thumbnail,
             status: 'pending',
-            progress: 0
+            progress: 0,
+            thumbnail
         });
-        
         setProgress(5 + ((i + 1) / uploadedFiles.length) * 90);
     }
 
@@ -465,95 +459,73 @@ export const CompressPdfPage: React.FC = () => {
     setStatus('');
   };
 
-  const handleCompress = async () => {
+  const handleConvert = async () => {
     if (files.length === 0) return;
     setIsProcessing(true);
-    setStatus('Starting compression...');
+    setStatus('Starting conversion...');
     
     let totalOriginal = 0;
-    let totalCompressed = 0;
-    const processedFiles: CompressedFile[] = [];
-
+    const zip = new JSZip();
     const total = files.length;
 
-    for (let i = 0; i < total; i++) {
-        const fileData = files[i];
-        setStatus(`Compressing ${i + 1}/${total}...`);
-        
-        totalOriginal += fileData.file.size;
-
-        try {
-            const res = await compressPdf(
+    try {
+        for (let i = 0; i < total; i++) {
+            const fileData = files[i];
+            setStatus(`Extracting ${fileData.file.name}...`);
+            totalOriginal += fileData.file.size;
+            
+            // Extract images
+            const images = await extractImagesFromPdf(
                 fileData.file, 
-                compressionLevel, 
-                (p) => setProgress(Math.round(((i + p/100) / total) * 100)),
-                (s) => setStatus(s)
+                (p) => setProgress(Math.round(((i + p/100) / total) * 80)), // Map to first 80%
+                undefined // No internal status update needed
             );
             
-            totalCompressed += res.newSize;
+            // Add to zip folder per PDF
+            const folderName = fileData.file.name.replace(/\.pdf$/i, "");
+            const folder = zip.folder(folderName);
             
-            processedFiles.push({ 
-                ...fileData, 
-                status: 'done', 
-                resultBlob: res.blob, 
-                savings: res.savings,
-                newSize: res.newSize
+            images.forEach((img, idx) => {
+                const imgName = `page-${idx + 1}.jpg`;
+                folder?.file(imgName, img.file);
             });
-        } catch (e) {
-            console.error(e);
-            processedFiles.push({ ...fileData, status: 'error' });
-            // Add original size to total if failed to ensure math works (0 savings)
-            totalCompressed += fileData.file.size;
+            
+            // Update status to done for this file (visually)
+            setFiles(prev => prev.map(f => f.id === fileData.id ? { ...f, status: 'done', progress: 100 } : f));
         }
-    }
 
-    setFiles(processedFiles);
-    setResult({
-        originalSize: totalOriginal,
-        finalSize: totalCompressed,
-        count: processedFiles.filter(f => f.status === 'done').length
-    });
-
-    setIsProcessing(false);
-    setProgress(0);
-    setStatus('');
-    addToast("Success", "Compression complete", "success");
-  };
-
-  const handleDownloadResult = async () => {
-    const doneFiles = files.filter(f => f.status === 'done' && f.resultBlob);
-    if (doneFiles.length === 0) return;
-
-    if (doneFiles.length === 1) {
-        // Single Download
-        const f = doneFiles[0];
-        const url = URL.createObjectURL(f.resultBlob!);
-        const link = document.createElement('a');
-        link.href = url;
-        const nameParts = f.file.name.split('.');
-        const ext = nameParts.pop();
-        const name = nameParts.join('.');
-        link.download = `${name}_min.${ext}`;
-        link.click();
-        URL.revokeObjectURL(url);
-    } else {
-        // Zip Download
-        const zip = new JSZip();
-        doneFiles.forEach(f => {
-            const nameParts = f.file.name.split('.');
-            const ext = nameParts.pop();
-            const name = nameParts.join('.');
-            zip.file(`${name}_min.${ext}`, f.resultBlob!);
+        setStatus('Compressing archive...');
+        const content = await zip.generateAsync({ type: "blob" }, (metadata) => {
+             setProgress(80 + (metadata.percent * 0.2));
         });
         
-        const zipBlob = await zip.generateAsync({ type: 'blob' });
-        const url = URL.createObjectURL(zipBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'compressed_files_EZtify.zip';
-        link.click();
-        URL.revokeObjectURL(url);
+        setResult({
+            originalSize: totalOriginal,
+            finalSize: content.size,
+            blob: content,
+            fileName: 'converted_images_EZtify.zip'
+        });
+        
+        addToast("Success", "Archive created", "success");
+
+    } catch (e) {
+        console.error(e);
+        addToast("Error", "Conversion failed", "error");
+    } finally {
+        setIsProcessing(false);
+        setProgress(0);
+        setStatus('');
     }
+  };
+
+  const handleDownloadResult = () => {
+    if (!result) return;
+    const url = URL.createObjectURL(result.blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = result.fileName;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const sensors = useSensors(
@@ -629,7 +601,7 @@ export const CompressPdfPage: React.FC = () => {
                     {/* Toolbar */}
                     <div className="h-20 shrink-0 border-b border-stone-100 flex items-center justify-between px-6 md:px-8 bg-white z-20">
                         <div className="flex items-center gap-4">
-                            <h2 className="text-lg font-bold text-[#111111] tracking-tight">Compress PDF</h2>
+                            <h2 className="text-lg font-bold text-[#111111] tracking-tight">PDF to ZIP</h2>
                             <span className="px-3 py-1 bg-stone-100 rounded-full text-xs font-bold text-stone-500 font-mono">
                                 {files.length} FILES
                             </span>
@@ -693,43 +665,21 @@ export const CompressPdfPage: React.FC = () => {
                     {/* Footer Controls */}
                     <div className="shrink-0 p-6 border-t border-stone-100 bg-white flex flex-col md:flex-row items-center gap-6 z-20">
                         
-                        {/* Compression Settings - Integrated */}
                         <div className="w-full md:w-auto flex-1 min-w-0">
-                            <div className="bg-stone-50 p-1.5 rounded-2xl border border-stone-200 inline-flex w-full md:w-auto">
-                                {[
-                                    { id: 'less', label: 'High Quality', sub: 'Low Compression' },
-                                    { id: 'recommended', label: 'Balanced', sub: 'Standard' },
-                                    { id: 'extreme', label: 'Smallest', sub: 'High Compression' }
-                                ].map((opt) => (
-                                    <button
-                                        key={opt.id}
-                                        onClick={() => setCompressionLevel(opt.id as CompressionLevel)}
-                                        className={`
-                                            flex-1 md:flex-none px-4 py-2 rounded-xl text-left transition-all duration-200
-                                            ${compressionLevel === opt.id 
-                                                ? 'bg-white shadow-sm text-[#111111] ring-1 ring-black/5' 
-                                                : 'text-stone-500 hover:text-stone-800 hover:bg-stone-100'
-                                            }
-                                        `}
-                                    >
-                                        <div className="text-xs font-bold uppercase tracking-tight">{opt.label}</div>
-                                        <div className="text-[10px] font-medium opacity-60">{opt.sub}</div>
-                                    </button>
-                                ))}
-                            </div>
+                            {/* Empty spacer or config if needed later */}
                         </div>
 
                         {/* Action Button */}
                         <div className="w-full md:w-auto flex gap-3">
                             <EZButton 
                                 variant="primary" 
-                                onClick={handleCompress}
+                                onClick={handleConvert}
                                 disabled={isProcessing}
                                 isLoading={isProcessing}
                                 className="!h-14 !px-10 !rounded-2xl !bg-[#111111] !text-white shadow-xl w-full md:w-auto"
-                                icon={!isProcessing && <Minimize2 size={20} />}
+                                icon={!isProcessing && <FileArchive size={20} />}
                             >
-                                {isProcessing ? 'Compressing...' : 'Compress PDF'}
+                                {isProcessing ? 'Archiving...' : 'Convert to ZIP'}
                             </EZButton>
                         </div>
                     </div>

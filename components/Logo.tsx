@@ -1,113 +1,39 @@
+
 import React from 'react';
-import { motion, useReducedMotion, Transition } from 'framer-motion';
+import { motion } from 'framer-motion';
 
-export const Logo: React.FC<{ size?: 'sm' | 'lg' | 'mono' }> = ({ size = 'lg' }) => {
-  const isSmall = size === 'sm';
-  const isMono = size === 'mono';
-  const shouldReduceMotion = useReducedMotion();
-  
-  // Increased base size for better readability of the detailed mark
-  const width = isSmall ? 40 : 80;
-  const height = isSmall ? 40 : 80;
-
-  const boltAnimation = { 
-     scale: [1, 1.1, 1],
-     filter: !isMono 
-       ? ["brightness(1)", "brightness(1.15) drop-shadow(0 0 8px rgba(250, 204, 21, 0.6))", "brightness(1)"] 
-       : undefined
-  };
-  const boltTransition: Transition = { 
-     duration: 2.5, 
-     repeat: Infinity, 
-     ease: "easeInOut" 
-  };
-  
-  const flashAnimation = { opacity: [0, 0.5, 0] };
-  const flashTransition: Transition = { duration: 2.5, repeat: Infinity, times: [0, 0.5, 1], ease: "easeInOut" };
+export const Logo: React.FC<{ size?: 'sm' | 'md' | 'lg' }> = ({ size = 'md' }) => {
+  const dims = size === 'sm' ? 24 : size === 'md' ? 32 : 48;
+  const strokeWidth = size === 'sm' ? 2 : 2.5;
 
   return (
-    <div className="relative flex items-center justify-center">
-      <motion.svg
-        width={width}
-        height={height}
-        viewBox="0 0 100 100"
+    <div className="relative flex items-center justify-center select-none" style={{ width: dims, height: dims }}>
+      <svg
+        viewBox="0 0 24 24"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="overflow-visible"
+        className="w-full h-full"
       >
-        <defs>
-          {/* Document Gradient (Brand Colors: Purple -> Blue) */}
-          <linearGradient id="ezDocGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#8B5CF6" /> 
-            <stop offset="100%" stopColor="#60A5FA" />
-          </linearGradient>
-
-          {/* Bolt Gradient (Electric Yellow) */}
-          <linearGradient id="ezBoltGradient" x1="10%" y1="0%" x2="90%" y2="100%">
-            <stop offset="0%" stopColor="#FEF08A" /> {/* Yellow 200 */}
-            <stop offset="50%" stopColor="#FACC15" /> {/* Yellow 400 */}
-            <stop offset="100%" stopColor="#EAB308" /> {/* Yellow 500 */}
-          </linearGradient>
-          
-          {/* Soft Glow for Bolt */}
-          <filter id="ezYellowGlow" x="-50%" y="-50%" width="200%" height="200%">
-             <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-             <feFlood floodColor="#FACC15" floodOpacity="0.6" result="glowColor" />
-             <feComposite in="glowColor" in2="coloredBlur" operator="in" result="coloredGlow" />
-             <feMerge>
-                <feMergeNode in="coloredGlow"/>
-                <feMergeNode in="SourceGraphic"/>
-             </feMerge>
-          </filter>
-        </defs>
-
-        {/* Document Outline - Static First */}
-        <path 
-          d="M26 14 H62 L82 34 V86 H26 V14 Z"
-          stroke={isMono ? "currentColor" : "url(#ezDocGradient)"}
-          strokeWidth={isSmall ? 6 : 5}
-          strokeLinecap="round"
+        {/* Document Frame */}
+        <path
+          d="M7 2H14.5L18 5.5V20C18 21.1046 17.1046 22 16 22H7C5.89543 22 5 21.1046 5 20V4C5 2.89543 5.89543 2 7 2Z"
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
           strokeLinejoin="round"
-          fill="none"
-          style={{ opacity: isMono ? 1 : 0.8 }}
         />
-        
-        {/* Document Folded Corner - Static First */}
-        <path 
-          d="M62 14 V34 H82"
-          stroke={isMono ? "currentColor" : "url(#ezDocGradient)"}
-          strokeWidth={isSmall ? 6 : 5}
-          strokeLinecap="round"
+        <path
+          d="M14 2V6H18"
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
           strokeLinejoin="round"
-          fill="none"
-          style={{ opacity: isMono ? 1 : 0.8 }}
         />
-
-        {/* Lightning Bolt (Central Power Element) - YELLOW - Gentle Pulse */}
-        <motion.path
-          d="M58 20 L34 54 H54 L44 90 L80 44 H58 L70 20 H58 Z"
-          fill={isMono ? "currentColor" : "url(#ezBoltGradient)"}
-          stroke={isMono ? "transparent" : "white"}
-          strokeWidth={isMono ? 0 : 2}
-          filter={!isMono ? "url(#ezYellowGlow)" : undefined}
-          animate={shouldReduceMotion ? { scale: 1 } : boltAnimation}
-          transition={shouldReduceMotion ? { duration: 0 } : boltTransition}
-          style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
+        {/* Lightning Bolt */}
+        <path
+          d="M12.5 8L9.5 13H12.5L11.5 17L14.5 12H11.5L12.5 8Z"
+          fill="#F97316"
+          className="drop-shadow-[0_0_8px_rgba(249,115,22,0.4)]"
         />
-        
-        {/* Inner energy flash - Subtle */}
-        {!isMono && (
-           <motion.path
-             d="M58 20 L34 54 H54 L44 90 L80 44 H58 L70 20 H58 Z"
-             fill="white"
-             fillOpacity="0.3"
-             stroke="none"
-             animate={shouldReduceMotion ? { opacity: 0 } : flashAnimation}
-             transition={shouldReduceMotion ? { duration: 0 } : flashTransition}
-             style={{ mixBlendMode: 'overlay' }}
-           />
-        )}
-      </motion.svg>
+      </svg>
     </div>
   );
 };

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Upload, Layers, Download, Settings, FileImage, MousePointerClick, Zap, Sliders, CheckCircle, GripVertical, Scissors, FileOutput, Archive, FilePlus, FileText, RotateCw, Trash2, FileKey, FileLock, Lock, ShieldCheck, Hash, Eraser, Palette, Code, PenTool, Presentation } from 'lucide-react';
+
+import React, { Layers, Download, Settings, FileImage, MousePointerClick, Zap, Sliders, CheckCircle, GripVertical, Scissors, FileOutput, Archive, FilePlus, FileText, RotateCw, Trash2, FileKey, FileLock, Lock, ShieldCheck, Hash, Eraser, Palette, Code, PenTool, Presentation, Upload } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AppMode } from '../types';
 import { staggerContainer, fadeInUp, cardHover } from '../utils/animations';
@@ -19,12 +19,13 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ mode }) => {
     }
     if (mode === 'pdf-to-image') {
       return [
+        // Added Upload to imports above to fix Cannot find name 'Upload'
         { icon: <Upload />, title: "Upload", desc: "Upload your PDF" },
         { icon: <Settings />, title: "Configure", desc: "Choose format" },
         { icon: <FileImage />, title: "Export", desc: "Save as images" }
       ];
     }
-    if (mode === 'word-to-pdf' || mode === 'pdf-to-word' || mode === 'pdf-to-pptx') {
+    if (mode === 'pdf-to-pptx') {
       return [
         { icon: <Upload />, title: "Upload", desc: "Select your file" },
         { icon: <Zap />, title: "Convert", desc: "Instant conversion" },
@@ -38,20 +39,6 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ mode }) => {
         { icon: <Download />, title: "Download", desc: "Save as PDF" }
       ];
     }
-    if (mode === 'rotate-pdf') {
-       return [
-        { icon: <Upload />, title: "Upload", desc: "Select your PDF" },
-        { icon: <RotateCw />, title: "Rotate", desc: "Click to rotate pages" },
-        { icon: <Download />, title: "Download", desc: "Save the new file" }
-      ];
-    }
-    if (mode === 'delete-pdf-pages') {
-       return [
-        { icon: <Upload />, title: "Upload", desc: "Select your PDF" },
-        { icon: <Trash2 />, title: "Select & Delete", desc: "Click pages to remove" },
-        { icon: <Download />, title: "Download", desc: "Save the new file" }
-      ];
-    }
     if (mode === 'unlock-pdf') {
        return [
         { icon: <Upload />, title: "Upload", desc: "Select your PDF" },
@@ -59,20 +46,6 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ mode }) => {
         { icon: <Download />, title: "Download", desc: "Save unlocked file" }
       ];
     }
-    if (mode === 'add-page-numbers') {
-       return [
-        { icon: <Upload />, title: "Upload", desc: "Select your PDF" },
-        { icon: <Hash />, title: "Configure", desc: "Set style & position" },
-        { icon: <Download />, title: "Download", desc: "Save numbered PDF" }
-      ];
-    }
-    if (mode === 'redact-pdf') {
-        return [
-         { icon: <Upload />, title: "Upload", desc: "Select your PDF" },
-         { icon: <Eraser />, title: "Redact", desc: "Black out sensitive info" },
-         { icon: <Download />, title: "Download", desc: "Save redacted file" }
-       ];
-     }
     if (mode === 'grayscale-pdf') {
         return [
          { icon: <Upload />, title: "Upload", desc: "Select your PDF" },

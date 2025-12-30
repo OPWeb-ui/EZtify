@@ -4,12 +4,11 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { Header } from './Header';
 import { ToastContainer } from './Toast';
 import { SuccessIndicator } from './SuccessIndicator';
+import { SupportSection } from './SupportSection';
 import { ToastMessage, AppMode, ToastAction } from '../types';
 import { nanoid } from 'nanoid';
 import { AnimatePresence, motion } from 'framer-motion';
-import { PwaInstallPrompt } from './PwaInstallPrompt';
 import { CookieConsentBanner } from './CookieConsentBanner';
-import { pageVariants } from '../utils/animations';
 import { FileProcessingLoader } from './FileProcessingLoader';
 import { allTools } from '../utils/tool-list';
 import { incrementToolUsage } from '../services/usageTracker';
@@ -24,6 +23,7 @@ interface LayoutContextType {
   ) => string;
   removeToast: (id: string) => void;
   isMobile: boolean;
+  registerUrl: (url: string) => void;
 }
 
 const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
@@ -34,6 +34,16 @@ export const useLayoutContext = () => {
     throw new Error('useLayoutContext must be used within a Layout provider');
   }
   return context;
+};
+
+// Global registry for Blob URLs created during a session
+const urlRegistry = new Set<string>();
+
+// Strictly Opacity-based variants to prevent structural shifting during navigation
+const navigationVariants = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } },
+  exit: { opacity: 0, transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1] } }
 };
 
 export const Layout: React.FC = () => {
@@ -56,10 +66,17 @@ export const Layout: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // --- Usage Tracking ---
+  // --- Global Memory Cleanup ---
   useEffect(() => {
     const currentPath = location.pathname;
     if (currentPath === lastTrackedPath.current) return;
+    
+    // Purge previous session URLs
+    urlRegistry.forEach(url => {
+        try { URL.revokeObjectURL(url); } catch (e) {}
+    });
+    urlRegistry.clear();
+    
     lastTrackedPath.current = currentPath;
 
     const tool = allTools.find(t => t.path === currentPath);
@@ -68,7 +85,12 @@ export const Layout: React.FC = () => {
     }
   }, [location.pathname]);
 
-  // --- Success Indicator Dismissal Logic ---
+  const registerUrl = useCallback((url: string) => {
+    if (url.startsWith('blob:')) {
+        urlRegistry.add(url);
+    }
+  }, []);
+
   const dismissSuccess = useCallback(() => {
     setSuccessActive(false);
     if (successTimer.current) clearTimeout(successTimer.current);
@@ -76,15 +98,8 @@ export const Layout: React.FC = () => {
 
   useEffect(() => {
     if (!successActive) return;
-
-    // Auto-dismiss after 1s
-    successTimer.current = setTimeout(() => {
-      setSuccessActive(false);
-    }, 1200);
-
-    // Immediate dismiss on interaction
+    successTimer.current = setTimeout(() => setSuccessActive(false), 1200);
     const handleInteraction = () => dismissSuccess();
-    
     window.addEventListener('mousedown', handleInteraction);
     window.addEventListener('touchstart', handleInteraction);
     window.addEventListener('scroll', handleInteraction, { capture: true });
@@ -106,45 +121,25 @@ export const Layout: React.FC = () => {
     type: 'warning' | 'error' | 'undo' | 'success' | 'info' = 'info',
     durationOrAction?: number | ToastAction
   ) => {
-    // --- 1. SUCCESS (Center Indicator) ---
     if (type === 'success') {
-      // Dismiss any existing success first to restart animation if needed, 
-      // or just ensure it stays visible. 
       setSuccessActive(false);
       requestAnimationFrame(() => setSuccessActive(true));
       return 'success';
     }
+    if (type === 'info') return 'info-silenced';
 
-    // --- 2. INFO (Chatty -> Silent) ---
-    if (type === 'info') {
-      // Per rules: "The UI must NEVER feel chatty."
-      // Info toasts (e.g. tips, 'Added files') are silenced or should be handled by local UI.
-      // We drop them here to enforce the new severity model strictly.
-      return 'info-silenced';
-    }
-
-    // --- 3. WARNING / ERROR (Toasts) ---
     const id = nanoid();
-    let duration = type === 'warning' ? 4000 : Infinity; // Errors don't auto-dismiss by default
+    let duration = type === 'warning' ? 4000 : Infinity;
     let action: ToastAction | undefined;
 
-    if (typeof durationOrAction === 'number') {
-      duration = durationOrAction;
-    } else if (durationOrAction) {
-      action = durationOrAction;
-      duration = 6000; // Warnings with actions need time
-    }
+    if (typeof durationOrAction === 'number') duration = durationOrAction;
+    else if (durationOrAction) { action = durationOrAction; duration = 6000; }
 
     setToasts(prev => {
-      // Limit stacks: Error (1), Warning (2)
-      // Since we mix them in one array, let's just cap total at 2 for tidiness.
       const current = [...prev];
-      if (current.length >= 2) {
-        current.shift();
-      }
+      if (current.length >= 2) current.shift();
       return [...current, { id, title, message, type, duration, action }];
     });
-
     return id;
   }, []);
 
@@ -152,13 +147,10 @@ export const Layout: React.FC = () => {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  // Determine current mode
   const currentPath = location.pathname;
   const currentTool = allTools.find(t => t.path === currentPath);
   const mode = (currentTool?.id || 'home') as AppMode;
 
-  // PWA & Cookie Logic
-  const [showPwaPrompt, setShowPwaPrompt] = useState(false);
   const [showCookieBanner, setShowCookieBanner] = useState(false);
 
   useEffect(() => {
@@ -166,51 +158,40 @@ export const Layout: React.FC = () => {
     if (!consent) setShowCookieBanner(true);
   }, []);
 
-  const handlePwaInstall = () => setShowPwaPrompt(false);
-  const handlePwaDismiss = () => {
-    setShowPwaPrompt(false);
-    localStorage.setItem('eztify-pwa-dismissed', 'true');
-  };
-  const handleCookieAccept = () => {
-    localStorage.setItem('eztify-cookie-consent', 'accepted');
-    setShowCookieBanner(false);
-  };
-  const handleCookieReject = () => {
-    localStorage.setItem('eztify-cookie-consent', 'rejected');
-    setShowCookieBanner(false);
-  };
-
   return (
-    <LayoutContext.Provider value={{ addToast, removeToast, isMobile }}>
-      <div className="flex flex-col h-[100dvh] bg-nd-base text-nd-primary overflow-hidden">
+    <LayoutContext.Provider value={{ addToast, removeToast, isMobile, registerUrl }}>
+      <div className="flex flex-col h-[100dvh] bg-nd-base text-nd-primary overflow-hidden isolate">
+        {/* Global UI Components - Never unmount to prevent flickering */}
         <Header currentMode={mode} isMobile={isMobile} />
         
-        <main className="flex-1 relative overflow-hidden flex flex-col pt-12">
-          <Suspense fallback={<FileProcessingLoader />}>
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                variants={pageVariants}
-                className="w-full h-full flex flex-col"
-              >
+        <main className="flex-1 relative overflow-hidden flex flex-col pt-16">
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.div
+              key={location.pathname}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              variants={navigationVariants}
+              className="w-full h-full flex flex-col relative"
+            >
+              <Suspense fallback={<FileProcessingLoader />}>
                 <Outlet />
-              </motion.div>
-            </AnimatePresence>
-          </Suspense>
+              </Suspense>
+            </motion.div>
+          </AnimatePresence>
         </main>
 
+        {/* Global Persistence layer */}
+        <SupportSection />
         <SuccessIndicator visible={successActive} />
         <ToastContainer toasts={toasts} onDismiss={removeToast} isMobile={isMobile} />
         
         <AnimatePresence>
-          {showPwaPrompt && (
-            <PwaInstallPrompt onInstall={handlePwaInstall} onDismiss={handlePwaDismiss} />
-          )}
           {showCookieBanner && (
-            <CookieConsentBanner onAccept={handleCookieAccept} onReject={handleCookieReject} />
+            <CookieConsentBanner 
+                onAccept={() => { localStorage.setItem('eztify-cookie-consent', 'accepted'); setShowCookieBanner(false); }} 
+                onReject={() => { localStorage.setItem('eztify-cookie-consent', 'rejected'); setShowCookieBanner(false); }} 
+            />
           )}
         </AnimatePresence>
       </div>
